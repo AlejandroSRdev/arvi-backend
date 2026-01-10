@@ -19,8 +19,6 @@
 import { createUser } from '../../../domain/use-cases/CreateUser.js';
 import { updateLastLogin } from '../../../domain/use-cases/ManageUser.js';
 import { validateEmail } from '../../../domain/validators/InputValidator.js';
-import { ValidationError } from '../../../shared/errorTypes.js';
-import { success, error as logError } from '../../../shared/logger.js';
 
 // Dependency injection - estas serán inyectadas en runtime
 let userRepository;

@@ -20,8 +20,6 @@
 import { getUserEnergy } from '../../../domain/use-cases/ConsumeEnergy.js';
 import { activateTrial } from '../../../domain/use-cases/ActivateTrial.js';
 import { getTrialStatus } from '../../../domain/use-cases/GetTrialStatus.js';
-import { TrialAlreadyUsedError } from '../../../shared/errorTypes.js';
-import { success, error as logError } from '../../../shared/logger.js';
 
 // Dependency injection - estas serán inyectadas en runtime
 let energyRepository;

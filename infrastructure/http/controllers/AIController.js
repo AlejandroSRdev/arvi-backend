@@ -22,8 +22,6 @@
 
 import { generateAIResponseWithFunctionType } from '../../../domain/use-cases/GenerateAIResponse.js';
 import { validateMessages } from '../../../domain/validators/InputValidator.js';
-import { ValidationError } from '../../../shared/errorTypes.js';
-import { success, error as logError } from '../../../shared/logger.js';
 import { isValidFunctionType } from '../../../domain/policies/ModelSelectionPolicy.js';
 
 // Dependency injection - estas serán inyectadas en runtime

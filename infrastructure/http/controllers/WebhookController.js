@@ -25,7 +25,6 @@ import {
   processSubscriptionUpdated,
   processSubscriptionDeleted,
 } from '../../../domain/use-cases/ProcessSubscription.js';
-import { success, error as logError } from '../../../shared/logger.js';
 
 // Dependency injection - estas serán inyectadas en runtime
 let userRepository;

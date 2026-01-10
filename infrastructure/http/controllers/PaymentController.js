@@ -24,8 +24,6 @@
  */
 
 import { startPayment } from '../../../domain/use-cases/StartPayment.js';
-import { ValidationError } from '../../../shared/errorTypes.js';
-import { success, error as logError } from '../../../shared/logger.js';
 
 /**
  * POST /api/payments/start

@@ -17,7 +17,6 @@
 
 import { createHabitSeries } from '../../../domain/use-cases/createHabitSeries.js';
 import { deleteHabitSeries } from '../../../domain/use-cases/deleteHabitSeries.js';
-import { success, error as logError } from '../../../shared/logger.js';
 
 let userRepository;
 let habitSeriesRepository;
