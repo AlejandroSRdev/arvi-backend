@@ -24,9 +24,6 @@ router.use(authenticate);
 // GET /api/user/energy - Obtener energía actual
 router.get('/', getEnergy);
 
-// REMOVED: POST /api/user/energy/consume
-// El consumo de energía se hace automáticamente en aiService.js basado en tokens
-
 // POST /api/user/trial/activate - Activar trial
 router.post('/trial/activate', activateTrialEndpoint);
 

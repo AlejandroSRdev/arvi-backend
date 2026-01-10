@@ -25,6 +25,7 @@
 
 import { getModelConfig } from '../policies/ModelSelectionPolicy.js';
 import { canConsumeEnergy } from '../entities/Energy.js';
+import { isHabitSeriesFinal } from '../policies/HabitSeriesPolicy.js';
 
 /**
  * Generar respuesta de IA con consumo de energía
@@ -91,22 +92,35 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
  * Generar respuesta de IA con selección automática de modelo según function_type
  *
  * MIGRADO DESDE: src/services/aiService.js:callAIWithFunctionType (líneas 212-233)
+ * EXTENDIDO: 2026-01-09 - Persistencia automática de series de hábitos finales
  *
  * @param {string} userId - ID del usuario
  * @param {Array<Object>} messages - Array de mensajes [{role, content}]
  * @param {string} functionType - Tipo de función (home_phrase, chat, etc.)
- * @param {Object} deps - Dependencias inyectadas {aiProvider, energyRepository}
+ * @param {Object} deps - Dependencias inyectadas {aiProvider, energyRepository, habitSeriesRepository?}
  * @returns {Promise<Object>} {content, model, tokensUsed, energyConsumed}
  */
 export async function generateAIResponseWithFunctionType(userId, messages, functionType, deps) {
+  const { habitSeriesRepository } = deps;
   const config = getModelConfig(functionType);
 
-  return await generateAIResponse(userId, messages, {
+  const response = await generateAIResponse(userId, messages, {
     model: config.model,
     temperature: config.temperature,
     maxTokens: config.maxTokens,
     forceJson: config.forceJson || false,
   }, deps);
+
+  // DECISIÓN DE DOMINIO: persistir serie final automáticamente
+  if (isHabitSeriesFinal(functionType)) {
+    if (!habitSeriesRepository) {
+      throw new Error('HabitSeriesRepository not provided');
+    }
+
+    await habitSeriesRepository.createFromAI(userId, response.content);
+  }
+
+  return response;
 }
 
 export default {

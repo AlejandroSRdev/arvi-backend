@@ -30,11 +30,13 @@ import { isValidFunctionType } from '../../../domain/policies/ModelSelectionPoli
 let aiProvider;
 let energyRepository;
 let userRepository;
+let habitSeriesRepository;
 
 export function setDependencies(deps) {
   aiProvider = deps.aiProvider;
   energyRepository = deps.energyRepository;
   userRepository = deps.userRepository;
+  habitSeriesRepository = deps.habitSeriesRepository;
 }
 
 /**
@@ -67,7 +69,7 @@ export async function chatEndpoint(req, res, next) {
       userId,
       messages,
       function_type,
-      { aiProvider, energyRepository }
+      { aiProvider, energyRepository, habitSeriesRepository }
     );
 
     // EXTRACCIÓN EXACTA: src/controllers/aiController.js:56

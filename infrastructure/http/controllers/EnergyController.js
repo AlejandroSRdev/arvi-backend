@@ -76,7 +76,7 @@ export async function activateTrialEndpoint(req, res, next) {
     // EXTRACCIÓN EXACTA: src/controllers/energyController.js:57-61
     res.json({
       success: true,
-      message: 'Trial de 48 horas activado correctamente',
+      message: '48-hour trial successfully activated',
       trial: trialData,
     });
   } catch (err) {

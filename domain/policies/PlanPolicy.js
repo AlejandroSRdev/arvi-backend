@@ -154,6 +154,8 @@ export const FEATURE_ACCESS = {
   'energy.consume': ['trial', 'mini', 'base', 'pro'],
   'weekly_summaries': ['trial', 'mini', 'base', 'pro'],
   'active_series': ['trial', 'mini', 'base', 'pro'],
+  'habits.series.create': ['trial', 'mini', 'base', 'pro'],
+  'execution.summary.generate': ['trial', 'mini', 'base', 'pro'],
 };
 
 export function hasFeatureAccess(planId, featureKey) {

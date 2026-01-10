@@ -22,7 +22,6 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 
 // Importar rutas (Hexagonal Architecture)
 import aiRoutes from './infrastructure/http/routes/ai.routes.js';
@@ -31,15 +30,108 @@ import energyRoutes from './infrastructure/http/routes/energy.routes.js';
 import userRoutes from './infrastructure/http/routes/user.routes.js';
 import stripeRoutes from './infrastructure/http/routes/stripe.routes.js';
 import webhookRoutes from './infrastructure/http/routes/webhook.routes.js';
+import paymentRoutes from './infrastructure/http/routes/payment.routes.js';
+import habitSeriesRoutes from './infrastructure/http/routes/habitSeries.routes.js';
+import executionSummaryRoutes from './infrastructure/http/routes/executionSummary.routes.js';
 
 // Importar middleware (Hexagonal Architecture)
 import { errorHandler } from './infrastructure/http/middleware/errorHandler.js';
 
+// ═══════════════════════════════════════════════════════════════
+// BOOTSTRAP - COMPOSICIÓN DE DEPENDENCIAS
+// ═══════════════════════════════════════════════════════════════
+// Este es el ÚNICO lugar donde se crean instancias de adaptadores
+// y se inyectan en los controllers mediante setDependencies.
+//
+// ARQUITECTURA HEXAGONAL - INYECCIÓN DE DEPENDENCIAS:
+// 1. Crear instancias ÚNICAS de adaptadores de infraestructura
+// 2. Inyectar en TODOS los controllers que las requieran
+// 3. NO permitir que controllers o use cases creen instancias propias
+// 4. Facilitar testing (permite inyectar mocks en lugar de instancias reales)
+//
+// IMPORTANTE: Este patrón cierra correctamente la arquitectura hexagonal
+// sin modificar la lógica de negocio existente.
+// ═══════════════════════════════════════════════════════════════
+
 // Importar configuración Firebase (Hexagonal Architecture)
 import { initializeFirebase } from './infrastructure/persistence/firestore/FirebaseConfig.js';
 
+// Importar Adaptadores de Infraestructura (Repositories)
+import FirestoreUserRepository from './infrastructure/persistence/firestore/FirestoreUserRepository.js';
+import FirestoreEnergyRepository from './infrastructure/persistence/firestore/FirestoreEnergyRepository.js';
+import FirestoreHabitSeriesRepository from './infrastructure/persistence/firestore/FirestoreHabitSeriesRepository.js';
+
+// Importar AI Provider (Gemini por defecto para contenido creativo)
+import GeminiAdapter from './infrastructure/ai/gemini/GeminiAdapter.js';
+
+// Importar Controllers para inyección de dependencias
+import { setDependencies as setAIDeps } from './infrastructure/http/controllers/AIController.js';
+import { setDependencies as setAuthDeps } from './infrastructure/http/controllers/AuthController.js';
+import { setDependencies as setUserDeps } from './infrastructure/http/controllers/UserController.js';
+import { setDependencies as setEnergyDeps } from './infrastructure/http/controllers/EnergyController.js';
+import { setDependencies as setWebhookDeps } from './infrastructure/http/controllers/WebhookController.js';
+import { setDependencies as setHabitSeriesDeps } from './infrastructure/http/controllers/HabitSeriesController.js';
+import { setDependencies as setExecutionSummaryDeps } from './infrastructure/http/controllers/ExecutionSummaryController.js';
+
 // Inicializar Firebase Admin SDK
 initializeFirebase();
+
+// ───────────────────────────────────────────────────────────────
+// CREAR INSTANCIAS ÚNICAS DE ADAPTADORES
+// ───────────────────────────────────────────────────────────────
+// UNA SOLA instancia de cada repositorio para toda la aplicación.
+// Esto garantiza consistencia y facilita el testing.
+
+const userRepository = new FirestoreUserRepository();
+const energyRepository = new FirestoreEnergyRepository();
+const habitSeriesRepository = new FirestoreHabitSeriesRepository();
+const aiProvider = new GeminiAdapter(); // Provider principal (contenido creativo)
+
+// ───────────────────────────────────────────────────────────────
+// INYECTAR DEPENDENCIAS EN CONTROLLERS
+// ───────────────────────────────────────────────────────────────
+// Llamar a setDependencies en CADA controller que lo requiera.
+// Este es el punto de composición que faltaba en la arquitectura.
+
+// AIController requiere: aiProvider, energyRepository, userRepository, habitSeriesRepository
+setAIDeps({
+  aiProvider,
+  energyRepository,
+  userRepository,
+  habitSeriesRepository
+});
+
+// AuthController requiere: userRepository
+setAuthDeps({
+  userRepository
+});
+
+// UserController requiere: userRepository
+setUserDeps({
+  userRepository
+});
+
+// EnergyController requiere: energyRepository, userRepository
+setEnergyDeps({
+  energyRepository,
+  userRepository
+});
+
+// WebhookController requiere: userRepository
+setWebhookDeps({
+  userRepository
+});
+
+// HabitSeriesController requiere: userRepository, habitSeriesRepository
+setHabitSeriesDeps({
+  userRepository,
+  habitSeriesRepository
+});
+
+// ExecutionSummaryController requiere: userRepository
+setExecutionSummaryDeps({
+  userRepository
+});
 
 const app = express();
 
@@ -75,7 +167,10 @@ app.get('/', (req, res) => {
       auth: 'POST /api/auth/login, POST /api/auth/register',
       energy: 'GET /api/energy, POST /api/energy/consume',
       user: 'GET /api/user/profile, PATCH /api/user/profile',
-      stripe: 'POST /api/stripe/create-checkout',
+      habits: 'POST /api/habits/series',
+      executionSummaries: 'POST /api/execution-summaries',
+      payments: 'POST /api/payments/start',
+      stripe: 'POST /api/stripe/create-checkout (legacy)',
       webhook: 'POST /api/webhooks/stripe',
     },
   });
@@ -89,7 +184,10 @@ app.use('/api/ai', aiRoutes);           // ✅ Endpoints de IA
 app.use('/api/auth', authRoutes);       // ✅ Autenticación
 app.use('/api/energy', energyRoutes);   // ✅ Gestión de energía
 app.use('/api/user', userRoutes);       // ✅ Gestión de usuarios
-app.use('/api/stripe', stripeRoutes);   // ✅ Pagos y suscripciones
+app.use('/api/stripe', stripeRoutes);   // ✅ Pagos y suscripciones (legacy)
+app.use('/api/payments', paymentRoutes); // ✅ Inicio de pagos
+app.use('/api/habits', habitSeriesRoutes); // ✅ Series de hábitos
+app.use('/api/execution-summaries', executionSummaryRoutes); // ✅ Resúmenes de ejecución
 app.use('/api/webhooks', webhookRoutes); // ✅ Webhooks de Stripe
 
 // ═══════════════════════════════════════════════════════════════
@@ -107,6 +205,9 @@ app.use((req, res) => {
       'POST /api/ai/chat',
       'POST /api/ai/json-convert',
       'GET /api/energy',
+      'POST /api/habits/series',
+      'POST /api/execution-summaries',
+      'POST /api/payments/start',
       'POST /api/stripe/create-checkout',
       'POST /api/webhooks/stripe',
     ],
@@ -131,13 +232,16 @@ app.listen(PORT, () => {
   console.log(`  🔗 URL:             http://localhost:${PORT}`);
   console.log('');
   console.log('  ✅ Rutas activas:');
-  console.log('     • GET  /health                    - Health check');
-  console.log('     • GET  /                          - Info API');
-  console.log('     • POST /api/ai/chat               - Chat con IA');
-  console.log('     • POST /api/ai/json-convert       - Conversión JSON');
-  console.log('     • GET  /api/energy                - Consultar energía');
-  console.log('     • POST /api/stripe/create-checkout - Crear sesión Stripe');
-  console.log('     • POST /api/webhooks/stripe        - Webhook Stripe');
+  console.log('     • GET  /health                       - Health check');
+  console.log('     • GET  /                             - Info API');
+  console.log('     • POST /api/ai/chat                  - Chat con IA');
+  console.log('     • POST /api/ai/json-convert          - Conversión JSON');
+  console.log('     • GET  /api/energy                   - Consultar energía');
+  console.log('     • POST /api/habits/series            - Validar creación serie hábitos');
+  console.log('     • POST /api/execution-summaries      - Validar generación resumen ejecución');
+  console.log('     • POST /api/payments/start           - Iniciar pago');
+  console.log('     • POST /api/stripe/create-checkout   - Crear sesión Stripe (legacy)');
+  console.log('     • POST /api/webhooks/stripe          - Webhook Stripe');
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');

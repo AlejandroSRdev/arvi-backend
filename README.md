@@ -1,480 +1,380 @@
-# 🚀 Arvi Backend - Node.js
+# AI Agent-Driven Backend System
 
-Backend profesional para **Arvi Evolution**, asistente de IA para desarrollo personal.
+Technical documentation for a production-grade backend system implementing LLM-based agent orchestration with hexagonal architecture.
 
----
+## System Overview
 
-## 📋 Descripción
+Node.js backend service (Express) implementing a request-driven AI orchestration layer. The system coordinates multiple LLM providers (OpenAI GPT-4o-mini, Google Gemini 2.0/2.5) with resource management, function-type based model selection, and token-cost optimization.
 
-Este backend centraliza toda la lógica crítica de negocio que anteriormente estaba expuesta en el frontend Flutter, incluyendo:
+**Core characteristics:**
+- Backend-driven architecture (API-first)
+- Hexagonal/Ports & Adapters pattern
+- Synchronous request-response flow
+- Multi-provider LLM abstraction
+- Dynamic model selection via policy layer
+- Usage-based resource metering (energy system)
 
-- ✅ Gestión de energía (moneda virtual del usuario)
-- ✅ Llamadas a APIs de IA (OpenAI GPT y Google Gemini) **protegidas server-side**
-- ✅ Validaciones de planes y límites
-- ✅ Sistema de trial de 48 horas
-- ✅ Integración con Stripe para suscripciones
-- ✅ Autenticación con Firebase Admin SDK
+## Architecture Layers
 
----
+### Domain Layer (`domain/`)
 
-## 🏗️ Arquitectura
+Pure business logic with zero external dependencies.
+
+**Entities:** `Energy.js`, `User.js`, `Plan.js`, `Subscription.js`, `Trial.js`
+- Immutable state validation functions
+- Pure predicates (e.g., `canConsumeEnergy(actual, required)`)
+
+**Policies:** `ModelSelectionPolicy.js`, `EnergyPolicy.js`, `PlanPolicy.js`
+- Function-type to model mapping (`MODEL_MAPPING`)
+- Deterministic model selection based on task characteristics
+- Configuration includes: model ID, temperature, max_tokens, forceJson flag
+
+**Use Cases:** `GenerateAIResponse.js`, `ConsumeEnergy.js`, `ValidatePlanAccess.js`
+- Orchestration logic for AI call lifecycle:
+  1. Pre-call energy validation
+  2. Model selection via policy
+  3. Provider invocation
+  4. Post-call energy deduction
+  5. Response normalization
+
+**Ports (Interfaces):** `IAIProvider.js`, `IEnergyRepository.js`, `IUserRepository.js`
+- Abstract contracts for infrastructure adapters
+- Dependency inversion boundary
+
+### Application Layer (`domain/use-cases/`)
+
+Coordinates domain entities and policies with infrastructure adapters. Implements transactional boundaries and error propagation.
+
+### Infrastructure Layer (`infrastructure/`)
+
+#### AI Adapters (`infrastructure/ai/`)
+
+Concrete implementations of `IAIProvider`:
+
+**GeminiAdapter** (`gemini/GeminiAdapter.js`):
+- Google Generative AI SDK integration
+- Token estimation: `text.length / 3.7`
+- Energy calculation: `ceil((response_tokens + prompt_tokens × 0.30) / 100)`
+- Message format conversion (system/user/assistant → Gemini parts)
+- Supports `responseMimeType: 'application/json'` for structured output
+
+**OpenAIAdapter** (`openai/OpenAIAdapter.js`):
+- OpenAI SDK integration
+- Accurate token counting via `completion.usage.total_tokens`
+- Energy consumption: **always 0** (GPT used only for JSON conversion tasks, not user-facing content generation)
+- Native `response_format: { type: 'json_object' }` support
+
+#### Persistence (`infrastructure/persistence/firestore/`)
+
+Firestore adapters implementing repository interfaces:
+- `FirestoreUserRepository`: User CRUD + subscription state
+- `FirestoreEnergyRepository`: Energy balance + consumption log
+- Firebase Admin SDK for server-side auth validation
+
+#### HTTP Layer (`infrastructure/http/`)
+
+**Controllers** (`controllers/AIController.js`):
+- HTTP adapter: `(req, res) → use case → (json response)`
+- Input validation (message format, function_type existence)
+- Error translation to HTTP status codes
+- No business logic
+
+**Routes** (`routes/ai.routes.js`):
+- Endpoint registration
+- Middleware chaining (auth → rate limit → validation → controller)
+
+**Middleware**:
+- `authenticate.js`: Firebase token validation
+- `rateLimiter.js`: Express-rate-limit (60 req/min for AI endpoints)
+- `errorHandler.js`: Global error mapper
+- `validateInputSize.js`: Request body size limits
+
+## AI Agent Flow
+
+### Request Entry Point
 
 ```
-stripe_backend/
-├── src/
-│   ├── config/           # Configuración (Firebase, Stripe, OpenAI, Gemini, Plans)
-│   ├── models/           # Modelos de datos (User, Energy, Trial, Subscription)
-│   ├── services/         # Lógica de negocio (energyService, aiService)
-│   ├── controllers/      # Controladores de endpoints
-│   ├── middleware/       # Middleware (auth, rate limiting, validaciones)
-│   ├── routes/           # Definición de rutas
-│   └── utils/            # Utilidades (logger, validator, errorTypes)
-├── server.js             # Entry point
-├── package.json
-├── .env                  # Variables de entorno (NO SUBIR A GIT)
-├── .env.example          # Template de variables de entorno
-└── README.md
-```
-
----
-
-## 🔧 Instalación
-
-### 1. Clonar repositorio
-```bash
-git clone <url-repo>
-cd stripe_backend
-```
-
-### 2. Instalar dependencias
-```bash
-npm install
-```
-
-### 3. Configurar variables de entorno
-
-Copia `.env.example` a `.env` y completa con tus valores:
-
-```bash
-cp .env.example .env
-```
-
-**Variables obligatorias:**
-- Firebase: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
-- Stripe: `STRIPE_SECRET_KEY_TEST`, `STRIPE_WEBHOOK_SECRET_TEST`, Price IDs
-- OpenAI: `OPENAI_API_KEY`
-- Gemini: `GEMINI_API_KEY`
-
-### 4. Iniciar servidor
-
-**Desarrollo (con auto-reload):**
-```bash
-npm run dev
-```
-
-**Producción:**
-```bash
-npm start
-```
-
-El servidor estará disponible en `http://localhost:3000`
-
----
-
-## 📡 Endpoints
-
-### **Autenticación**
-```
-POST   /api/auth/register        # Registrar nuevo usuario
-POST   /api/auth/login           # Login (requiere Firebase Auth token)
-```
-
-### **Usuario**
-```
-GET    /api/user/profile         # Obtener perfil
-PUT    /api/user/profile         # Actualizar perfil
-GET    /api/user/subscription    # Estado de suscripción
-DELETE /api/user/account         # Eliminar cuenta
-```
-
-### **Energía**
-```
-GET    /api/user/energy          # Obtener energía disponible
-POST   /api/user/energy/consume  # Consumir energía (validado server-side)
-POST   /api/user/trial/activate  # Activar trial de 48h
-GET    /api/user/trial/status    # Estado del trial
-```
-
-### **IA (OpenAI/Gemini)** - VERSIÓN CORREGIDA
-```
-POST   /api/ai/call                           # Llamada universal a OpenAI/Gemini (consume energía)
-POST   /api/ai/convert-json                   # Convertir texto a JSON (gpt-4o-mini)
-POST   /api/ai/generate-home-phrase           # Generar frase pantalla principal (gemini-2.0-flash)
-POST   /api/ai/generate-comment               # Generar comentario filosófico (gemini-2.5-flash)
-POST   /api/ai/generate-reprogramming-result  # Generar resultado reprogramación (gemini-2.5-pro)
-POST   /api/ai/generate-execution-summary     # Generar resumen ejecución diaria (gemini-2.5-flash)
-```
-
-### **Stripe**
-```
-POST   /api/stripe/create-checkout    # Crear sesión de pago
-POST   /api/stripe/portal-session     # Portal de gestión de suscripciones
-POST   /api/webhooks/stripe           # Webhook de Stripe (eventos de suscripción)
-```
-
----
-
-## 🤖 Endpoints de IA - Documentación Detallada
-
-### POST /api/ai/call
-Llamada universal a OpenAI o Gemini. Detecta automáticamente el proveedor según el modelo.
-
-**Request:**
-```json
+POST /api/ai/chat
 {
   "messages": [
-    {"role": "system", "content": "Eres un asistente útil"},
-    {"role": "user", "content": "Hola"}
+    {"role": "system", "content": "..."},
+    {"role": "user", "content": "..."}
   ],
-  "options": {
-    "model": "gemini-2.5-flash",  // o "gpt-4o-mini", "gemini-2.5-pro", etc.
-    "temperature": 0.7,
-    "maxTokens": 1500,
-    "forceJson": false
-  }
+  "function_type": "execution_summary_creative"
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "content": "Respuesta de la IA",
-  "model": "gemini-2.5-flash",
-  "tokensUsed": 150,
-  "energyConsumed": 2
-}
-```
+### Orchestration Logic
 
-### POST /api/ai/convert-json
-Convierte texto libre a JSON estructurado. Siempre usa **gpt-4o-mini**.
+**AIController → GenerateAIResponseWithFunctionType Use Case:**
 
-**Request:**
-```json
-{
-  "freeContent": "Quiero crear un hábito de leer 30 minutos por la mañana",
-  "targetSchema": {
-    "nombre": "string",
-    "duracion": "number",
-    "momento": "string"
-  },
-  "language": "es",
-  "functionName": "crear_habito"
-}
-```
+1. **Function Type Validation**
+   - Verify `function_type` exists in `MODEL_MAPPING`
+   - Fail fast with 400 if invalid
 
-**Response:**
-```json
-{
-  "success": true,
-  "result": {
-    "nombre": "Leer",
-    "duracion": 30,
-    "momento": "mañana"
-  }
-}
-```
+2. **Model Selection** (ModelSelectionPolicy)
+   - Map `function_type` → `{model, temperature, maxTokens, forceJson}`
+   - Examples:
+     - `home_phrase` → `gemini-2.0-flash`, temp=0.8, 100 tokens
+     - `execution_summary_creative` → `gemini-2.5-pro`, temp=0.7, 2000 tokens
+     - `json_conversion` → `gpt-4o-mini`, temp=0.0, forceJson=true
 
-### POST /api/ai/generate-home-phrase
-Genera frase motivadora para pantalla principal (≤25 palabras). Modelo: **gemini-2.0-flash**.
+3. **Pre-Call Energy Validation**
+   - `EnergyRepository.getEnergy(userId)`
+   - Assert `energy.actual > 0`
+   - Fail with `INSUFFICIENT_ENERGY` error if depleted
 
-**Request:**
-```json
-{
-  "userContext": "Usuario: Juan. Objetivo: Perder 5kg. Plan: Ejercicio diario.",
-  "language": "es"
-}
-```
+4. **Provider Invocation**
+   - Select adapter based on model prefix (`gemini-*` → GeminiAdapter, `gpt-*` → OpenAIAdapter)
+   - Provider transforms messages to native SDK format
+   - Execute blocking API call (no streaming)
+   - Parse response + extract token count
 
-**Response:**
-```json
-{
-  "success": true,
-  "phrase": "Juan, hoy es otro paso hacia tus 5kg menos. El ejercicio te espera."
-}
-```
+5. **Post-Call Energy Deduction**
+   - Calculate consumption based on provider formula
+   - Validate sufficient balance: `canConsumeEnergy(actual, required)`
+   - Atomic update: `updateEnergy(userId, {actual: new_value, consumoTotal: total})`
 
-### POST /api/ai/generate-comment
-Genera comentario filosófico breve (≤6 líneas). Modelo: **gemini-2.5-flash**.
+6. **Response Normalization**
+   - Standardized output: `{content, model, tokensUsed, energyConsumed}`
+   - Log consumption metrics
+   - Return to controller
 
-**Request:**
-```json
-{
-  "question": "¿Qué te impide alcanzar tu objetivo?",
-  "answer": "El miedo al fracaso",
-  "philosophyTone": "Stoico",
-  "language": "es"
-}
-```
+### Prompt Structure
 
-**Response:**
-```json
-{
-  "success": true,
-  "comment": "El miedo al fracaso es solo una proyección mental..."
-}
-```
+**Client responsibility:** Frontend constructs full prompt including:
+- System instructions
+- Context (user history, preferences)
+- Task-specific guidance
+- Output format requirements
 
-### POST /api/ai/generate-reprogramming-result
-Genera informe final de reprogramación (3-5 párrafos). Modelo: **gemini-2.5-pro**.
+**Backend responsibility:** Executes single-turn inference without prompt manipulation.
 
-**Request:**
-```json
-{
-  "steps": [
-    {
-      "question": "¿Qué te impide avanzar?",
-      "answer": "El miedo",
-      "comment": "Comentario filosófico previo"
-    }
-  ],
-  "reprogrammingType": "Creencias limitantes",
-  "language": "es"
-}
-```
+### Function Calling / Tool Use
 
-**Response:**
-```json
-{
-  "success": true,
-  "result": "Informe final de 3-5 párrafos analizando las respuestas..."
-}
-```
+Not currently implemented. System operates in completion-only mode. Potential extension points:
+- Define tools in domain policies
+- Parse structured function calls from model output
+- Execute tool logic in dedicated use cases
+- Feed results back to model in multi-turn flow
 
-### POST /api/ai/generate-execution-summary
-Genera resumen estructurado de ejecución diaria. Modelo: **gemini-2.5-flash**.
+### Output Validation & Normalization
 
-**Request:**
-```json
-{
-  "dailyPlan": {
-    "actividades": ["Ejercicio", "Leer", "Meditar"]
-  },
-  "activities": [
-    {"name": "Ejercicio", "completed": true},
-    {"name": "Leer", "completed": false}
-  ],
-  "notes": ["No tuve tiempo para leer"],
-  "language": "es"
-}
-```
+**Gemini:**
+- Text extraction: `result.response.text()`
+- JSON mode: Parse and validate schema externally (frontend responsibility)
 
-**Response:**
-```json
-{
-  "success": true,
-  "summary": {
-    "resumen": "Resumen general del día...",
-    "cumplimiento": 66,
-    "principales_logros": ["Completaste ejercicio"],
-    "desviaciones": [{"actividad": "Leer", "motivo": "Falta de tiempo"}],
-    "recomendaciones": ["Planifica tiempo específico para leer"]
-  }
-}
-```
+**OpenAI:**
+- Content: `completion.choices[0].message.content`
+- JSON mode: Built-in validation via `response_format`
 
----
+**Post-processing:**
+- No content filtering or transformation in backend
+- Token counts logged for cost analysis
+- Energy metrics persisted in `Energy.consumoTotal` field
 
-## 🔐 Autenticación
+## External LLM Integration
 
-Todos los endpoints protegidos requieren un **token de Firebase Auth** en el header:
+### Provider Abstraction
 
-```http
-Authorization: Bearer <firebase-id-token>
-```
-
-### Cómo obtener el token desde Flutter:
-```dart
-final user = FirebaseAuth.instance.currentUser;
-final token = await user?.getIdToken();
-
-// Llamada al backend
-final response = await http.get(
-  Uri.parse('https://tu-backend.com/api/user/profile'),
-  headers: {
-    'Authorization': 'Bearer $token',
-  },
-);
-```
-
----
-
-## ⚡ Sistema de Energía
-
-### Planes y Límites
-
-| Plan | Energía Diaria | Series Activas | Resúmenes Semanales | Precio |
-|------|---------------|----------------|---------------------|--------|
-| **Freemium** | 0 | 0 | 0 | Gratis |
-| **Trial (48h)** | 135 (recarga a las 24h) | Ilimitado | Ilimitado | Gratis |
-| **Mini** | 75 | 2 | 2 | 1.19 EUR/mes |
-| **Base** | 150 | 5 | 5 | 4.29 EUR/mes |
-| **Pro** | 300 | Ilimitado | Ilimitado | 10.99 EUR/mes |
-
-### Costos de Energía por Acción
+`IAIProvider` interface decouples domain logic from vendor SDKs:
 
 ```javascript
-CHAT_MESSAGE: 1
-HABIT_COMPLETE: 2
-PLAN_GENERATE: 3
-REPROGRAMMING_COMPLETE: 5
+async callAI(userId, messages, {model, temperature, maxTokens, forceJson})
+  → {content, model, tokensUsed, energyConsumed}
 ```
 
-### Trial de 48 Horas
+### Configuration Management
 
-- Se activa **una sola vez** por usuario
-- Proporciona **135 energía inicial**
-- Recarga **+135 energía después de 24 horas**
-- Expira automáticamente después de **48 horas**
-- Durante el trial, el usuario tiene capacidades equivalentes al plan **Pro**
+**Secrets:** `.env` file (not committed)
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
+- `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON path)
 
----
+**Model Registry:** Centralized in `ModelSelectionPolicy.js`
+- Adding new models: Extend `MODEL_MAPPING` object
+- Changing defaults: Update policy without touching adapters
 
-## 🎯 Migración desde Flutter
+### Error Handling
 
-Este backend migra la lógica que anteriormente estaba en:
+**Provider failures:**
+- Network errors: Propagate as 503 Service Unavailable
+- Rate limit (429): Caught and logged, return 429 to client
+- Invalid API key: Fatal error, crash on startup (fail-fast)
 
-| Servicio Flutter | Migrado a | Estado |
-|-----------------|-----------|--------|
-| `energy_service.dart` | `src/services/energyService.js` | ✅ Completado |
-| `ai_service.dart` | `src/services/aiService.js` | ✅ Completado (CORREGIDO 2025-12-26) |
-| `user_service.dart` | `src/models/User.js` | ✅ Completado |
-| `payment_service.dart` | `src/routes/stripe.routes.js` | ✅ Completado |
-| `plan_limits.dart` | `src/config/plans.js` | ✅ Completado |
-| Webhooks Stripe | `src/controllers/webhookController.js` | ✅ Completado |
+**Retry logic:** Not implemented (clients responsible for idempotent retries)
 
-**CORRECCIONES CRÍTICAS EN ai_service.dart (2025-12-26):**
-- ✅ Selección de modelo por tipo de función (NO por plan del usuario)
-- ✅ Consumo de energía para AMBOS proveedores (OpenAI y Gemini)
-- ✅ Cálculo correcto de energía Gemini: ceil((response + prompt×0.30) / 100)
-- ✅ Funciones específicas con modelos fijos (ver ANALISIS_AI_SERVICE.md)
+## Token Management & Cost Control
 
----
+### Token Accounting
 
-## 🔒 Seguridad
+**Gemini:**
+- Estimation-based: `tokens ≈ text.length / 3.7`
+- Logged for monitoring but not billed
 
-### ✅ Implementado
+**OpenAI:**
+- Exact count from API: `completion.usage.{prompt_tokens, completion_tokens, total_tokens}`
 
-- **Firebase Admin SDK**: Validación de tokens server-side
-- **Rate Limiting**: Límite de requests por minuto
-- **Helmet**: Headers de seguridad HTTP
-- **CORS**: Configuración restrictiva en producción
-- **Validaciones**: Todas las entradas validadas
-- **Claves API**: Nunca expuestas en frontend
+### Energy System (Internal Metering)
 
-### ⚠️ Recomendaciones
+**Rationale:** Abstract away actual LLM costs into user-facing "energy" units.
 
-- Rotar claves API periódicamente
-- Monitorear logs de Firebase y Stripe
-- Configurar alertas para uso anormal de energía
-- Revisar webhooks de Stripe regularmente
+**Calculation:**
+- Gemini: `ceil((response_tokens + prompt_tokens × 0.30) / 100)`
+- OpenAI: 0 (reserved for non-content tasks like JSON conversion)
 
----
+**Replenishment:**
+- Daily recharge to plan-defined maximum
+- Subscription tier determines `maxEnergy` value
 
-## 🧪 Testing
+**Enforcement:**
+- Pre-call validation prevents overages
+- Atomic decrements prevent race conditions
 
-**Pendiente**: Implementar tests automatizados
+### Latency Considerations
 
-```bash
-# Cuando se implementen
-npm test
-```
+**Blocking calls:** All LLM requests are synchronous (async/await)
+- Typical p50 latency: 800ms - 2s
+- Timeout: Express default (2 min)
 
----
+**Optimization strategies:**
+- Model selection prioritizes `flash` variants for low-latency tasks
+- `maxTokens` limits prevent runaway generation
+- Rate limiting prevents cascade failures under load
 
-## 📊 Monitoreo
+**Streaming:** Not implemented (would require SSE or WebSocket infrastructure)
 
-### Logs
+## Error Handling & Observability
 
-El servidor usa un sistema de logging centralizado en `src/utils/logger.js`:
+### Error Propagation
 
+1. **Domain errors:** Throw typed errors (`ValidationError`, `InsufficientEnergyError`)
+2. **Use case layer:** Catch domain errors, add context, rethrow
+3. **Controller layer:** Catch all, map to HTTP status:
+   - `ValidationError` → 400
+   - `InsufficientEnergyError` → 402 (Payment Required)
+   - `ProviderError` → 503
+   - Unknown → 500
+4. **Global middleware:** `errorHandler.js` logs stack, sanitizes response
+
+### Logging
+
+**Console-based logging** (`shared/logger.js`):
+- Energy transactions: `[Gemini Energy] Prompt: 120t, Respuesta: 450t → Energía: 6`
+- Model invocations: `[Gemini] Llamando modelo: gemini-2.5-pro`
+- Errors: Full stack traces in development mode
+
+**Production logging:**
+- Integrate structured logger (Winston, Pino) at infrastructure boundary
+- Log correlation IDs (e.g., `userId`, `requestId`)
+- Metrics export to monitoring system (Datadog, CloudWatch)
+
+### AI Behavior Monitoring
+
+**Metrics to track:**
+- Tokens/request distribution by `function_type`
+- Energy consumption trends (detect runaway generation)
+- Error rates by provider
+- Latency percentiles by model
+
+**Anomaly detection:**
+- Alert on sudden energy consumption spikes
+- Monitor token/energy ratio for drift (indicates estimation error)
+- Track provider error rates (API stability)
+
+**Content quality:**
+- Not measured backend-side (requires human eval or LLM-as-judge)
+- Frontend can log user feedback (thumbs up/down) for offline analysis
+
+## Testing Strategy
+
+### Unit Tests
+
+**Domain layer:**
+- Pure function tests: `canConsumeEnergy(10, 5) === true`
+- Policy validation: `getModelConfig('invalid_type')` throws error
+- Entity state transitions
+
+**Mocking:**
+- Use cases: Mock repository interfaces
+- Controllers: Mock use cases
+- No mocking of domain logic (pure functions need no mocks)
+
+### Integration Tests
+
+**AI provider adapters:**
+- Use real API keys in CI with small requests
+- Verify response structure contract
+- Test error handling (invalid keys, malformed requests)
+
+**Energy flow:**
+- Seed test user with known energy balance
+- Execute AI call
+- Assert energy decreased by expected amount
+- Verify Firestore state matches
+
+**End-to-end:**
+- Spin up server in test mode
+- Send `POST /api/ai/chat` with known input
+- Assert 200 response with valid structure
+- Verify side effects (energy deduction, logs)
+
+### Test Doubles
+
+**Provider mocking:**
 ```javascript
-import { success, error, log, warn } from './src/utils/logger.js';
-
-success('Usuario registrado exitosamente');
-error('Error conectando a Firestore', err);
+class MockAIProvider extends IAIProvider {
+  async callAI(userId, messages, options) {
+    return {
+      content: 'mocked response',
+      model: options.model,
+      tokensUsed: 100,
+      energyConsumed: 1
+    };
+  }
+}
 ```
 
-### Health Check
+**Repository stubs:**
+- In-memory implementations of `IEnergyRepository`, `IUserRepository`
+- Avoid Firestore emulator for faster unit tests
 
-```bash
-curl http://localhost:3000/health
-```
+## Deployment Context
 
----
+**Target environment:** Cloud container (Docker) or serverless (Cloud Run, Lambda)
 
-## 🚀 Deployment
+**Configuration:**
+- Environment variables for secrets
+- Firebase Admin SDK initialized via service account JSON
+- No local state (stateless for horizontal scaling)
 
-### Render.com (Recomendado)
+**Health checks:** `GET /health` returns service status + version
 
-1. Conecta tu repositorio Git
-2. Configura las variables de entorno en el dashboard
-3. Despliega automáticamente desde `main` branch
+**Scaling considerations:**
+- Stateless design enables horizontal scaling
+- Firebase handles concurrent read/write locking
+- LLM API rate limits may require request queuing under high load
 
-### Variables de entorno en Render:
-- Copia todas las variables de `.env.example`
-- Asegúrate de usar claves **LIVE** de Stripe en producción
-- Cambia `STRIPE_MODE` a `live`
+**Cloud-agnostic:**
+- No vendor lock-in (Express + Firebase Admin SDK portable)
+- Can deploy to AWS, GCP, Azure with minimal changes
+- Database swap: Replace Firestore adapters with MongoDB/PostgreSQL implementations
 
----
+## Key Design Decisions
 
-## 📚 Documentación Adicional
+1. **Hexagonal architecture:** Enables testing without external dependencies, clean domain logic
+2. **Backend as thin orchestrator:** Frontend owns prompt engineering, multi-turn logic
+3. **Energy abstraction:** Decouples LLM costs from billing model
+4. **Synchronous flow:** Simpler reasoning, acceptable latency for current scale
+5. **Policy-based model selection:** Centralized control, easy A/B testing
+6. **Provider parity:** Both adapters implement same interface (swap without code changes)
+7. **No streaming:** Reduces complexity, sufficient for current use cases
 
-- [Análisis de Migración](./ANALISIS_MIGRACION.md) - Informe completo de la migración desde Flutter
-- [Stripe Webhooks](https://stripe.com/docs/webhooks) - Documentación oficial de Stripe
-- [Firebase Admin SDK](https://firebase.google.com/docs/admin/setup) - Configuración de Firebase
-- [OpenAI API](https://platform.openai.com/docs/api-reference) - Referencia de OpenAI
-- [Google Gemini](https://ai.google.dev/docs) - Documentación de Gemini
+## Dependencies
 
----
-
-## 🛠️ Stack Tecnológico
-
-- **Runtime**: Node.js 18+
-- **Framework**: Express.js
-- **Base de datos**: Firebase Firestore
-- **Autenticación**: Firebase Auth
-- **Pagos**: Stripe
-- **IA**: OpenAI GPT + Google Gemini
-- **Seguridad**: Helmet, CORS, Express Rate Limit
-
----
-
-## 👥 Contribución
-
-Este proyecto está en desarrollo activo. Para contribuir:
-
-1. Crea un branch desde `main`
-2. Implementa tu feature/fix
-3. Crea un Pull Request con descripción detallada
-
----
-
-## 📝 Licencia
-
-UNLICENSED - Uso interno de Arvi Team
-
----
-
-## 📞 Soporte
-
-Para reportar issues o hacer preguntas:
-- Crea un issue en el repositorio
-- Contacta al equipo de desarrollo
-
----
-
-**Desarrollado con ❤️ por el equipo de Arvi Evolution**
-
-*Backend migrado y mejorado desde el frontend Flutter original*
-*Fecha de migración: 2025-12-26*
+- Runtime: Node.js 18+
+- Framework: Express 4.19
+- LLM SDKs: OpenAI 4.20, @google/generative-ai 0.1
+- Database: Firebase Admin SDK 13.6
+- Security: Helmet, express-rate-limit
+- Payment processing: Stripe 16.6 (separate webhook flow)
