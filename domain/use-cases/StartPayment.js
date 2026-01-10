@@ -25,7 +25,6 @@
 
 import { PLANS } from '../policies/PlanPolicy.js';
 import { stripe } from '../../infrastructure/payment/stripe/StripeConfig.js';
-import { ValidationError } from '../../shared/errorTypes.js';
 
 /**
  * Iniciar proceso de pago
