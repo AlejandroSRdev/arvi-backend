@@ -17,7 +17,6 @@
  */
 
 import { hasFeatureAccess } from '../../../domain/policies/PlanPolicy.js';
-import { error as logError } from '../../../shared/logger.js';
 
 // Dependency injection - será inyectada en runtime
 let userRepository;

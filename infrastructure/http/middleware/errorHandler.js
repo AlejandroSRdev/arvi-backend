@@ -10,8 +10,6 @@
  * - Logging de errores
  */
 
-import { log, error as logError } from '../../../shared/logger.js';
-
 /**
  * Middleware global de manejo de errores
  * MIGRADO DESDE: src/middleware/errorHandler.js:errorHandler (líneas 9-22)

@@ -33,8 +33,6 @@
  * - Responder con errores HTTP apropiados
  */
 
-import { error as logError } from '../../../shared/logger.js';
-
 /**
  * Calcula el tamaño aproximado en bytes de un objeto JSON
  * MIGRADO DESDE: src/middleware/validateInputSize.js:getBodySize (líneas 34-36)

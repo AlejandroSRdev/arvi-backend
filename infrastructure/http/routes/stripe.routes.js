@@ -11,8 +11,6 @@
 import express from 'express';
 import { stripe } from '../../payment/stripe/StripeConfig.js';
 import { authenticate } from '../middleware/authenticate.js';
-import { ValidationError } from '../../../shared/errorTypes.js';
-import { success, error as logError } from '../../../shared/logger.js';
 import { PLANS } from '../../../domain/policies/PlanPolicy.js';
 
 const router = express.Router();

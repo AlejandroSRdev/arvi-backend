@@ -10,7 +10,6 @@
  */
 
 import rateLimit from 'express-rate-limit';
-import { RATE_LIMITS } from '../../../shared/constants.js';
 
 /**
  * Rate limiter para endpoints de IA
