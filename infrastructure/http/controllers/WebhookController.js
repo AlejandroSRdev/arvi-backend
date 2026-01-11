@@ -26,7 +26,7 @@ import {
   processSubscriptionDeleted,
 } from '../../../application/use-cases/ProcessSubscription.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { error as logError, success } from '../../logger/logger.js';
+import { logger } from '../../logger/logger.js';
 
 // Dependency injection
 let userRepository;
@@ -51,7 +51,7 @@ export async function stripeWebhook(req, res) {
     // Construir evento verificando la firma
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    logError(`❌ Webhook signature verification failed: ${err.message}`);
+    logger.error(`❌ Webhook signature verification failed: ${err.message}`);
     return res.status(HTTP_STATUS.BAD_REQUEST).send(`Webhook Error: ${err.message}`);
   }
 
@@ -90,7 +90,7 @@ export async function stripeWebhook(req, res) {
 
     res.status(HTTP_STATUS.OK).json({ received: true });
   } catch (err) {
-    logError('Error procesando webhook:', err);
+    logger.error('Error procesando webhook:', err);
     // IMPORTANTE: Siempre responder 200 si la firma es válida
     res.status(HTTP_STATUS.OK).json({ received: true, error: err.message });
   }
@@ -105,7 +105,7 @@ async function handleCheckoutCompleted(event) {
   const { userId, plan } = metadata;
 
   if (!userId || !plan) {
-    logError('Webhook sin metadata de userId o plan');
+    logger.error('Webhook sin metadata de userId o plan');
     return;
   }
 
@@ -125,7 +125,7 @@ async function handleCheckoutCompleted(event) {
     { userRepository }
   );
 
-  success(`Suscripción activada: ${userId} → ${plan}`);
+  logger.success(`Suscripción activada: ${userId} → ${plan}`);
 }
 
 /**
@@ -158,13 +158,13 @@ async function handleSubscriptionUpdated(event) {
     if (cancelAtPeriodEnd) {
       console.log(`⏳ [Webhook] Cancelación programada para fin de periodo`);
       console.log(`   → Acceso hasta: ${new Date(currentPeriodEnd * 1000).toISOString()}`);
-      success(`Cancelación programada: acceso hasta ${new Date(currentPeriodEnd * 1000).toISOString()}`);
+      logger.success(`Cancelación programada: acceso hasta ${new Date(currentPeriodEnd * 1000).toISOString()}`);
     } else {
       console.log(`📊 [Webhook] Actualizando estado de suscripción`);
-      success(`Suscripción actualizada → ${status}`);
+      logger.success(`Suscripción actualizada → ${status}`);
     }
   } catch (err) {
-    logError(`Error procesando subscription.updated: ${err.message}`);
+    logger.error(`Error procesando subscription.updated: ${err.message}`);
   }
 }
 
@@ -183,9 +183,9 @@ async function handleSubscriptionDeleted(event) {
   try {
     await processSubscriptionDeleted({ customerId }, { userRepository });
 
-    success(`Suscripción cancelada definitivamente → revertido a freemium`);
+    logger.success(`Suscripción cancelada definitivamente → revertido a freemium`);
   } catch (err) {
-    logError(`Error procesando subscription.deleted: ${err.message}`);
+    logger.error(`Error procesando subscription.deleted: ${err.message}`);
   }
 }
 

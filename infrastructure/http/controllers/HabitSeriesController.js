@@ -19,7 +19,7 @@ import { createHabitSeries } from '../../../application/use-cases/createHabitSer
 import { deleteHabitSeries } from '../../../application/use-cases/deleteHabitSeries.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
-import { error as logError, success } from '../../logger/logger.js';
+import { logger } from '../../logger/logger.js';
 
 let userRepository;
 let habitSeriesRepository;
@@ -43,16 +43,16 @@ export async function createHabitSeriesEndpoint(req, res) {
     if (!result.allowed) {
       const statusCode = result.reason === 'LIMIT_REACHED' ? 429 : HTTP_STATUS.FORBIDDEN;
 
-      logError(`[Habit Series] Validación fallida para ${userId}: ${result.reason}`);
+      logger.error(`[Habit Series] Validación fallida para ${userId}: ${result.reason}`);
 
       return res.status(statusCode).json(result);
     }
 
-    success(`[Habit Series] Validación exitosa para ${userId}`);
+    logger.success(`[Habit Series] Validación exitosa para ${userId}`);
 
     res.status(HTTP_STATUS.OK).json(result);
   } catch (err) {
-    logError('[Habit Series] Error:', err);
+    logger.error('[Habit Series] Error:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -70,7 +70,7 @@ export async function deleteHabitSeriesEndpoint(req, res) {
 
     await deleteHabitSeries({ userId, seriesId, habitSeriesRepository, userRepository });
 
-    success(`[Habit Series] Delete exitoso para ${userId}, seriesId: ${seriesId}`);
+    logger.success(`[Habit Series] Delete exitoso para ${userId}, seriesId: ${seriesId}`);
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
@@ -78,7 +78,7 @@ export async function deleteHabitSeriesEndpoint(req, res) {
       deletedSeriesId: seriesId,
     });
   } catch (err) {
-    logError('[Habit Series] Error en delete:', err);
+    logger.error('[Habit Series] Error en delete:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json({

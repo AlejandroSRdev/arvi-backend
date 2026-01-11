@@ -22,7 +22,7 @@ import { getUserProfile, updateUserProfile, deleteUserAccount } from '../../../a
 import { getSubscriptionStatus } from '../../../application/use-cases/GetSubscriptionStatus.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
-import { error as logError, success } from '../../logger/logger.js';
+import { logger } from '../../logger/logger.js';
 
 // Dependency injection
 let userRepository;
@@ -46,7 +46,7 @@ export async function getProfile(req, res) {
       user: user,
     });
   } catch (err) {
-    logError('Error en getProfile:', err);
+    logger.error('Error en getProfile:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -64,7 +64,7 @@ export async function updateProfile(req, res) {
 
     const updatedUser = await updateUserProfile(userId, { assistant }, { userRepository });
 
-    success(`Perfil actualizado: ${userId}`);
+    logger.success(`Perfil actualizado: ${userId}`);
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
@@ -72,7 +72,7 @@ export async function updateProfile(req, res) {
       user: updatedUser,
     });
   } catch (err) {
-    logError('Error en updateProfile:', err);
+    logger.error('Error en updateProfile:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -94,7 +94,7 @@ export async function getSubscription(req, res) {
       subscription,
     });
   } catch (err) {
-    logError('Error en getSubscription:', err);
+    logger.error('Error en getSubscription:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -111,14 +111,14 @@ export async function deleteAccount(req, res) {
 
     await deleteUserAccount(userId, { userRepository });
 
-    success(`Cuenta eliminada: ${userId}`);
+    logger.success(`Cuenta eliminada: ${userId}`);
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
       message: 'Cuenta eliminada correctamente',
     });
   } catch (err) {
-    logError('Error en deleteAccount:', err);
+    logger.error('Error en deleteAccount:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);

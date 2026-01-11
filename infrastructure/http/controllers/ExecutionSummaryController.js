@@ -17,7 +17,7 @@
 import { generateExecutionSummary } from '../../../application/use-cases/GenerateExecutionSummary.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
-import { error as logError, success } from '../../logger/logger.js';
+import { logger } from '../../logger/logger.js';
 
 let userRepository;
 
@@ -39,16 +39,16 @@ export async function generateExecutionSummaryEndpoint(req, res) {
     if (!result.allowed) {
       const statusCode = result.reason === 'LIMIT_REACHED' ? 429 : HTTP_STATUS.FORBIDDEN;
 
-      logError(`[Execution Summary] Validación fallida para ${userId}: ${result.reason}`);
+      logger.error(`[Execution Summary] Validación fallida para ${userId}: ${result.reason}`);
 
       return res.status(statusCode).json(result);
     }
 
-    success(`[Execution Summary] Validación exitosa para ${userId}`);
+    logger.success(`[Execution Summary] Validación exitosa para ${userId}`);
 
     res.status(HTTP_STATUS.OK).json(result);
   } catch (err) {
-    logError('[Execution Summary] Error:', err);
+    logger.error('[Execution Summary] Error:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);

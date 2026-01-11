@@ -27,7 +27,7 @@ import { startPayment } from '../../../application/use-cases/StartPayment.js';
 import { stripe } from '../../payment/stripe/StripeConfig.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
-import { error as logError, success } from '../../logger/logger.js';
+import { logger } from '../../logger/logger.js';
 
 /**
  * POST /api/payments/start
@@ -48,7 +48,7 @@ export async function start(req, res) {
     });
 
     // Log estructurado para auditoría
-    success('Pago iniciado', {
+    logger.success('Pago iniciado', {
       action: 'payment_start',
       userId,
       planId,
@@ -62,7 +62,7 @@ export async function start(req, res) {
       checkoutUrl: result.checkoutUrl,
     });
   } catch (err) {
-    logError('Error iniciando pago:', err);
+    logger.error('Error iniciando pago:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json({

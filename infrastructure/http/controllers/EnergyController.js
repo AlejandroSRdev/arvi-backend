@@ -22,7 +22,7 @@ import { activateTrial } from '../../../application/use-cases/ActivateTrial.js';
 import { getTrialStatus } from '../../../application/use-cases/GetTrialStatus.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
-import { error as logError, success } from '../../logger/logger.js';
+import { logger } from '../../logger/logger.js';
 
 // Dependency injection
 let energyRepository;
@@ -48,7 +48,7 @@ export async function getEnergy(req, res) {
       energy,
     });
   } catch (err) {
-    logError('Error en getEnergy:', err);
+    logger.error('Error en getEnergy:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -65,7 +65,7 @@ export async function activateTrialEndpoint(req, res) {
 
     const trialData = await activateTrial(userId, { userRepository });
 
-    success(`Trial activado: ${userId}`);
+    logger.success(`Trial activado: ${userId}`);
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
@@ -73,7 +73,7 @@ export async function activateTrialEndpoint(req, res) {
       trial: trialData,
     });
   } catch (err) {
-    logError('Error en activateTrial:', err);
+    logger.error('Error en activateTrial:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -95,7 +95,7 @@ export async function getTrialStatusEndpoint(req, res) {
       trial: status,
     });
   } catch (err) {
-    logError('Error en getTrialStatus:', err);
+    logger.error('Error en getTrialStatus:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);

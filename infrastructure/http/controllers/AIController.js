@@ -20,7 +20,7 @@ import { validateMessages } from '../../../domain/validators/InputValidator.js';
 import { isValidFunctionType } from '../../../domain/policies/ModelSelectionPolicy.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
-import { error as logError, success } from '../../logger/logger.js';
+import { logger } from '../../logger/logger.js';
 
 // Dependency injection
 let aiProvider;
@@ -68,7 +68,7 @@ export async function chatEndpoint(req, res) {
       { aiProvider, energyRepository, habitSeriesRepository }
     );
 
-    success(`[AI Chat] Completado para ${userId} - Tipo: ${function_type}, Modelo: ${response.model}, Energía: ${response.energyConsumed}`);
+    logger.success(`[AI Chat] Completado para ${userId} - Tipo: ${function_type}, Modelo: ${response.model}, Energía: ${response.energyConsumed}`);
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
@@ -78,7 +78,7 @@ export async function chatEndpoint(req, res) {
       energyConsumed: response.energyConsumed,
     });
   } catch (err) {
-    logError('[AI Chat] Error:', err);
+    logger.error('[AI Chat] Error:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);

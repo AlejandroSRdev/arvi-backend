@@ -21,7 +21,7 @@ import { updateLastLogin } from '../../../application/use-cases/ManageUser.js';
 import { validateEmail } from '../../../domain/validators/InputValidator.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
-import { error as logError, success } from '../../logger/logger.js';
+import { logger } from '../../logger/logger.js';
 
 // Dependency injection
 let userRepository;
@@ -53,7 +53,7 @@ export async function register(req, res) {
 
     const newUser = await createUser(userId, { email }, { userRepository });
 
-    success(`Usuario registrado: ${userId}`);
+    logger.success(`Usuario registrado: ${userId}`);
 
     res.status(HTTP_STATUS.CREATED).json({
       success: true,
@@ -65,7 +65,7 @@ export async function register(req, res) {
       },
     });
   } catch (err) {
-    logError('Error en register:', err);
+    logger.error('Error en register:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -88,7 +88,7 @@ export async function login(req, res) {
 
     await updateLastLogin(userId, { userRepository });
 
-    success(`Login exitoso: ${userId}`);
+    logger.success(`Login exitoso: ${userId}`);
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
@@ -96,7 +96,7 @@ export async function login(req, res) {
       userId,
     });
   } catch (err) {
-    logError('Error en login:', err);
+    logger.error('Error en login:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
