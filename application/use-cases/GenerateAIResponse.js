@@ -26,6 +26,8 @@
 import { getModelConfig } from '../policies/ModelSelectionPolicy.js';
 import { canConsumeEnergy } from '../entities/Energy.js';
 import { isHabitSeriesFinal } from '../policies/HabitSeriesPolicy.js';
+import { ValidationError } from '../errors/index.js';
+import { InsufficientEnergyError } from '../../domain/errors/index.js';
 
 /**
  * Generar respuesta de IA con consumo de energía
@@ -43,7 +45,7 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
   const { aiProvider, energyRepository } = deps;
 
   if (!aiProvider || !energyRepository) {
-    throw new Error('Dependencies required: aiProvider, energyRepository');
+    throw new ValidationError('Dependencies required: aiProvider, energyRepository');
   }
 
   const {
@@ -57,7 +59,7 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
   const energyData = await energyRepository.getEnergy(userId);
 
   if (!energyData || energyData.actual <= 0) {
-    throw new Error('INSUFFICIENT_ENERGY');
+    throw new InsufficientEnergyError(1, energyData?.actual || 0);
   }
 
   // 2. LLAMAR A IA VÍA PORT
@@ -72,7 +74,7 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
   if (response.energyConsumed > 0) {
     // Validar que tenga suficiente energía (función pura de entity)
     if (!canConsumeEnergy(energyData.actual, response.energyConsumed)) {
-      throw new Error('INSUFFICIENT_ENERGY');
+      throw new InsufficientEnergyError(response.energyConsumed, energyData.actual);
     }
 
     // Calcular nueva energía aquí (NO en el repo)
@@ -114,7 +116,7 @@ export async function generateAIResponseWithFunctionType(userId, messages, funct
   // DECISIÓN DE DOMINIO: persistir serie final automáticamente
   if (isHabitSeriesFinal(functionType)) {
     if (!habitSeriesRepository) {
-      throw new Error('HabitSeriesRepository not provided');
+      throw new ValidationError('HabitSeriesRepository not provided');
     }
 
     await habitSeriesRepository.createFromAI(userId, response.content);

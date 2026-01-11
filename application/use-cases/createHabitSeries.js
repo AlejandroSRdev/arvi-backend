@@ -23,6 +23,7 @@
  */
 
 import { validateFeatureAccess, validateActiveSeriesLimit } from './ValidatePlanAccess.js';
+import { ValidationError } from '../errors/index.js';
 
 /**
  * Validar si el usuario puede crear una nueva serie de hábitos
@@ -37,7 +38,7 @@ export async function createHabitSeries(userId, payload, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const featureAccess = await validateFeatureAccess(userId, 'habits.series.create', deps);

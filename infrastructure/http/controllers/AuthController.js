@@ -12,15 +12,18 @@
  * - NO contiene lógica de negocio
  *
  * LÓGICA MOVIDA A:
- * - domain/use-cases/CreateUser.js (líneas 31-36 del original)
- * - domain/use-cases/ManageUser.js:updateLastLogin (línea 68 del original)
+ * - application/use-cases/CreateUser.js
+ * - application/use-cases/ManageUser.js:updateLastLogin
  */
 
-import { createUser } from '../../../domain/use-cases/CreateUser.js';
-import { updateLastLogin } from '../../../domain/use-cases/ManageUser.js';
+import { createUser } from '../../../application/use-cases/CreateUser.js';
+import { updateLastLogin } from '../../../application/use-cases/ManageUser.js';
 import { validateEmail } from '../../../domain/validators/InputValidator.js';
+import { HTTP_STATUS } from '../httpStatus.js';
+import { mapErrorToHttp } from '../../errorMapper.js';
+import { error as logError, success } from '../../../utils/logger.js';
 
-// Dependency injection - estas serán inyectadas en runtime
+// Dependency injection
 let userRepository;
 
 export function setDependencies(deps) {
@@ -30,31 +33,29 @@ export function setDependencies(deps) {
 /**
  * POST /api/auth/register
  * Registrar nuevo usuario
- *
- * COMPORTAMIENTO ORIGINAL: src/controllers/authController.js:17-53
  */
-export async function register(req, res, next) {
+export async function register(req, res) {
   try {
     const { email, userId } = req.body;
 
-    // EXTRACCIÓN EXACTA: src/controllers/authController.js:22-28
     // Validaciones HTTP
     if (!email || !userId) {
-      throw new ValidationError('Email y userId son requeridos');
+      const err = new Error('Email y userId son requeridos');
+      err.code = 'VALIDATION_ERROR';
+      throw err;
     }
 
     if (!validateEmail(email)) {
-      throw new ValidationError('Email inválido');
+      const err = new Error('Email inválido');
+      err.code = 'VALIDATION_ERROR';
+      throw err;
     }
 
-    // DELEGACIÓN A USE CASE (reemplaza líneas 31-36 del original)
     const newUser = await createUser(userId, { email }, { userRepository });
 
-    // EXTRACCIÓN EXACTA: src/controllers/authController.js:38
     success(`Usuario registrado: ${userId}`);
 
-    // EXTRACCIÓN EXACTA: src/controllers/authController.js:40-48
-    res.status(201).json({
+    res.status(HTTP_STATUS.CREATED).json({
       success: true,
       message: 'Usuario registrado correctamente',
       user: {
@@ -64,43 +65,41 @@ export async function register(req, res, next) {
       },
     });
   } catch (err) {
-    // EXTRACCIÓN EXACTA: src/controllers/authController.js:50-51
     logError('Error en register:', err);
-    next(err);
+
+    const httpError = mapErrorToHttp(err);
+    res.status(httpError.status).json(httpError.body);
   }
 }
 
 /**
  * POST /api/auth/login
  * Actualizar último login
- *
- * COMPORTAMIENTO ORIGINAL: src/controllers/authController.js:59-81
  */
-export async function login(req, res, next) {
+export async function login(req, res) {
   try {
     const userId = req.user?.uid;
 
-    // EXTRACCIÓN EXACTA: src/controllers/authController.js:63-65
     if (!userId) {
-      throw new ValidationError('Usuario no autenticado');
+      const err = new Error('Usuario no autenticado');
+      err.code = 'AUTHENTICATION_ERROR';
+      throw err;
     }
 
-    // DELEGACIÓN A USE CASE (reemplaza línea 68 del original)
     await updateLastLogin(userId, { userRepository });
 
-    // EXTRACCIÓN EXACTA: src/controllers/authController.js:70
     success(`Login exitoso: ${userId}`);
 
-    // EXTRACCIÓN EXACTA: src/controllers/authController.js:72-76
-    res.json({
+    res.status(HTTP_STATUS.OK).json({
       success: true,
       message: 'Login exitoso',
       userId,
     });
   } catch (err) {
-    // EXTRACCIÓN EXACTA: src/controllers/authController.js:78-79
     logError('Error en login:', err);
-    next(err);
+
+    const httpError = mapErrorToHttp(err);
+    res.status(httpError.status).json(httpError.body);
   }
 }
 

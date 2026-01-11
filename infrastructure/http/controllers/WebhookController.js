@@ -14,34 +14,33 @@
  * - NO contiene lógica de negocio
  *
  * LÓGICA MOVIDA A:
- * - domain/use-cases/ProcessSubscription.js:processCheckoutCompleted (líneas 79-106 del original)
- * - domain/use-cases/ProcessSubscription.js:processSubscriptionUpdated (líneas 112-153 del original)
- * - domain/use-cases/ProcessSubscription.js:processSubscriptionDeleted (líneas 160-186 del original)
+ * - application/use-cases/ProcessSubscription.js:processCheckoutCompleted
+ * - application/use-cases/ProcessSubscription.js:processSubscriptionUpdated
+ * - application/use-cases/ProcessSubscription.js:processSubscriptionDeleted
  */
 
-import { stripe, webhookSecret } from '../../../infrastructure/payment/stripe/StripeConfig.js';
+import { stripe, webhookSecret } from '../../payment/stripe/StripeConfig.js';
 import {
   processCheckoutCompleted,
   processSubscriptionUpdated,
   processSubscriptionDeleted,
-} from '../../../domain/use-cases/ProcessSubscription.js';
+} from '../../../application/use-cases/ProcessSubscription.js';
+import { HTTP_STATUS } from '../httpStatus.js';
+import { error as logError, success } from '../../../utils/logger.js';
 
-// Dependency injection - estas serán inyectadas en runtime
+// Dependency injection
 let userRepository;
 
 export function setDependencies(deps) {
   userRepository = deps.userRepository;
 }
 
-// EXTRACCIÓN EXACTA: src/controllers/webhookController.js:16
 // Cache para eventos procesados (idempotencia simple en memoria)
 const processedEvents = new Set();
 
 /**
  * POST /api/webhooks/stripe
  * Webhook de Stripe para confirmaciones de pago
- *
- * COMPORTAMIENTO ORIGINAL: src/controllers/webhookController.js:22-74
  */
 export async function stripeWebhook(req, res) {
   const sig = req.headers['stripe-signature'];
@@ -49,27 +48,23 @@ export async function stripeWebhook(req, res) {
   let event;
 
   try {
-    // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:28-33
     // Construir evento verificando la firma
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
     logError(`❌ Webhook signature verification failed: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    return res.status(HTTP_STATUS.BAD_REQUEST).send(`Webhook Error: ${err.message}`);
   }
 
-  // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:35-39
   // Idempotencia: verificar si ya procesamos este evento
   if (processedEvents.has(event.id)) {
     console.log(`⚠️ Evento duplicado ignorado: ${event.id}`);
-    return res.json({ received: true, duplicate: true });
+    return res.status(HTTP_STATUS.OK).json({ received: true, duplicate: true });
   }
 
   // Manejar el evento
   try {
-    // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:43
     console.log(`📨 [Webhook] Recibido: ${event.type} (${event.id})`);
 
-    // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:45-60
     switch (event.type) {
       case 'checkout.session.completed':
         await handleCheckoutCompleted(event);
@@ -87,49 +82,39 @@ export async function stripeWebhook(req, res) {
         console.log(`⚠️ Unhandled event type: ${event.type}`);
     }
 
-    // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:62-66
     // Marcar evento como procesado
     processedEvents.add(event.id);
 
     // Limpiar cache después de 24h (evitar memoria infinita)
     setTimeout(() => processedEvents.delete(event.id), 24 * 60 * 60 * 1000);
 
-    // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:68
-    res.json({ received: true });
+    res.status(HTTP_STATUS.OK).json({ received: true });
   } catch (err) {
-    // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:70-72
     logError('Error procesando webhook:', err);
     // IMPORTANTE: Siempre responder 200 si la firma es válida
-    res.status(200).json({ received: true, error: err.message });
+    res.status(HTTP_STATUS.OK).json({ received: true, error: err.message });
   }
 }
 
 /**
  * Manejar checkout completado (pago exitoso)
- *
- * DELEGACIÓN: domain/use-cases/ProcessSubscription.js:processCheckoutCompleted
- * COMPORTAMIENTO ORIGINAL: src/controllers/webhookController.js:79-106
  */
 async function handleCheckoutCompleted(event) {
-  // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:80-82
   const session = event.data.object;
   const { metadata, customer, subscription } = session;
   const { userId, plan } = metadata;
 
-  // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:84-87
   if (!userId || !plan) {
     logError('Webhook sin metadata de userId o plan');
     return;
   }
 
-  // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:89-93
   console.log(`✅ [Webhook] checkout.session.completed`);
   console.log(`   → Event ID: ${event.id}`);
   console.log(`   → User ID: ${userId}`);
   console.log(`   → Plan: ${plan}`);
   console.log(`   → Customer: ${customer}`);
 
-  // DELEGACIÓN A USE CASE (reemplaza líneas 95-105 del original)
   await processCheckoutCompleted(
     {
       userId,
@@ -145,26 +130,20 @@ async function handleCheckoutCompleted(event) {
 
 /**
  * Manejar actualización de suscripción
- *
- * DELEGACIÓN: domain/use-cases/ProcessSubscription.js:processSubscriptionUpdated
- * COMPORTAMIENTO ORIGINAL: src/controllers/webhookController.js:112-153
  */
 async function handleSubscriptionUpdated(event) {
-  // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:113-117
   const subscription = event.data.object;
   const customerId = subscription.customer;
   const status = subscription.status;
   const cancelAtPeriodEnd = subscription.cancel_at_period_end;
   const currentPeriodEnd = subscription.current_period_end;
 
-  // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:119-123
   console.log(`🔄 [Webhook] customer.subscription.updated`);
   console.log(`   → Event ID: ${event.id}`);
   console.log(`   → Customer: ${customerId}`);
   console.log(`   → Status: ${status}`);
   console.log(`   → Cancel at period end: ${cancelAtPeriodEnd}`);
 
-  // DELEGACIÓN A USE CASE (reemplaza líneas 125-152 del original)
   try {
     await processSubscriptionUpdated(
       {
@@ -176,7 +155,6 @@ async function handleSubscriptionUpdated(event) {
       { userRepository }
     );
 
-    // Logs según el caso (EXTRACCIÓN: líneas 137-143 y 149-152 del original)
     if (cancelAtPeriodEnd) {
       console.log(`⏳ [Webhook] Cancelación programada para fin de periodo`);
       console.log(`   → Acceso hasta: ${new Date(currentPeriodEnd * 1000).toISOString()}`);
@@ -192,12 +170,8 @@ async function handleSubscriptionUpdated(event) {
 
 /**
  * Manejar cancelación definitiva de suscripción
- *
- * DELEGACIÓN: domain/use-cases/ProcessSubscription.js:processSubscriptionDeleted
- * COMPORTAMIENTO ORIGINAL: src/controllers/webhookController.js:160-186
  */
 async function handleSubscriptionDeleted(event) {
-  // EXTRACCIÓN EXACTA: src/controllers/webhookController.js:161-167
   const subscription = event.data.object;
   const customerId = subscription.customer;
 
@@ -206,7 +180,6 @@ async function handleSubscriptionDeleted(event) {
   console.log(`   → Customer: ${customerId}`);
   console.log(`   → Este es el FIN REAL del periodo - usuario pierde acceso`);
 
-  // DELEGACIÓN A USE CASE (reemplaza líneas 169-185 del original)
   try {
     await processSubscriptionDeleted({ customerId }, { userRepository });
 

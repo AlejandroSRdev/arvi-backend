@@ -20,6 +20,7 @@
 import { determineEffectivePlan } from './ValidatePlanAccess.js';
 import { needsDailyRecharge } from '../entities/Energy.js';
 import { getPlan } from '../policies/PlanPolicy.js';
+import { ValidationError } from '../errors/index.js';
 
 /**
  * Obtener energía actual del usuario (con recarga automática si corresponde)
@@ -35,7 +36,7 @@ export async function getUserEnergy(userId, deps) {
   const { energyRepository, userRepository } = deps;
 
   if (!energyRepository || !userRepository) {
-    throw new Error('Dependencies required: energyRepository, userRepository');
+    throw new ValidationError('Dependencies required: energyRepository, userRepository');
   }
 
   const energy = await energyRepository.getEnergy(userId);
@@ -83,7 +84,7 @@ export async function forceRecharge(userId, deps) {
   const { energyRepository, userRepository } = deps;
 
   if (!energyRepository || !userRepository) {
-    throw new Error('Dependencies required: energyRepository, userRepository');
+    throw new ValidationError('Dependencies required: energyRepository, userRepository');
   }
 
   const user = await userRepository.getUser(userId);

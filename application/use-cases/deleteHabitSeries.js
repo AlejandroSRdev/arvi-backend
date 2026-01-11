@@ -21,6 +21,8 @@
  * - Transacciones complejas (se hace en orden seguro)
  */
 
+import { ValidationError } from '../errors/index.js';
+
 /**
  * Eliminar una serie de hábitos
  *
@@ -33,15 +35,15 @@
  */
 export async function deleteHabitSeries({ userId, seriesId, habitSeriesRepository, userRepository }) {
   if (!habitSeriesRepository || !userRepository) {
-    throw new Error('Missing dependencies: habitSeriesRepository and userRepository required');
+    throw new ValidationError('Missing dependencies: habitSeriesRepository and userRepository required');
   }
 
   if (!userId) {
-    return { ok: false, reason: 'USER_ID_REQUIRED' };
+    throw new ValidationError('userId is required');
   }
 
   if (!seriesId) {
-    return { ok: false, reason: 'SERIES_ID_REQUIRED' };
+    throw new ValidationError('seriesId is required');
   }
 
   try {

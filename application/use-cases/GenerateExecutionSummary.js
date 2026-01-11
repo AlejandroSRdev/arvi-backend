@@ -26,6 +26,7 @@
  */
 
 import { validateFeatureAccess, validateWeeklySummariesLimit } from './ValidatePlanAccess.js';
+import { ValidationError } from '../errors/index.js';
 
 /**
  * Validar si el usuario puede generar un resumen de ejecución
@@ -40,7 +41,7 @@ export async function generateExecutionSummary(userId, payload, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   // 1. Validar acceso a la feature

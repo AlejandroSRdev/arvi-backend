@@ -18,6 +18,8 @@
  * - Acceso directo a Firestore
  */
 
+import { ValidationError, NotFoundError } from '../errors/index.js';
+
 /**
  * Obtener perfil completo del usuario
  *
@@ -31,13 +33,13 @@ export async function getUserProfile(userId, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const user = await userRepository.getUser(userId);
 
   if (!user) {
-    throw new Error('Usuario no encontrado');
+    throw new NotFoundError('User');
   }
 
   // EXTRACCIÓN EXACTA: src/controllers/userController.js:26-36
@@ -67,7 +69,7 @@ export async function updateUserProfile(userId, updates, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   // EXTRACCIÓN EXACTA: src/controllers/userController.js:53-59
@@ -98,7 +100,7 @@ export async function updateLastLogin(userId, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   // EXTRACCIÓN EXACTA: src/controllers/authController.js:68
@@ -120,7 +122,7 @@ export async function deleteUserAccount(userId, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   // EXTRACCIÓN EXACTA: src/controllers/userController.js:104

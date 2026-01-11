@@ -15,6 +15,8 @@
  * - Cálculos de tiempo restante (eso en el frontend)
  */
 
+import { ValidationError, NotFoundError } from '../errors/index.js';
+
 /**
  * Obtener estado del trial del usuario
  *
@@ -29,13 +31,13 @@ export async function getTrialStatus(userId, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const user = await userRepository.getUser(userId);
 
   if (!user) {
-    throw new Error('Usuario no encontrado');
+    throw new NotFoundError('User');
   }
 
   // Retornar estado del trial o valores por defecto

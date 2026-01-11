@@ -17,6 +17,8 @@
  */
 
 import { PLANS } from '../policies/PlanPolicy.js';
+import { ValidationError, NotFoundError, AuthorizationError } from '../errors/index.js';
+import { TrialAlreadyUsedError } from '../../domain/errors/index.js';
 
 /**
  * Activar trial de 48 horas (solo si nunca lo ha usado)
@@ -31,21 +33,21 @@ export async function activateTrial(userId, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const user = await userRepository.getUser(userId);
 
   if (!user) {
-    throw new Error('Usuario no encontrado');
+    throw new NotFoundError('User');
   }
 
   if (user.plan !== 'freemium') {
-    throw new Error('Solo usuarios freemium pueden activar el trial');
+    throw new AuthorizationError('Only freemium users can activate trial');
   }
 
   if (user.trial?.startTimestamp) {
-    throw new Error('Trial ya fue activado previamente');
+    throw new TrialAlreadyUsedError();
   }
 
   const now = new Date();

@@ -15,6 +15,8 @@
  * - Acceso directo a Firestore
  */
 
+import { ValidationError, NotFoundError } from '../errors/index.js';
+
 /**
  * Obtener estado de suscripción del usuario
  *
@@ -29,13 +31,13 @@ export async function getSubscriptionStatus(userId, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const user = await userRepository.getUser(userId);
 
   if (!user) {
-    throw new Error('Usuario no encontrado');
+    throw new NotFoundError('User');
   }
 
   // Retornar información de suscripción

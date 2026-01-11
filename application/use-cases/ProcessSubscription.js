@@ -18,6 +18,8 @@
  * - Acceso directo a Firestore
  */
 
+import { ValidationError, NotFoundError } from '../errors/index.js';
+
 /**
  * Procesar pago exitoso (checkout.session.completed)
  *
@@ -31,13 +33,13 @@ export async function processCheckoutCompleted(checkoutData, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const { userId, plan, subscriptionId, customerId } = checkoutData;
 
   if (!userId || !plan) {
-    throw new Error('Checkout data incomplete: userId and plan required');
+    throw new ValidationError('Checkout data incomplete: userId and plan required');
   }
 
   await userRepository.updateUser(userId, {
@@ -64,7 +66,7 @@ export async function processSubscriptionUpdated(subscriptionData, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const { customerId, status, cancelAtPeriodEnd, currentPeriodEnd } = subscriptionData;
@@ -72,7 +74,7 @@ export async function processSubscriptionUpdated(subscriptionData, deps) {
   const user = await userRepository.getUserByCustomerId(customerId);
 
   if (!user) {
-    throw new Error(`Usuario no encontrado para customerId: ${customerId}`);
+    throw new NotFoundError(`User with customerId: ${customerId}`);
   }
 
   if (cancelAtPeriodEnd) {
@@ -101,7 +103,7 @@ export async function processSubscriptionDeleted(subscriptionData, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const { customerId } = subscriptionData;
@@ -109,7 +111,7 @@ export async function processSubscriptionDeleted(subscriptionData, deps) {
   const user = await userRepository.getUserByCustomerId(customerId);
 
   if (!user) {
-    throw new Error(`Usuario no encontrado para customerId: ${customerId}`);
+    throw new NotFoundError(`User with customerId: ${customerId}`);
   }
 
   await userRepository.updateUser(user.id, {

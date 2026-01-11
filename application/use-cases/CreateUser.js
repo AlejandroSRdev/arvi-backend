@@ -16,6 +16,8 @@
  * - Acceso directo a Firestore
  */
 
+import { ValidationError } from '../errors/index.js';
+
 /**
  * Crear nuevo usuario en el sistema
  *
@@ -30,13 +32,13 @@ export async function createUser(userId, userData, deps) {
   const { userRepository } = deps;
 
   if (!userRepository) {
-    throw new Error('Dependency required: userRepository');
+    throw new ValidationError('Dependency required: userRepository');
   }
 
   const { email } = userData;
 
   if (!email) {
-    throw new Error('Email es requerido');
+    throw new ValidationError('Email is required');
   }
 
   // EXTRACCIÓN EXACTA: src/controllers/authController.js:31-36

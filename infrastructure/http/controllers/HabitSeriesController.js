@@ -11,12 +11,15 @@
  * - NO contiene lógica de negocio
  *
  * LÓGICA DELEGADA A:
- * - domain/use-cases/createHabitSeries.js
- * - domain/use-cases/deleteHabitSeries.js
+ * - application/use-cases/createHabitSeries.js
+ * - application/use-cases/deleteHabitSeries.js
  */
 
-import { createHabitSeries } from '../../../domain/use-cases/createHabitSeries.js';
-import { deleteHabitSeries } from '../../../domain/use-cases/deleteHabitSeries.js';
+import { createHabitSeries } from '../../../application/use-cases/createHabitSeries.js';
+import { deleteHabitSeries } from '../../../application/use-cases/deleteHabitSeries.js';
+import { HTTP_STATUS } from '../httpStatus.js';
+import { mapErrorToHttp } from '../../errorMapper.js';
+import { error as logError, success } from '../../../utils/logger.js';
 
 let userRepository;
 let habitSeriesRepository;
@@ -29,23 +32,8 @@ export function setDependencies(deps) {
 /**
  * POST /api/habits/series
  * Validar si el usuario puede crear una nueva serie de hábitos
- *
- * Request body: (payload vacío por ahora, preparado para extensiones futuras)
- * {}
- *
- * Response 200:
- * { "allowed": true }
- *
- * Response 403/429:
- * {
- *   "allowed": false,
- *   "reason": "LIMIT_REACHED" | "FEATURE_NOT_ALLOWED" | "USER_NOT_FOUND",
- *   "limitType": "active_series", // solo si reason === "LIMIT_REACHED"
- *   "used": number,
- *   "max": number
- * }
  */
-export async function createHabitSeriesEndpoint(req, res, next) {
+export async function createHabitSeriesEndpoint(req, res) {
   try {
     const userId = req.user?.uid;
     const payload = req.body || {};
@@ -53,7 +41,7 @@ export async function createHabitSeriesEndpoint(req, res, next) {
     const result = await createHabitSeries(userId, payload, { userRepository });
 
     if (!result.allowed) {
-      const statusCode = result.reason === 'LIMIT_REACHED' ? 429 : 403;
+      const statusCode = result.reason === 'LIMIT_REACHED' ? 429 : HTTP_STATUS.FORBIDDEN;
 
       logError(`[Habit Series] Validación fallida para ${userId}: ${result.reason}`);
 
@@ -62,87 +50,42 @@ export async function createHabitSeriesEndpoint(req, res, next) {
 
     success(`[Habit Series] Validación exitosa para ${userId}`);
 
-    res.json(result);
+    res.status(HTTP_STATUS.OK).json(result);
   } catch (err) {
     logError('[Habit Series] Error:', err);
-    next(err);
+
+    const httpError = mapErrorToHttp(err);
+    res.status(httpError.status).json(httpError.body);
   }
 }
 
 /**
  * DELETE /api/habits/series/:seriesId
  * Eliminar una serie de hábitos de Firestore y decrementar contador
- *
- * Request params:
- * - seriesId: ID de la serie a eliminar
- *
- * Response 200:
- * {
- *   "success": true,
- *   "message": "Serie eliminada exitosamente",
- *   "deletedSeriesId": "abc123"
- * }
- *
- * Response 404:
- * {
- *   "success": false,
- *   "error": "SERIES_NOT_FOUND",
- *   "message": "Serie no encontrada o ya fue eliminada"
- * }
- *
- * Response 500:
- * {
- *   "success": false,
- *   "message": "Error eliminando serie"
- * }
  */
-export async function deleteHabitSeriesEndpoint(req, res, next) {
+export async function deleteHabitSeriesEndpoint(req, res) {
   try {
     const userId = req.user?.uid;
     const seriesId = req.params?.seriesId;
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'UNAUTHORIZED',
-        message: 'Usuario no autenticado',
-      });
-    }
-
-    if (!seriesId) {
-      return res.status(400).json({
-        success: false,
-        error: 'INVALID_REQUEST',
-        message: 'seriesId es requerido',
-      });
-    }
-
-    const result = await deleteHabitSeries({ userId, seriesId, habitSeriesRepository, userRepository });
-
-    if (!result.ok) {
-      const statusCode = result.reason === 'SERIES_NOT_FOUND' ? 404 : 500;
-
-      logError(`[Habit Series] Delete fallido para ${userId}: ${result.reason}`);
-
-      return res.status(statusCode).json({
-        success: false,
-        error: result.reason,
-        message: result.reason === 'SERIES_NOT_FOUND'
-          ? 'Serie no encontrada o ya fue eliminada'
-          : 'Error eliminando serie',
-      });
-    }
+    await deleteHabitSeries({ userId, seriesId, habitSeriesRepository, userRepository });
 
     success(`[Habit Series] Delete exitoso para ${userId}, seriesId: ${seriesId}`);
 
-    res.json({
+    res.status(HTTP_STATUS.OK).json({
       success: true,
       message: 'Serie eliminada exitosamente',
-      deletedSeriesId: result.deletedSeriesId,
+      deletedSeriesId: seriesId,
     });
   } catch (err) {
     logError('[Habit Series] Error en delete:', err);
-    next(err);
+
+    const httpError = mapErrorToHttp(err);
+    res.status(httpError.status).json({
+      success: false,
+      error: httpError.body.error,
+      message: httpError.body.message,
+    });
   }
 }
 

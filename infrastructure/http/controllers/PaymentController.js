@@ -23,7 +23,11 @@
  * - Toda la lógica de validación y creación está en StartPayment use case
  */
 
-import { startPayment } from '../../../domain/use-cases/StartPayment.js';
+import { startPayment } from '../../../application/use-cases/StartPayment.js';
+import { stripe } from '../../payment/stripe/StripeConfig.js';
+import { HTTP_STATUS } from '../httpStatus.js';
+import { mapErrorToHttp } from '../../errorMapper.js';
+import { error as logError, success } from '../../../utils/logger.js';
 
 /**
  * POST /api/payments/start
@@ -31,22 +35,17 @@ import { startPayment } from '../../../domain/use-cases/StartPayment.js';
  *
  * MIDDLEWARE REQUERIDO: authenticate (para obtener req.user.uid)
  */
-export async function start(req, res, next) {
+export async function start(req, res) {
   try {
     const { planId } = req.body;
-    const userId = req.user?.uid; // ✅ userId desde token validado, NO desde body
+    const userId = req.user?.uid;
 
-    // Validación HTTP básica
-    if (!userId) {
-      throw new ValidationError('Usuario no autenticado');
-    }
-
-    if (!planId) {
-      throw new ValidationError('planId es requerido');
-    }
-
-    // Delegar a use case (toda la lógica de negocio está ahí)
-    const result = await startPayment({ userId, planId });
+    // Delegar a use case con stripeClient inyectado
+    const result = await startPayment({
+      userId,
+      planId,
+      stripeClient: stripe
+    });
 
     // Log estructurado para auditoría
     success('Pago iniciado', {
@@ -57,7 +56,7 @@ export async function start(req, res, next) {
     });
 
     // Respuesta en formato esperado por el frontend
-    res.json({
+    res.status(HTTP_STATUS.OK).json({
       success: true,
       message: 'Pago iniciado',
       checkoutUrl: result.checkoutUrl,
@@ -65,18 +64,10 @@ export async function start(req, res, next) {
   } catch (err) {
     logError('Error iniciando pago:', err);
 
-    // Si es error de validación, devolver formato esperado por frontend
-    if (err instanceof ValidationError || err.message.includes('Plan')) {
-      return res.status(400).json({
-        success: false,
-        message: err.message,
-      });
-    }
-
-    // Otros errores (Stripe, etc.)
-    res.status(500).json({
+    const httpError = mapErrorToHttp(err);
+    res.status(httpError.status).json({
       success: false,
-      message: 'Error procesando solicitud de pago',
+      message: httpError.body.message,
     });
   }
 }

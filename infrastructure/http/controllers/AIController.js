@@ -12,57 +12,55 @@
  * - NO contiene lógica de negocio
  *
  * LÓGICA MOVIDA A:
- * - domain/use-cases/GenerateAIResponse.js:generateAIResponseWithFunctionType (línea 54 del original)
- *
- * ELIMINADO (lógica de producto movida al frontend):
- * - executionSummaryEndpoint → El frontend construye el prompt y orquesta el flujo
- * - habitSeriesEndpoint → El frontend construye el prompt y orquesta el flujo
- * - jsonConvertEndpoint → El frontend construye el prompt de conversión JSON y usa /chat
+ * - application/use-cases/GenerateAIResponse.js:generateAIResponseWithFunctionType
  */
 
-import { generateAIResponseWithFunctionType } from '../../../domain/use-cases/GenerateAIResponse.js';
+import { generateAIResponseWithFunctionType } from '../../../application/use-cases/GenerateAIResponse.js';
 import { validateMessages } from '../../../domain/validators/InputValidator.js';
-import { isValidFunctionType } from '../../../domain/policies/ModelSelectionPolicy.js';
+import { isValidFunctionType } from '../../../application/policies/ModelSelectionPolicy.js';
+import { HTTP_STATUS } from '../httpStatus.js';
+import { mapErrorToHttp } from '../../errorMapper.js';
+import { error as logError, success } from '../../../utils/logger.js';
 
-// Dependency injection - estas serán inyectadas en runtime
+// Dependency injection
 let aiProvider;
 let energyRepository;
-let userRepository;
 let habitSeriesRepository;
 
 export function setDependencies(deps) {
   aiProvider = deps.aiProvider;
   energyRepository = deps.energyRepository;
-  userRepository = deps.userRepository;
   habitSeriesRepository = deps.habitSeriesRepository;
 }
 
 /**
  * POST /api/ai/chat
  * Endpoint unificado para todas las llamadas a IA
- *
- * COMPORTAMIENTO ORIGINAL: src/controllers/aiController.js:36-69
  */
-export async function chatEndpoint(req, res, next) {
+export async function chatEndpoint(req, res) {
   try {
     const userId = req.user?.uid;
     const { messages, function_type } = req.body;
 
-    // EXTRACCIÓN EXACTA: src/controllers/aiController.js:42-52
     // Validaciones HTTP
     if (!messages || !validateMessages(messages)) {
-      throw new ValidationError('Mensajes inválidos o vacíos');
+      const err = new Error('Mensajes inválidos o vacíos');
+      err.code = 'VALIDATION_ERROR';
+      throw err;
     }
 
     if (!function_type || typeof function_type !== 'string') {
-      throw new ValidationError('function_type es requerido y debe ser string');
+      const err = new Error('function_type es requerido y debe ser string');
+      err.code = 'VALIDATION_ERROR';
+      throw err;
     }
 
     if (!isValidFunctionType(function_type)) {
-      throw new ValidationError(`function_type "${function_type}" no es válido. Consulta modelMapping.js`);
+      const err = new Error(`function_type "${function_type}" no es válido. Consulta modelMapping.js`);
+      err.code = 'VALIDATION_ERROR';
+      throw err;
     }
 
-    // DELEGACIÓN A USE CASE (reemplaza línea 54 del original)
     const response = await generateAIResponseWithFunctionType(
       userId,
       messages,
@@ -70,11 +68,9 @@ export async function chatEndpoint(req, res, next) {
       { aiProvider, energyRepository, habitSeriesRepository }
     );
 
-    // EXTRACCIÓN EXACTA: src/controllers/aiController.js:56
     success(`[AI Chat] Completado para ${userId} - Tipo: ${function_type}, Modelo: ${response.model}, Energía: ${response.energyConsumed}`);
 
-    // EXTRACCIÓN EXACTA: src/controllers/aiController.js:58-64
-    res.json({
+    res.status(HTTP_STATUS.OK).json({
       success: true,
       message: response.content,
       model: response.model,
@@ -82,9 +78,10 @@ export async function chatEndpoint(req, res, next) {
       energyConsumed: response.energyConsumed,
     });
   } catch (err) {
-    // EXTRACCIÓN EXACTA: src/controllers/aiController.js:66-67
     logError('[AI Chat] Error:', err);
-    next(err);
+
+    const httpError = mapErrorToHttp(err);
+    res.status(httpError.status).json(httpError.body);
   }
 }
 

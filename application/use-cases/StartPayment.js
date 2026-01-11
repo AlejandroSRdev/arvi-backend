@@ -24,27 +24,32 @@
  */
 
 import { PLANS } from '../policies/PlanPolicy.js';
-import { stripe } from '../../infrastructure/payment/stripe/StripeConfig.js';
+import { ValidationError } from '../errors/index.js';
 
 /**
  * Iniciar proceso de pago
  *
- * @param {Object} paymentData - Datos del pago {userId, planId}
+ * @param {Object} paymentData - Datos del pago {userId, planId, stripeClient}
  * @param {string} paymentData.userId - ID del usuario autenticado
  * @param {string} paymentData.planId - ID del plan a comprar
+ * @param {object} paymentData.stripeClient - Cliente de Stripe (inyectado)
  * @returns {Promise<Object>} {checkoutUrl: string}
  * @throws {ValidationError} Si el plan no existe o no es de pago
  */
 export async function startPayment(paymentData) {
-  const { userId, planId } = paymentData;
+  const { userId, planId, stripeClient } = paymentData;
+
+  if (!stripeClient) {
+    throw new ValidationError('stripeClient is required');
+  }
 
   // Validaciones de entrada
   if (!userId || typeof userId !== 'string') {
-    throw new ValidationError('userId es requerido y debe ser string');
+    throw new ValidationError('userId is required and must be a string');
   }
 
   if (!planId || typeof planId !== 'string') {
-    throw new ValidationError('planId es requerido y debe ser string');
+    throw new ValidationError('planId is required and must be a string');
   }
 
   // Validar que el plan existe
@@ -53,20 +58,20 @@ export async function startPayment(paymentData) {
 
   if (!planConfig) {
     throw new ValidationError(
-      `Plan "${planId}" no existe. Planes válidos: mini, base, pro`
+      `Plan "${planId}" does not exist. Valid plans: mini, base, pro`
     );
   }
 
   // Validar que el plan es de pago (no freemium ni trial)
   if (!planConfig.stripePriceId) {
     throw new ValidationError(
-      `Plan "${planId}" no está disponible para compra. Solo planes de pago: mini, base, pro`
+      `Plan "${planId}" is not available for purchase. Only paid plans: mini, base, pro`
     );
   }
 
   // Crear sesión de Stripe Checkout
   try {
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripeClient.checkout.sessions.create({
       mode: 'subscription',
       line_items: [
         {
@@ -92,8 +97,8 @@ export async function startPayment(paymentData) {
       sessionId: session.id, // Para tracking interno si es necesario
     };
   } catch (stripeError) {
-    // Traducir errores de Stripe a errores de dominio
-    throw new Error(`Error creando sesión de pago: ${stripeError.message}`);
+    // Translate Stripe errors to application errors
+    throw new ValidationError(`Error creating payment session: ${stripeError.message}`);
   }
 }
 
