@@ -17,10 +17,10 @@
 
 import { generateAIResponseWithFunctionType } from '../../../application/use-cases/GenerateAIResponse.js';
 import { validateMessages } from '../../../domain/validators/InputValidator.js';
-import { isValidFunctionType } from '../../../application/policies/ModelSelectionPolicy.js';
+import { isValidFunctionType } from '../../../domain/policies/ModelSelectionPolicy.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../../errorMapper.js';
-import { error as logError, success } from '../../../utils/logger.js';
+import { error as logError, success } from '../../logger/logger.js';
 
 // Dependency injection
 let aiProvider;

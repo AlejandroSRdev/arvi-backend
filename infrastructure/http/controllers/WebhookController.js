@@ -26,7 +26,7 @@ import {
   processSubscriptionDeleted,
 } from '../../../application/use-cases/ProcessSubscription.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { error as logError, success } from '../../../utils/logger.js';
+import { error as logError, success } from '../../logger/logger.js';
 
 // Dependency injection
 let userRepository;

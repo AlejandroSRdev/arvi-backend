@@ -17,7 +17,7 @@
 import { generateExecutionSummary } from '../../../application/use-cases/GenerateExecutionSummary.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../../errorMapper.js';
-import { error as logError, success } from '../../../utils/logger.js';
+import { error as logError, success } from '../../logger/logger.js';
 
 let userRepository;
 

@@ -17,8 +17,7 @@
  * - Acceso directo a Firestore
  */
 
-import { hasFeatureAccess, getPlan } from '../policies/PlanPolicy.js';
-import { ValidationError, NotFoundError } from '../errors/index.js';
+import { hasFeatureAccess, getPlan } from '../../domain/policies/PlanPolicy.js';
 
 export function determineEffectivePlan(user) {
   let effectivePlan = user.plan || 'freemium';
@@ -31,11 +30,11 @@ export function determineEffectivePlan(user) {
 export async function validateFeatureAccess(userId, featureKey, deps) {
   const { userRepository } = deps;
   if (!userRepository) {
-    throw new ValidationError('Dependency required: userRepository');
+    throw new Error('Dependency required: userRepository');
   }
   const user = await userRepository.getUser(userId);
   if (!user) {
-    throw new NotFoundError('User');
+    return { allowed: false, reason: 'USER_NOT_FOUND' };
   }
   const effectivePlan = determineEffectivePlan(user);
   const allowed = hasFeatureAccess(effectivePlan, featureKey);
@@ -52,10 +51,10 @@ export async function validateFeatureAccess(userId, featureKey, deps) {
  */
 export async function validateWeeklySummariesLimit(userId, deps) {
   const { userRepository } = deps;
-  if (!userRepository) throw new ValidationError('Dependency required: userRepository');
+  if (!userRepository) throw new Error('Dependency required: userRepository');
 
   const user = await userRepository.getUser(userId);
-  if (!user) throw new NotFoundError('User');
+  if (!user) return { allowed: false, reason: 'USER_NOT_FOUND' };
 
   const effectivePlan = determineEffectivePlan(user);
   const plan = getPlan(effectivePlan, user.trial?.activo);
@@ -104,10 +103,10 @@ export async function validateWeeklySummariesLimit(userId, deps) {
  */
 export async function validateActiveSeriesLimit(userId, deps) {
   const { userRepository } = deps;
-  if (!userRepository) throw new ValidationError('Dependency required: userRepository');
+  if (!userRepository) throw new Error('Dependency required: userRepository');
 
   const user = await userRepository.getUser(userId);
-  if (!user) throw new NotFoundError('User');
+  if (!user) return { allowed: false, reason: 'USER_NOT_FOUND' };
 
   const effectivePlan = determineEffectivePlan(user);
   const plan = getPlan(effectivePlan, user.trial?.activo);

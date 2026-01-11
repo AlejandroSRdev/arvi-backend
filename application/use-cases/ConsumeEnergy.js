@@ -18,8 +18,8 @@
  */
 
 import { determineEffectivePlan } from './ValidatePlanAccess.js';
-import { needsDailyRecharge } from '../entities/Energy.js';
-import { getPlan } from '../policies/PlanPolicy.js';
+import { needsDailyRecharge } from '../../domain/entities/Energy.js';
+import { getPlan } from '../../domain/policies/PlanPolicy.js';
 import { ValidationError } from '../errors/index.js';
 
 /**

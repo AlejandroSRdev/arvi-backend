@@ -22,7 +22,7 @@ import { getUserProfile, updateUserProfile, deleteUserAccount } from '../../../a
 import { getSubscriptionStatus } from '../../../application/use-cases/GetSubscriptionStatus.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../../errorMapper.js';
-import { error as logError, success } from '../../../utils/logger.js';
+import { error as logError, success } from '../../logger/logger.js';
 
 // Dependency injection
 let userRepository;
