@@ -21,7 +21,7 @@ import { getUserEnergy } from '../../../application/use-cases/ConsumeEnergy.js';
 import { activateTrial } from '../../../application/use-cases/ActivateTrial.js';
 import { getTrialStatus } from '../../../application/use-cases/GetTrialStatus.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { mapErrorToHttp } from '../../errorMapper.js';
+import { mapErrorToHttp } from '../errorMapper.js';
 import { error as logError, success } from '../../logger/logger.js';
 
 // Dependency injection

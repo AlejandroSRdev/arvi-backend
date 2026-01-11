@@ -19,7 +19,7 @@ import { generateAIResponseWithFunctionType } from '../../../application/use-cas
 import { validateMessages } from '../../../domain/validators/InputValidator.js';
 import { isValidFunctionType } from '../../../domain/policies/ModelSelectionPolicy.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { mapErrorToHttp } from '../../errorMapper.js';
+import { mapErrorToHttp } from '../errorMapper.js';
 import { error as logError, success } from '../../logger/logger.js';
 
 // Dependency injection

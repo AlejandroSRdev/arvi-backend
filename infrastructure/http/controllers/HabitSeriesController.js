@@ -18,7 +18,7 @@
 import { createHabitSeries } from '../../../application/use-cases/createHabitSeries.js';
 import { deleteHabitSeries } from '../../../application/use-cases/deleteHabitSeries.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { mapErrorToHttp } from '../../errorMapper.js';
+import { mapErrorToHttp } from '../errorMapper.js';
 import { error as logError, success } from '../../logger/logger.js';
 
 let userRepository;

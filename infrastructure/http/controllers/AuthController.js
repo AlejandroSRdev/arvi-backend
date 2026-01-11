@@ -20,7 +20,7 @@ import { createUser } from '../../../application/use-cases/CreateUser.js';
 import { updateLastLogin } from '../../../application/use-cases/ManageUser.js';
 import { validateEmail } from '../../../domain/validators/InputValidator.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { mapErrorToHttp } from '../../errorMapper.js';
+import { mapErrorToHttp } from '../errorMapper.js';
 import { error as logError, success } from '../../logger/logger.js';
 
 // Dependency injection
