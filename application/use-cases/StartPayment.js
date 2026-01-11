@@ -23,7 +23,7 @@
  * - Metadata en Stripe permite trazabilidad completa
  */
 
-import { PLANS } from '../policies/PlanPolicy.js';
+import { PLANS } from '../../domain/policies/PlanPolicy.js';
 import { ValidationError } from '../errors/index.js';
 
 /**

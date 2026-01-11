@@ -23,9 +23,9 @@
  * - convertToJSON → El frontend debe construir el prompt de conversión JSON y llamar a /chat
  */
 
-import { getModelConfig } from '../policies/ModelSelectionPolicy.js';
+import { getModelConfig } from '../../domain/policies/ModelSelectionPolicy.js';
 import { canConsumeEnergy } from '../entities/Energy.js';
-import { isHabitSeriesFinal } from '../policies/HabitSeriesPolicy.js';
+import { isHabitSeriesFinal } from '../../domain/policies/HabitSeriesPolicy.js';
 import { ValidationError } from '../errors/index.js';
 import { InsufficientEnergyError } from '../../domain/errors/index.js';
 
