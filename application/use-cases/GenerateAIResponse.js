@@ -24,7 +24,7 @@
  */
 
 import { getModelConfig } from '../../domain/policies/ModelSelectionPolicy.js';
-import { canConsumeEnergy } from '../entities/Energy.js';
+import { canConsumeEnergy } from '../../domain/entities/Energy.js';
 import { isHabitSeriesFinal } from '../../domain/policies/HabitSeriesPolicy.js';
 import { ValidationError } from '../errors/index.js';
 import { InsufficientEnergyError } from '../../domain/errors/index.js';
