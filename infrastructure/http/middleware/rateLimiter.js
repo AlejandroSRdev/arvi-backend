@@ -10,6 +10,7 @@
  */
 
 import rateLimit from 'express-rate-limit';
+import { RATE_LIMITS } from '../../config/rateLimits.js';
 
 /**
  * Rate limiter para endpoints de IA
@@ -44,6 +45,10 @@ export const authRateLimiter = rateLimit({
 /**
  * Rate limiter general
  * MIGRADO DESDE: src/middleware/rateLimiter.js:generalRateLimiter (líneas 41-50)
+ *
+ * Nota:
+ * - Si quiere que esto también salga de config, añada RATE_LIMITS.GENERAL en rateLimits.js
+ * - Por ahora se mantiene EXACTAMENTE igual (mismo comportamiento) sin depender de RATE_LIMITS
  */
 export const generalRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
@@ -61,3 +66,4 @@ export default {
   authRateLimiter,
   generalRateLimiter,
 };
+
