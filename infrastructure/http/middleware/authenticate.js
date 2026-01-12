@@ -11,7 +11,7 @@
  */
 
 import { auth } from '../../persistence/firestore/FirebaseConfig.js';
-import { AuthenticationError } from '../../application/errors/AuthenticationError.js';
+import { AuthenticationError } from '../../../application/errors/AuthenticationError.js';
 
 /**
  * Middleware para validar Firebase Auth token
