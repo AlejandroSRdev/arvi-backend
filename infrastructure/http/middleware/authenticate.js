@@ -11,6 +11,7 @@
  */
 
 import { auth } from '../../persistence/firestore/FirebaseConfig.js';
+import { AuthenticationError } from '../../application/errors/AuthenticationError.js';
 
 /**
  * Middleware para validar Firebase Auth token
@@ -37,9 +38,13 @@ export async function authenticate(req, res, next) {
 
     next();
   } catch (error) {
-    console.error('❌ [Auth] Error validando token:', error.message);
-    next(new AuthenticationError('Token inválido o expirado'));
-  }
+  console.error('❌ [Auth] Error validando token:', error.message);
+  return next(
+    error instanceof AuthenticationError
+      ? error
+      : new AuthenticationError('Token inválido o expirado')
+  );
+}
 }
 
 /**

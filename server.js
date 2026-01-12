@@ -139,6 +139,7 @@ const app = express();
 // CONFIGURACIÓN GENERAL
 // ═══════════════════════════════════════════════════════════════
 
+app.set('trust proxy', 1);
 app.use(cors());
 
 // JSON parser para el resto de rutas
