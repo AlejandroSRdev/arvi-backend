@@ -16,7 +16,7 @@
  */
 export function errorHandler(err, req, res, next) {
   // Log del error
-  logError(`Error en ${req.method} ${req.path}:`, err);
+  console.error(`Error en ${req.method} ${req.path}:`, err);
 
   // Respuesta según tipo de error
   const statusCode = err.statusCode || 500;
