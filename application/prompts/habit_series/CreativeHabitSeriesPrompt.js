@@ -18,7 +18,7 @@
  * @param {string} params.difficultyLabels.high
  * @returns {Array<{role: string, content: string}>} Array of message objects
  */
-function CreativePrompt({
+function CreativeHabitSeriesPrompt({
   language,
   assistantContext,
   testData,
@@ -96,4 +96,4 @@ NO es JSON aún.`;
   ];
 }
 
-module.exports = CreativePrompt;
+module.exports = CreativeHabitSeriesPrompt;

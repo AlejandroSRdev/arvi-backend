@@ -15,7 +15,7 @@
  * @param {Object} params.schema - JSON schema to enforce
  * @returns {Array<{role: string, content: string}>} Array of message objects
  */
-function JsonSchemaPrompt({
+function JsonSchemaHabitSeriesPrompt({
   content,
   schema
 }) {
@@ -45,4 +45,4 @@ Return ONLY the JSON object matching this schema.`;
   ];
 }
 
-module.exports = JsonSchemaPrompt;
+module.exports = JsonSchemaHabitSeriesPrompt;
