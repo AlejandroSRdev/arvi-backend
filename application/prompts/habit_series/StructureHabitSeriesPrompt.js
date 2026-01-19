@@ -17,11 +17,11 @@
  * @param {string} params.difficultyLabels.high
  * @returns {Array<{role: string, content: string}>} Array of message objects
  */
-function StructurePrompt({
+function StructureHabitSeriesPrompt({
   language,
   rawText,
   difficultyLabels
-}) {
+}) {  
   const dificultadBaja = difficultyLabels.low;
   const dificultadMedia = difficultyLabels.medium;
   const dificultadAlta = difficultyLabels.high;
@@ -88,4 +88,4 @@ REGLAS:
   ];
 }
 
-module.exports = StructurePrompt;
+module.exports = StructureHabitSeriesPrompt;
