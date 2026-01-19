@@ -1,4 +1,6 @@
 /**
+ * ⚠️ ESTADO: PARCIALMENTE CONSOLIDADO
+ *
  * Validate Plan Access Use Case (Domain)
  *
  * MIGRADO DESDE:
@@ -15,6 +17,22 @@
  * - Lógica HTTP (req/res)
  * - Middleware
  * - Acceso directo a Firestore
+ *
+ * NOTA DE REFACTORIZACIÓN (2026-01-13):
+ * =====================================
+ * Las funciones validateFeatureAccess + validateActiveSeriesLimit han sido
+ * CONSOLIDADAS en application/services/HabitSeriesValidationService.js para
+ * el caso de uso específico de validación de creación de series de hábitos.
+ *
+ * ESTE ARCHIVO AÚN SE MANTIENE porque:
+ * 1. validateWeeklySummariesLimit() se usa en otros flujos (resúmenes semanales)
+ * 2. Las funciones individuales pueden ser útiles para otros casos de validación
+ *
+ * TODO FUTURO:
+ * ===========
+ * - Evaluar crear servicios específicos para otros dominios (ej: WeeklySummaryValidationService)
+ * - Si se consolidan todos los casos de uso, este archivo puede ser eliminado
+ * - Por ahora, se mantiene como utilidad de validación genérica
  */
 
 import { hasFeatureAccess, getPlan } from '../../domain/policies/PlanPolicy.js';

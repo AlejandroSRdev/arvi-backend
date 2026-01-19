@@ -3,19 +3,20 @@
  *
  * ARQUITECTURA: Hexagonal (Ports & Adapters)
  * FECHA CREACIÓN: 2026-01-03
+ * ÚLTIMA ACTUALIZACIÓN: 2026-01-13 (Migración a HabitSeriesValidationService)
  *
  * RESPONSABILIDAD ÚNICA:
- * - Adaptar HTTP (req/res) → Use Cases
+ * - Adaptar HTTP (req/res) → Application Services / Use Cases
  * - Validar input HTTP
  * - Traducir errores a status codes
  * - NO contiene lógica de negocio
  *
  * LÓGICA DELEGADA A:
- * - application/use-cases/createHabitSeries.js
- * - application/use-cases/deleteHabitSeries.js
+ * - application/services/HabitSeriesValidationService.js (validaciones)
+ * - application/use-cases/deleteHabitSeries.js (eliminación)
  */
 
-import { createHabitSeries } from '../../../application/use-cases/createHabitSeries.js';
+import { assertCanCreateHabitSeries } from '../../../application/services/HabitSeriesValidationService.js';
 import { deleteHabitSeries } from '../../../application/use-cases/deleteHabitSeries.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
@@ -36,9 +37,8 @@ export function setDependencies(deps) {
 export async function createHabitSeriesEndpoint(req, res) {
   try {
     const userId = req.user?.uid;
-    const payload = req.body || {};
 
-    const result = await createHabitSeries(userId, payload, { userRepository });
+    const result = await assertCanCreateHabitSeries(userId, { userRepository });
 
     if (!result.allowed) {
       const statusCode = result.reason === 'LIMIT_REACHED' ? 429 : HTTP_STATUS.FORBIDDEN;

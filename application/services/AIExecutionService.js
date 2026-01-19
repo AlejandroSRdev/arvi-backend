@@ -1,27 +1,43 @@
 /**
- * Generate AI Response Use Case (Domain)
+ * AIExecutionService (Application Service)
  *
- * MIGRADO DESDE: src/services/aiService.js (líneas 87-417)
- * REFACTORIZADO: 2025-12-30
- * EXTRACCIÓN: Orquestación de generación de respuestas IA
+ * MIGRATION DATE: 2026-01-13
  *
- * Responsabilidades:
- * - Validar energía disponible ANTES de llamar a IA
- * - Seleccionar modelo según function_type (vía ModelSelectionPolicy)
- * - Coordinar con IAIProvider (port) para generar respuesta
- * - Calcular energía consumida
- * - Coordinar con IEnergyRepository (port) para consumir energía
+ * Architectural role:
+ * Application-level service responsible for executing AI calls in a
+ * controlled, safe, and reusable manner, without knowledge of business
+ * intent or product-specific semantics.
  *
- * NO contiene:
- * - Llamadas directas a OpenAI/Gemini
- * - SDKs
- * - Lógica de Firestore
- * - HTTP
- * - Construcción de prompts (eso es responsabilidad del frontend)
+ * This service encapsulates:
+ * - Energy validation and consumption associated with AI calls
+ * - Technical model selection (via ModelSelectionPolicy)
+ * - Coordination with AI providers through ports (IAIProvider)
  *
- * ELIMINADO:
- * - convertToJSON → El frontend debe construir el prompt de conversión JSON y llamar a /chat
+ * Responsibilities:
+ * - Validate available energy before executing AI calls
+ * - Select model configuration based on functionType
+ * - Execute AI requests via ports (no direct SDK usage)
+ * - Calculate and persist energy consumption
+ *
+ * Out of scope (explicitly NOT responsible for):
+ * - Prompt construction
+ * - JSON schema definition or validation
+ * - Parsing AI output into domain entities
+ * - Business flow orchestration
+ * - Product-level decision making
+ * - HTTP, controllers, authentication, or request handling
+ *
+ * Dependencies:
+ * - ModelSelectionPolicy (domain)
+ * - Energy entity and policies (domain)
+ * - IAIProvider (port)
+ * - IEnergyRepository (port)
+ *
+ * Note:
+ * This is a transversal, reusable application service.
+ * It does not represent a business use case by itself.
  */
+
 
 import { getModelConfig } from '../../domain/policies/ModelSelectionPolicy.js';
 import { canConsumeEnergy } from '../../domain/entities/Energy.js';

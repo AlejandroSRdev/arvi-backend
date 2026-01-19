@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:src/**)",
+      "Bash(cat:application/**)",
+      "Bash(ls:src/**)",
+      "Bash(ls:application/**)",
+      "Bash(mkdir:src/**)"
+    ]
+  }
+}
+
