@@ -31,7 +31,7 @@ import userRoutes from './infrastructure/http/routes/user.routes.js';
 import stripeRoutes from './infrastructure/http/routes/stripe.routes.js';
 import webhookRoutes from './infrastructure/http/routes/webhook.routes.js';
 import paymentRoutes from './infrastructure/http/routes/payment.routes.js';
-import habitSeriesRoutes from './infrastructure/http/routes/habitSeries.routes.js';
+import habitSeriesRoutes from './infrastructure/http/routes/HabitSeriesRoutes.js';
 import executionSummaryRoutes from './infrastructure/http/routes/executionSummary.routes.js';
 
 // Importar middleware (Hexagonal Architecture)
@@ -122,10 +122,12 @@ setWebhookDeps({
   userRepository
 });
 
-// HabitSeriesController requiere: userRepository, habitSeriesRepository
+// HabitSeriesController requiere: userRepository, habitSeriesRepository, energyRepository, aiProvider
 setHabitSeriesDeps({
   userRepository,
-  habitSeriesRepository
+  habitSeriesRepository,
+  energyRepository,
+  aiProvider
 });
 
 // ExecutionSummaryController requiere: userRepository
@@ -238,7 +240,7 @@ app.listen(PORT, () => {
   console.log('     • POST /api/ai/chat                  - Chat con IA');
   console.log('     • POST /api/ai/json-convert          - Conversión JSON');
   console.log('     • GET  /api/energy                   - Consultar energía');
-  console.log('     • POST /api/habits/series            - Validar creación serie hábitos');
+  console.log('     • POST /api/habits/series            - Crear serie de hábitos via IA');
   console.log('     • POST /api/execution-summaries      - Validar generación resumen ejecución');
   console.log('     • POST /api/payments/start           - Iniciar pago');
   console.log('     • POST /api/stripe/create-checkout   - Crear sesión Stripe (legacy)');

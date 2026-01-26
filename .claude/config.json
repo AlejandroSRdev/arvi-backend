@@ -1,0 +1,6 @@
+{
+  "projectContext": ".claude/manifest.md",
+  "skills": {
+    "implementer": ".claude/agents/workers/implementer.md"
+  }
+}

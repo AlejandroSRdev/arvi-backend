@@ -1,58 +1,136 @@
 /**
  * Habit Series Controller (Infrastructure - HTTP Layer)
  *
- * ARQUITECTURA: Hexagonal (Ports & Adapters)
- * FECHA CREACIÓN: 2026-01-03
- * ÚLTIMA ACTUALIZACIÓN: 2026-01-13 (Migración a HabitSeriesValidationService)
+ * ARCHITECTURE: Hexagonal (Ports & Adapters)
  *
- * RESPONSABILIDAD ÚNICA:
- * - Adaptar HTTP (req/res) → Application Services / Use Cases
- * - Validar input HTTP
- * - Traducir errores a status codes
- * - NO contiene lógica de negocio
+ * RESPONSIBILITIES:
+ * - Extract data from HTTP request
+ * - Perform minimal syntactic validation (required fields, basic types)
+ * - Transform HTTP DTO to Application Contract
+ * - Invoke use-cases
+ * - Map application errors to HTTP responses
  *
- * LÓGICA DELEGADA A:
- * - application/services/HabitSeriesValidationService.js (validaciones)
- * - application/use-cases/deleteHabitSeries.js (eliminación)
+ * STRICTLY FORBIDDEN:
+ * - Business logic
+ * - Domain entity instantiation
+ * - AI orchestration
+ * - Schema validation
  */
 
-import { assertCanCreateHabitSeries } from '../../../application/services/HabitSeriesValidationService.js';
+import { createHabitSeries } from '../../../application/use-cases/habit_series_use_cases/CreateHabitSeriesUseCase.js';
 import { deleteHabitSeries } from '../../../application/use-cases/deleteHabitSeries.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
 import { logger } from '../../logger/logger.js';
 
+// Dependency injection
 let userRepository;
 let habitSeriesRepository;
+let energyRepository;
+let aiProvider;
 
 export function setDependencies(deps) {
   userRepository = deps.userRepository;
   habitSeriesRepository = deps.habitSeriesRepository;
+  energyRepository = deps.energyRepository;
+  aiProvider = deps.aiProvider;
+}
+
+/**
+ * Validate HTTP request body has required fields with correct basic types.
+ * This is syntactic validation only - business rules are in the use-case.
+ *
+ * @param {object} body - Request body
+ * @returns {{ valid: true } | { valid: false, error: string }}
+ */
+function validateRequestBody(body) {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Request body must be an object' };
+  }
+
+  if (!body.language || (body.language !== 'es' && body.language !== 'en')) {
+    return { valid: false, error: 'language is required and must be "es" or "en"' };
+  }
+
+  if (!body.testData || typeof body.testData !== 'object') {
+    return { valid: false, error: 'testData is required and must be an object' };
+  }
+
+  if (!body.difficultyLabels || typeof body.difficultyLabels !== 'object') {
+    return { valid: false, error: 'difficultyLabels is required and must be an object' };
+  }
+
+  // assistantContext can be optional, default to empty string
+  if (body.assistantContext !== undefined && typeof body.assistantContext !== 'string') {
+    return { valid: false, error: 'assistantContext must be a string' };
+  }
+
+  return { valid: true };
 }
 
 /**
  * POST /api/habits/series
- * Validar si el usuario puede crear una nueva serie de hábitos
+ *
+ * Creates a new habit series via AI.
+ *
+ * Request body:
+ * - language: 'es' | 'en'
+ * - testData: Record<string, string>
+ * - difficultyLabels: { baja: string, media: string, alta: string }
+ * - assistantContext?: string
+ *
+ * Response (201 Created): Full Habit Series DTO
+ * - id: string
+ * - titulo: string
+ * - descripcion: string
+ * - acciones: Array<{nombre, descripcion, dificultad}>
+ * - rango: 'bronze' | 'silver' | 'golden' | 'diamond'
+ * - puntuacionTotal: number
+ * - fechaCreacion: string (ISO)
+ * - ultimaActividad: string (ISO)
  */
 export async function createHabitSeriesEndpoint(req, res) {
   try {
     const userId = req.user?.uid;
 
-    const result = await assertCanCreateHabitSeries(userId, { userRepository });
-
-    if (!result.allowed) {
-      const statusCode = result.reason === 'LIMIT_REACHED' ? 429 : HTTP_STATUS.FORBIDDEN;
-
-      logger.error(`[Habit Series] Validación fallida para ${userId}: ${result.reason}`);
-
-      return res.status(statusCode).json(result);
+    if (!userId) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        error: 'AUTHENTICATION_ERROR',
+        message: 'User not authenticated',
+      });
     }
 
-    logger.success(`[Habit Series] Validación exitosa para ${userId}`);
+    // Syntactic validation of HTTP input
+    const validation = validateRequestBody(req.body);
+    if (!validation.valid) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: 'VALIDATION_ERROR',
+        message: validation.error,
+      });
+    }
 
-    res.status(HTTP_STATUS.OK).json(result);
+    // Transform HTTP DTO to Application Contract input
+    const payload = {
+      language: req.body.language,
+      testData: req.body.testData,
+      difficultyLabels: req.body.difficultyLabels,
+      assistantContext: req.body.assistantContext || '',
+    };
+
+    // Invoke use-case
+    const result = await createHabitSeries(userId, payload, {
+      userRepository,
+      habitSeriesRepository,
+      energyRepository,
+      aiProvider,
+    });
+
+    logger.success(`[Habit Series] Created for user ${userId}, seriesId: ${result.id}`);
+
+    // Return use-case result directly (backend is authoritative over shape)
+    res.status(HTTP_STATUS.CREATED).json(result);
   } catch (err) {
-    logger.error('[Habit Series] Error:', err);
+    logger.error('[Habit Series] Error in create:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -61,24 +139,39 @@ export async function createHabitSeriesEndpoint(req, res) {
 
 /**
  * DELETE /api/habits/series/:seriesId
- * Eliminar una serie de hábitos de Firestore y decrementar contador
+ *
+ * Deletes a habit series from Firestore and decrements counter.
  */
 export async function deleteHabitSeriesEndpoint(req, res) {
   try {
     const userId = req.user?.uid;
     const seriesId = req.params?.seriesId;
 
+    if (!userId) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        error: 'AUTHENTICATION_ERROR',
+        message: 'User not authenticated',
+      });
+    }
+
+    if (!seriesId) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: 'VALIDATION_ERROR',
+        message: 'seriesId is required',
+      });
+    }
+
     await deleteHabitSeries({ userId, seriesId, habitSeriesRepository, userRepository });
 
-    logger.success(`[Habit Series] Delete exitoso para ${userId}, seriesId: ${seriesId}`);
+    logger.success(`[Habit Series] Deleted for user ${userId}, seriesId: ${seriesId}`);
 
     res.status(HTTP_STATUS.OK).json({
       success: true,
-      message: 'Serie eliminada exitosamente',
+      message: 'Series deleted successfully',
       deletedSeriesId: seriesId,
     });
   } catch (err) {
-    logger.error('[Habit Series] Error en delete:', err);
+    logger.error('[Habit Series] Error in delete:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json({

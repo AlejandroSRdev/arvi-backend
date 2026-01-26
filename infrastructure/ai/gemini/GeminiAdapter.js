@@ -30,6 +30,7 @@
 
 import { getModel } from './GeminiConfig.js';
 import { IAIProvider } from '../../../domain/ports/IAIProvider.js';
+import { sanitizeUserInput } from '../../../application/input/sanitizeUserInput.js';
 
 /**
  * Calcular tokens para Gemini (aproximación)
@@ -105,11 +106,20 @@ export class GeminiAdapter extends IAIProvider {
       // EXTRACCIÓN EXACTA: src/services/aiService.js:138
       const geminiModel = getModel(model);
 
+      // Sanitize user input at the system boundary (before any processing)
+      // Only user messages contain raw input; system/assistant messages are internal
+      const sanitizedMessages = messages.map(m => {
+        if (m.role === 'user') {
+          return { ...m, content: sanitizeUserInput(m.content) };
+        }
+        return m;
+      });
+
       // EXTRACCIÓN EXACTA: src/services/aiService.js:140-145
       // Convertir mensajes a formato Gemini
-      const prompt = messages.map(m => {
-        if (m.role === 'system') return `[INSTRUCCIONES DEL SISTEMA]\n${m.content}`;
-        if (m.role === 'assistant') return `[ASISTENTE]\n${m.content}`;
+      const prompt = sanitizedMessages.map(m => {
+        if (m.role === 'system') return `[SYSTEM INSTRUCTIONS]\n${m.content}`;
+        if (m.role === 'assistant') return `[ASSISTANT]\n${m.content}`;
         return m.content;
       }).join('\n\n');
 

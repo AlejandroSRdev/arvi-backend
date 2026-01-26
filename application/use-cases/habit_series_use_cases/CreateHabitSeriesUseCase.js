@@ -21,15 +21,15 @@
  * - aiProvider: IAIProvider
  */
 
-import { hasFeatureAccess, getPlan } from '../../domain/policies/PlanPolicy.js';
-import { getModelConfig } from '../../domain/policies/ModelSelectionPolicy.js';
-import { generateAIResponse } from '../services/AIExecutionService.js';
+import { hasFeatureAccess, getPlan } from '../../../domain/policies/PlanPolicy.js';
+import { getModelConfig } from '../../../domain/policies/ModelSelectionPolicy.js';
+import { generateAIResponse } from '../../services/AIExecutionService.js';
 import { ValidationError, AuthorizationError } from '../errors/index.js';
-import { InsufficientEnergyError } from '../../domain/errors/index.js';
+import { InsufficientEnergyError } from '../../../domain/errors/index.js';
 
-import CreativeHabitSeriesPrompt from '../prompts/habit_series/CreativeHabitSeriesPrompt.js';
-import StructureHabitSeriesPrompt from '../prompts/habit_series/StructureHabitSeriesPrompt.js';
-import JsonSchemaHabitSeriesPrompt from '../prompts/habit_series/JsonSchemaHabitSeriesPrompt.js';
+import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
+import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
+import JsonSchemaHabitSeriesPrompt from '../../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
 
 /**
  * Expected schema for habit series
@@ -121,7 +121,7 @@ function validateSchema(data) {
  * @param {Record<string, string>} payload.testData - User test responses
  * @param {Object} payload.difficultyLabels - Difficulty label translations
  * @param {Object} deps - Injected dependencies
- * @returns {Promise<{success: true, seriesId: string, titulo: string}>}
+ * @returns {Promise<HabitSeriesDTO>} The complete habit series as persisted
  */
 export async function createHabitSeries(userId, payload, deps) {
   const { userRepository, habitSeriesRepository, energyRepository, aiProvider } = deps;
@@ -286,14 +286,22 @@ export async function createHabitSeries(userId, payload, deps) {
   await userRepository.incrementActiveSeries(userId);
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 6: RETURN SUCCESS RESULT
+  // STEP 6: RETURN FULL HABIT SERIES DTO
   // ═══════════════════════════════════════════════════════════════════════
+  // The backend is authoritative over the final series shape.
+  // Return the complete series exactly as persisted.
+
+  const now = new Date().toISOString();
 
   return {
-    success: true,
-    seriesId,
+    id: seriesId,
     titulo: parsedSeries.titulo,
-    message: 'Habit series created successfully'
+    descripcion: parsedSeries.descripcion,
+    acciones: parsedSeries.acciones,
+    rango: 'bronze',
+    puntuacionTotal: 0,
+    fechaCreacion: now,
+    ultimaActividad: now
   };
 }
 

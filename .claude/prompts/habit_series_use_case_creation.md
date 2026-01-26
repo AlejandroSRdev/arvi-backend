@@ -7,7 +7,8 @@ Context:
 - Do NOT refactor existing services, policies, or repositories.
 
 Objective:
-Implement the application use case `CreateHabitSeriesUseCase` to orchestrate the full flow of habit series creation via AI.
+Implement the application use case `CreateHabitSeriesUseCase` to orchestrate the full flow of habit series creat
+ion via AI.
 
 Scope:
 - Only add or complete logic inside the existing use case file: CreateHabitSeriesUseCase.

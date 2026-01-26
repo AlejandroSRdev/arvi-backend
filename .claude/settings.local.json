@@ -5,8 +5,8 @@
       "Bash(cat:application/**)",
       "Bash(ls:src/**)",
       "Bash(ls:application/**)",
-      "Bash(mkdir:src/**)"
+      "Bash(mkdir:src/**)",
+      "Bash(dir /ad \"C:\\\\Users\\\\asaav\\\\Escritorio\\\\projects\\\\personal_projects\\\\arvi_backend\\\\application\")"
     ]
   }
 }
-
