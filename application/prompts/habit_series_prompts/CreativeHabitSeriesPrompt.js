@@ -96,4 +96,4 @@ NO es JSON aún.`;
   ];
 }
 
-module.exports = CreativeHabitSeriesPrompt;
+export default CreativeHabitSeriesPrompt;
