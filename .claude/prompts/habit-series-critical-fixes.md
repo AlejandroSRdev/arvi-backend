@@ -118,7 +118,7 @@ SanitizeUserInput MUST be invoked inside the AI adapter, before the first LLM ca
 Correct location:
 
 /infraestructure/ai/gemini/GeminiAdapter.js
-(And any adapter that receives raw user input.)
+
 
 2. Execution Rules
 The adapter must:
