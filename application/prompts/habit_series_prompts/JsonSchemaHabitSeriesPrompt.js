@@ -45,4 +45,4 @@ Return ONLY the JSON object matching this schema.`;
   ];
 }
 
-module.exports = JsonSchemaHabitSeriesPrompt;
+export default JsonSchemaHabitSeriesPrompt;

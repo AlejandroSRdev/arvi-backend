@@ -88,4 +88,4 @@ REGLAS:
   ];
 }
 
-module.exports = StructureHabitSeriesPrompt;
+export default StructureHabitSeriesPrompt;
