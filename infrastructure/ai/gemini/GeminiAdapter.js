@@ -30,7 +30,7 @@
 
 import { getModel } from './GeminiConfig.js';
 import { IAIProvider } from '../../../domain/ports/IAIProvider.js';
-import { sanitizeUserInput } from '../../../application/input/sanitizeUserInput.js';
+import { sanitizeUserInput } from '../../../application/input/SanitizeUserInput.js';
 
 /**
  * Calcular tokens para Gemini (aproximación)
