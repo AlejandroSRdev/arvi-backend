@@ -24,7 +24,6 @@ import express from 'express';
 import cors from 'cors';
 
 // Importar rutas (Hexagonal Architecture)
-import aiRoutes from './infrastructure/http/routes/ai.routes.js';
 import authRoutes from './infrastructure/http/routes/auth.routes.js';
 import energyRoutes from './infrastructure/http/routes/energy.routes.js';
 import userRoutes from './infrastructure/http/routes/user.routes.js';
