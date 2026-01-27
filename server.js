@@ -64,7 +64,6 @@ import FirestoreHabitSeriesRepository from './infrastructure/persistence/firesto
 import GeminiAdapter from './infrastructure/ai/gemini/GeminiAdapter.js';
 
 // Importar Controllers para inyección de dependencias
-import { setDependencies as setAIDeps } from './infrastructure/http/controllers/AIController.js';
 import { setDependencies as setAuthDeps } from './infrastructure/http/controllers/AuthController.js';
 import { setDependencies as setUserDeps } from './infrastructure/http/controllers/UserController.js';
 import { setDependencies as setEnergyDeps } from './infrastructure/http/controllers/EnergyController.js';
@@ -91,14 +90,6 @@ const aiProvider = new GeminiAdapter(); // Provider principal (contenido creativ
 // ───────────────────────────────────────────────────────────────
 // Llamar a setDependencies en CADA controller que lo requiera.
 // Este es el punto de composición que faltaba en la arquitectura.
-
-// AIController requiere: aiProvider, energyRepository, userRepository, habitSeriesRepository
-setAIDeps({
-  aiProvider,
-  energyRepository,
-  userRepository,
-  habitSeriesRepository
-});
 
 // AuthController requiere: userRepository
 setAuthDeps({
