@@ -18,7 +18,7 @@
  */
 
 import { createHabitSeries } from '../../../application/use-cases/habit_series_use_cases/CreateHabitSeriesUseCase.js';
-import { deleteHabitSeries } from '../../../application/use-cases/deleteHabitSeries.js';
+import { deleteHabitSeries } from '../../../application/use-cases/habit_series_use_cases/deleteHabitSeries.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
 import { logger } from '../../logger/logger.js';
