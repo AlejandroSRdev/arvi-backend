@@ -16,7 +16,7 @@
  * - Incremento de contadores (se hará en siguiente iteración)
  */
 
-import { IHabitSeriesRepository } from '../../../domain/ports/IHabitSeriesRepository.js';
+import { IHabitSeriesRepository } from '../../../domain/ports/HabitSeriesRepository.js';
 import { db, FieldValue, Timestamp } from './FirebaseConfig.js';
 
 export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
