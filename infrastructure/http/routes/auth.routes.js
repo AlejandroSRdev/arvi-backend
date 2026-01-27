@@ -18,7 +18,7 @@ const router = express.Router();
 // POST /api/auth/register - Registrar nuevo usuario
 router.post('/register', authRateLimiter, register);
 
-// POST /api/auth/login - Login (requiere autenticación Firebase)
-router.post('/login', authRateLimiter, authenticate, login);
+// POST /api/auth/login - Login de usuario
+router.post('/login', authRateLimiter, login);
 
 export default router;
