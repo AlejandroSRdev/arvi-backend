@@ -22,6 +22,8 @@ import { validateEmail } from '../../../domain/validators/InputValidator.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../errorMapper.js';
 import { logger } from '../../logger/logger.js';
+import jwt from 'jsonwebtoken';
+
 
 // Dependency injection
 let userRepository;
@@ -90,9 +92,14 @@ export async function login(req, res) {
 
     logger.success(`Login exitoso: ${userId}`);
 
+    const token = jwt.sign(
+      { userId },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
     res.status(HTTP_STATUS.OK).json({
-      success: true,
-      message: 'Login exitoso',
+      token,
       userId,
     });
   } catch (err) {
