@@ -156,17 +156,16 @@ app.get('/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'Arvi Backend',
-    version: '2.0.0',
+    version: '2.0.1',
   });
 });
 
 app.get('/', (req, res) => {
   res.json({
     message: '🚀 ARVI Backend API',
-    version: '2.0.0',
+    version: '2.0.1',
     endpoints: {
       health: 'GET /health',
-      ai: 'POST /api/ai/chat, POST /api/ai/json-convert',
       auth: 'POST /api/auth/login, POST /api/auth/register',
       energy: 'GET /api/energy, POST /api/energy/consume',
       user: 'GET /api/user/profile, PATCH /api/user/profile',
@@ -183,7 +182,6 @@ app.get('/', (req, res) => {
 // RUTAS API (NUEVA ARQUITECTURA)
 // ═══════════════════════════════════════════════════════════════
 
-app.use('/api/ai', aiRoutes);           // ✅ Endpoints de IA
 app.use('/api/auth', authRoutes);       // ✅ Autenticación
 app.use('/api/energy', energyRoutes);   // ✅ Gestión de energía
 app.use('/api/user', userRoutes);       // ✅ Gestión de usuarios
@@ -205,7 +203,6 @@ app.use((req, res) => {
     availableEndpoints: [
       'GET /health',
       'GET /',
-      'POST /api/ai/chat',
       'POST /api/ai/json-convert',
       'GET /api/energy',
       'POST /api/habits/series',
@@ -228,7 +225,7 @@ const PORT = process.env.PORT || 4242;
 app.listen(PORT, () => {
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('  🚀 ARVI Backend Server v2.0.0');
+  console.log('  🚀 ARVI Backend Server v2.0.1');
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`  📡 Puerto:          ${PORT}`);
   console.log(`  🌍 Entorno:         ${process.env.NODE_ENV || 'development'}`);
@@ -237,7 +234,6 @@ app.listen(PORT, () => {
   console.log('  ✅ Rutas activas:');
   console.log('     • GET  /health                       - Health check');
   console.log('     • GET  /                             - Info API');
-  console.log('     • POST /api/ai/chat                  - Chat con IA');
   console.log('     • POST /api/ai/json-convert          - Conversión JSON');
   console.log('     • GET  /api/energy                   - Consultar energía');
   console.log('     • POST /api/habits/series            - Crear serie de hábitos via IA');

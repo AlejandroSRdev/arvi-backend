@@ -19,26 +19,6 @@ router.use(authenticate);
 /**
  * POST /api/habits/series
  * Create a new habit series via AI.
- *
- * Request body:
- * - language: 'es' | 'en'
- * - testData: Record<string, string>
- * - difficultyLabels: { baja: string, media: string, alta: string }
- * - assistantContext?: string
- *
- * Response (201 Created):
- * - success: true
- * - seriesId: string
- * - titulo: string
- * - message: string
- *
- * The use-case handles:
- * - Plan/feature access validation
- * - Active series limit validation
- * - Energy availability validation
- * - AI execution (3 passes)
- * - Schema validation
- * - Persistence
  */
 router.post('/series', createHabitSeriesEndpoint);
 
