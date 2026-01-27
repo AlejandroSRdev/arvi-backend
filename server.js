@@ -60,8 +60,8 @@ import FirestoreUserRepository from './infrastructure/persistence/firestore/Fire
 import FirestoreEnergyRepository from './infrastructure/persistence/firestore/FirestoreEnergyRepository.js';
 import FirestoreHabitSeriesRepository from './infrastructure/persistence/firestore/FirestoreHabitSeriesRepository.js';
 
-// Importar AI Provider (Gemini por defecto para contenido creativo)
-import GeminiAdapter from './infrastructure/ai/gemini/GeminiAdapter.js';
+// Importar AI Provider Router (routes to correct adapter based on model)
+import AIProviderRouter from './infrastructure/ai/AIProviderRouter.js';
 
 // Importar Controllers para inyección de dependencias
 import { setDependencies as setAuthDeps } from './infrastructure/http/controllers/AuthController.js';
@@ -83,7 +83,7 @@ initializeFirebase();
 const userRepository = new FirestoreUserRepository();
 const energyRepository = new FirestoreEnergyRepository();
 const habitSeriesRepository = new FirestoreHabitSeriesRepository();
-const aiProvider = new GeminiAdapter(); // Provider principal (contenido creativo)
+const aiProvider = new AIProviderRouter(); // Routes to Gemini/OpenAI based on model
 
 // ───────────────────────────────────────────────────────────────
 // INYECTAR DEPENDENCIAS EN CONTROLLERS
