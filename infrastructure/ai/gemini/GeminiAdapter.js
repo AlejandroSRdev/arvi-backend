@@ -127,7 +127,6 @@ export class GeminiAdapter extends IAIProvider {
       const generationConfig = {
         temperature,
         maxOutputTokens: maxTokens,
-        ...(forceJson && { responseMimeType: 'application/json' }),
       };
 
       // EXTRACCIÓN EXACTA: src/services/aiService.js:153-156
