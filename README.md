@@ -52,7 +52,7 @@ infrastructure/ → HTTP, database, and external service adapters
 ## Tech Stack
 
 - **Runtime:** Node.js (>=18)
-- **Language:** JavaScript
+- **Language:** JavaScript/TypeScript
 - **HTTP Framework:** Express (used as a thin adapter)
 - **Database:** Firebase (Firestore)
 - **Hosting:** Render
