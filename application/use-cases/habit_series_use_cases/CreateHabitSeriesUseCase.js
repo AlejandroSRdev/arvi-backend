@@ -143,8 +143,8 @@ export async function createHabitSeries(userId, payload, deps) {
   }
 
   // Validate payload
-  if (!payload?.language || !payload?.testData || !payload?.difficultyLabels) {
-    throw new ValidationError('Missing required payload fields: language, testData, difficultyLabels');
+  if (!payload?.language || !payload?.testData) {
+    throw new ValidationError('Missing required payload fields: language, testData');
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -190,14 +190,13 @@ export async function createHabitSeries(userId, payload, deps) {
   // STEP 2: AI EXECUTION (3 passes)
   // ═══════════════════════════════════════════════════════════════════════
 
-  const { language, assistantContext, testData, difficultyLabels } = payload;
+  const { language, assistantContext, testData } = payload;
 
   // Pass 1: Creative generation (human-readable text)
   const creativeMessages = CreativeHabitSeriesPrompt({
     language,
     assistantContext: assistantContext || '',
-    testData,
-    difficultyLabels
+    testData
   });
 
   const creativeConfig = getModelConfig('habit_series_creative');
@@ -218,8 +217,7 @@ export async function createHabitSeries(userId, payload, deps) {
   // Pass 2: Structure extraction (text → JSON)
   const structureMessages = StructureHabitSeriesPrompt({
     language,
-    rawText: rawCreativeText,
-    difficultyLabels
+    rawText: rawCreativeText
   });
 
   const structureConfig = getModelConfig('habit_series_structure');
