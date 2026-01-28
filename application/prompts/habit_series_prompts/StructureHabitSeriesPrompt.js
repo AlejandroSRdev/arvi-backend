@@ -1,30 +1,27 @@
+import { Difficulty } from '../../../domain/value_objects/habit_objects/Difficulty.js';
+
 /**
  * SECOND PASS — Structure Prompt
  *
  * Extracts semantic JSON structure from creative text.
  *
  * This is a pure prompt factory extracted from legacy frontend logic.
- * The prompt content has been preserved EXACTLY as it was.
+ * Difficulty values are sourced from the domain to ensure alignment.
  */
 
 /**
  * @param {Object} params
  * @param {string} params.language - 'en' | 'es'
  * @param {string} params.rawText - Raw text output from creative pass
- * @param {Object} params.difficultyLabels
- * @param {string} params.difficultyLabels.low
- * @param {string} params.difficultyLabels.medium
- * @param {string} params.difficultyLabels.high
  * @returns {Array<{role: string, content: string}>} Array of message objects
  */
 function StructureHabitSeriesPrompt({
   language,
-  rawText,
-  difficultyLabels
+  rawText
 }) {  
-  const dificultadBaja = difficultyLabels.low;
-  const dificultadMedia = difficultyLabels.medium;
-  const dificultadAlta = difficultyLabels.high;
+  const dificultadBaja = Difficulty.LOW;
+  const dificultadMedia = Difficulty.MEDIUM;
+  const dificultadAlta = Difficulty.HIGH;
 
   const systemPrompt = language === 'en'
     ? `RETURN ONLY ONE JSON OBJECT.
