@@ -56,10 +56,6 @@ function validateRequestBody(body) {
     return { valid: false, error: 'testData is required and must be an object' };
   }
 
-  if (!body.difficultyLabels || typeof body.difficultyLabels !== 'object') {
-    return { valid: false, error: 'difficultyLabels is required and must be an object' };
-  }
-
   // assistantContext can be optional, default to empty string
   if (body.assistantContext !== undefined && typeof body.assistantContext !== 'string') {
     return { valid: false, error: 'assistantContext must be a string' };

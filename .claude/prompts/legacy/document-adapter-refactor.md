@@ -1,0 +1,1 @@
+Quiero que documentes el cambio arquitectónico real realizado en el backend con arquitectura Ports & Adapters y soporte multi-provider de IA (Gemini + OpenAI) que acabas de realizar y añádelo a la carpeta .docs.
