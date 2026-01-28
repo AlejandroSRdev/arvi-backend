@@ -6,9 +6,9 @@
  */
 
 export const Difficulty = Object.freeze({
-  LOW: 'baja',
-  MEDIUM: 'media',
-  HIGH: 'alta',
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
 });
 
 export default Difficulty;
