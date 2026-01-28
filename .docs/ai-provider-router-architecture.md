@@ -248,4 +248,4 @@ To verify the router works correctly:
 ## 14. Related Documentation
 
 - [Habit Series Creation Flow](.docs/habit_series_creation_flow.md)
-- [Technical Debt Registry](.docs/technical-debt.md)
+- [Technical Debt Registry](.docs/techni  cal-debt.md)
