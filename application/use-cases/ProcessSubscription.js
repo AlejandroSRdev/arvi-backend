@@ -18,7 +18,7 @@
  * - Acceso directo a Firestore
  */
 
-import { ValidationError, NotFoundError } from '../errors/index.js';
+import { ValidationError, NotFoundError } from './errors/index.js';
 
 /**
  * Procesar pago exitoso (checkout.session.completed)

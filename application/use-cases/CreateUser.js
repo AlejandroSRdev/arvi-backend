@@ -16,7 +16,7 @@
  * - Acceso directo a Firestore
  */
 
-import { ValidationError } from '../errors/index.js';
+import { ValidationError } from './errors/index.js';
 
 /**
  * Crear nuevo usuario en el sistema
