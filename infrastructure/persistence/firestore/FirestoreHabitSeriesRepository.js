@@ -66,7 +66,14 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
     };
 
     // Escribir en Firestore
-    await seriesRef.set(dataToStore);
+    console.log(`[REPOSITORY] [Habit Series] Saving series for user ${userId}`);
+    try {
+      await seriesRef.set(dataToStore);
+      console.log(`[REPOSITORY] [Habit Series] Series saved with id ${seriesId}`);
+    } catch (err) {
+      console.error(`[REPOSITORY ERROR] [Habit Series] Error saving series: ${err.message}`);
+      throw err;
+    }
 
     return { id: seriesId };
   }

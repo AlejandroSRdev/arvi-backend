@@ -124,6 +124,8 @@ function validateSchema(data) {
  * @returns {Promise<HabitSeriesDTO>} The complete habit series as persisted
  */
 export async function createHabitSeries(userId, payload, deps) {
+  console.log(`[USE-CASE] [Habit Series] CreateHabitSeries started for user ${userId}`);
+
   const { userRepository, habitSeriesRepository, energyRepository, aiProvider } = deps;
 
   // Validate dependencies
@@ -267,10 +269,16 @@ export async function createHabitSeries(userId, payload, deps) {
     throw new ValidationError(`AI output is not valid JSON: ${parseError.message}`);
   }
 
+  const actionCount = Array.isArray(parsedSeries?.acciones) ? parsedSeries.acciones.length : 0;
+  console.log(`[SCHEMA] [Habit Series] Validating AI output against schema, actions=${actionCount}`);
+
   const schemaValidation = validateSchema(parsedSeries);
   if (!schemaValidation.valid) {
+    console.error(`[SCHEMA ERROR] [Habit Series] Schema validation failed: ${schemaValidation.error}`);
     throw new ValidationError(`AI output schema validation failed: ${schemaValidation.error}`);
   }
+
+  console.log('[SCHEMA] [Habit Series] Schema validation OK');
 
   // ═══════════════════════════════════════════════════════════════════════
   // STEP 4: PERSISTENCE

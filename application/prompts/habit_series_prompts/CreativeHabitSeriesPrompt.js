@@ -1,10 +1,12 @@
+import { Difficulty } from '../../../domain/value_objects/habit_objects/Difficulty.js';
+
 /**
  * FIRST PASS — Creative Prompt
  *
  * Generates free but constrained human-readable content (NOT JSON).
  *
  * This is a pure prompt factory extracted from legacy frontend logic.
- * The prompt content has been preserved EXACTLY as it was.
+ * Difficulty values are sourced from the domain to ensure alignment.
  */
 
 /**
@@ -12,21 +14,16 @@
  * @param {string} params.language - 'en' | 'es'
  * @param {string} params.assistantContext - Serialized assistant context messages
  * @param {Record<string, string>} params.testData - User test data
- * @param {Object} params.difficultyLabels
- * @param {string} params.difficultyLabels.low
- * @param {string} params.difficultyLabels.medium
- * @param {string} params.difficultyLabels.high
  * @returns {Array<{role: string, content: string}>} Array of message objects
  */
 function CreativeHabitSeriesPrompt({
   language,
   assistantContext,
-  testData,
-  difficultyLabels
+  testData
 }) {
-  const dificultadBaja = difficultyLabels.low;
-  const dificultadMedia = difficultyLabels.medium;
-  const dificultadAlta = difficultyLabels.high;
+  const dificultadBaja = Difficulty.LOW;
+  const dificultadMedia = Difficulty.MEDIUM;
+  const dificultadAlta = Difficulty.HIGH;
 
   const systemPrompt = language === 'en'
     ? `You are Arvi. Create ONE complete thematic habit series based on the user's test responses.
@@ -38,7 +35,7 @@ FORMAT RULES (VERY STRICT):
 - Each action must have:
   • A short action name
   • One description of max **5 lines**
-  • A difficulty: "${dificultadBaja}", "${dificultadMedia}" or "${dificultadAlta}"
+  • A difficulty: "${dificultadBaja}" (easy/quick), "${dificultadMedia}" (moderate effort), or "${dificultadAlta}" (challenging/demanding)
 - NO lists outside the action list.
 - NO intros ("Here is your series"), NO conclusions.
 - ONLY the content of the series.
@@ -61,7 +58,7 @@ REGLAS DE FORMATO (MUY ESTRICTAS):
 - Cada acción debe incluir:
   • Un nombre corto
   • Una descripción de máximo **5 líneas**
-  • Una dificultad: "${dificultadBaja}", "${dificultadMedia}" o "${dificultadAlta}"
+  • Una dificultad: "${dificultadBaja}" (fácil/rápida), "${dificultadMedia}" (esfuerzo moderado), o "${dificultadAlta}" (exigente/desafiante)
 - SIN intros del tipo ("Aquí tienes la serie"), SIN cierres formales.
 - SIN listas externas que no sean las acciones.
 - SOLO el contenido de la serie.

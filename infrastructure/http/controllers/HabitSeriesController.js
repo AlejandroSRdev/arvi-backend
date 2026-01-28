@@ -76,7 +76,6 @@ function validateRequestBody(body) {
  * Request body:
  * - language: 'es' | 'en'
  * - testData: Record<string, string>
- * - difficultyLabels: { baja: string, media: string, alta: string }
  * - assistantContext?: string
  *
  * Response (201 Created): Full Habit Series DTO
@@ -100,6 +99,9 @@ export async function createHabitSeriesEndpoint(req, res) {
       });
     }
 
+    const testKeys = req.body.testData ? Object.keys(req.body.testData) : [];
+    console.log(`[START] [Habit Series] Request received for user ${userId}, language=${req.body.language}, testKeys=[${testKeys.join(', ')}]`);
+
     // Syntactic validation of HTTP input
     const validation = validateRequestBody(req.body);
     if (!validation.valid) {
@@ -113,7 +115,6 @@ export async function createHabitSeriesEndpoint(req, res) {
     const payload = {
       language: req.body.language,
       testData: req.body.testData,
-      difficultyLabels: req.body.difficultyLabels,
       assistantContext: req.body.assistantContext || '',
     };
 
