@@ -17,7 +17,7 @@
  */
 
 import { PLANS } from '../../domain/policies/PlanPolicy.js';
-import { ValidationError, NotFoundError, AuthorizationError } from '../errors/index.js';
+import { ValidationError, NotFoundError, AuthorizationError } from './errors/index.js';
 import { TrialAlreadyUsedError } from '../../domain/errors/index.js';
 
 /**

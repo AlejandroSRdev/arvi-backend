@@ -15,7 +15,7 @@
  * - Cálculos de tiempo restante (eso en el frontend)
  */
 
-import { ValidationError, NotFoundError } from '../errors/index.js';
+import { ValidationError, NotFoundError } from './errors/index.js';
 
 /**
  * Obtener estado del trial del usuario

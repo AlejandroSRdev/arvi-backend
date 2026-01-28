@@ -24,7 +24,7 @@
  */
 
 import { PLANS } from '../../domain/policies/PlanPolicy.js';
-import { ValidationError } from '../errors/index.js';
+import { ValidationError } from './errors/index.js';
 
 /**
  * Iniciar proceso de pago

@@ -42,7 +42,7 @@
 import { getModelConfig } from '../../domain/policies/ModelSelectionPolicy.js';
 import { canConsumeEnergy } from '../../domain/entities/Energy.js';
 import { isHabitSeriesFinal } from '../../domain/policies/HabitSeriesPolicy.js';
-import { ValidationError } from '../errors/index.js';
+import { ValidationError } from '../application_errors/index.js';
 import { InsufficientEnergyError } from '../../domain/errors/index.js';
 
 /**
