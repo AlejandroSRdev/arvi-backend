@@ -25,9 +25,16 @@ function CreativeHabitSeriesPrompt({
   const dificultadMedia = Difficulty.MEDIUM;
   const dificultadAlta = Difficulty.HIGH;
 
-  const systemPrompt = language === 'en'
-    ? `You are Arvi. Create ONE complete thematic habit series based on the user's test responses.
+  // Build context section only if assistantContext is non-empty
+  const contextSection = assistantContext?.trim()
+    ? `\n\n---\nBACKGROUND CONTEXT (for reference only, do not reply to this):\n${assistantContext}\n---\n`
+    : '';
 
+  const systemPrompt = language === 'en'
+    ? `LANGUAGE CONSTRAINT (MANDATORY): You MUST generate ALL content in ENGLISH. This is non-negotiable.
+
+You are Arvi. Create ONE complete thematic habit series based on the user's test responses.
+${contextSection}
 FORMAT RULES (VERY STRICT):
 - ONE title only.
 - ONE explanatory description, max **10 lines** (≈120–180 words).
@@ -48,9 +55,12 @@ The series must:
 - Remain practical, personalized and realistic.
 
 Your output must be a clean, structured description, but NOT JSON.
-Just produce the text, respecting the limits.`
-    : `Eres Arvi. Crea UNA serie temática de hábitos completa.
+Just produce the text, respecting the limits.
+ALL OUTPUT MUST BE IN ENGLISH.`
+    : `RESTRICCIÓN DE IDIOMA (OBLIGATORIO): DEBES generar TODO el contenido en ESPAÑOL. Esto es innegociable.
 
+Eres Arvi. Crea UNA serie temática de hábitos completa.
+${contextSection}
 REGLAS DE FORMATO (MUY ESTRICTAS):
 - SOLO un título.
 - SOLO una descripción explicativa de la serie, máximo **10 líneas** (≈120–180 palabras).
@@ -71,17 +81,14 @@ La serie debe:
 - Ser práctica, personalizada y realista.
 
 Tu salida debe ser texto limpio, estructurado y limitado.
-NO es JSON aún.`;
+NO es JSON aún.
+TODO EL CONTENIDO DEBE ESTAR EN ESPAÑOL.`;
 
   const userPrompt = language === 'en'
     ? `Test data: ${Object.entries(testData).map(([k, v]) => `${k}: ${v}`).join("; ")}`
     : `Datos del test: ${Object.entries(testData).map(([k, v]) => `${k}: ${v}`).join("; ")}`;
 
   return [
-    {
-      role: 'system',
-      content: assistantContext
-    },
     {
       role: 'system',
       content: systemPrompt
