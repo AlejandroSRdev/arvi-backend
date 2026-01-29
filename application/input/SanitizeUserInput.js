@@ -37,5 +37,13 @@ export function sanitizeUserInput(rawInput) {
   // Convert the entire string to lowercase
   const normalized = cleaned.toLowerCase();
 
+  // Step 4 — Observability
+  // Log whether normalization modified the input
+  if (rawInput === normalized) {
+    console.log('[SanitizeUserInput] Input already normalized – no changes applied');
+  } else {
+    console.log('[SanitizeUserInput] Input normalized');
+  }
+
   return normalized;
 }
