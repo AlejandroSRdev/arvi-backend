@@ -30,9 +30,11 @@ import { InsufficientEnergyError } from '../../../domain/errors/index.js';
 import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
 import JsonSchemaHabitSeriesPrompt from '../../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
+import { HabitSeries } from '../../../domain/value_objects/habit_objects/HabitSeries.js';
 
 /**
- * Expected schema for habit series
+ * Expected schema for habit series (AI output structure)
+ * Note: AI prompts use Spanish keys; this schema validates AI output.
  */
 const HABIT_SERIES_SCHEMA = {
   type: 'object',
@@ -294,21 +296,12 @@ export async function createHabitSeries(userId, payload, deps) {
   // ═══════════════════════════════════════════════════════════════════════
   // STEP 6: RETURN FULL HABIT SERIES DTO
   // ═══════════════════════════════════════════════════════════════════════
-  // The backend is authoritative over the final series shape.
-  // Return the complete series exactly as persisted.
+  // Create domain entity and return its DTO projection.
+  // The entity handles mapping AI output (Spanish) to domain model (English).
 
-  const now = new Date().toISOString();
+  const habitSeries = HabitSeries.fromAIOutput(seriesId, parsedSeries);
 
-  return {
-    id: seriesId,
-    titulo: parsedSeries.titulo,
-    descripcion: parsedSeries.descripcion,
-    acciones: parsedSeries.acciones,
-    rango: 'bronze',
-    puntuacionTotal: 0,
-    fechaCreacion: now,
-    ultimaActividad: now
-  };
+  return habitSeries.toDTO();
 }
 
 export default { createHabitSeries };

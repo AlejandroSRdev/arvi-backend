@@ -37,12 +37,12 @@
  * NORMALIZATION RULES (from legacy lines 232-237):
  * ================================================
  * Difficulty normalization (case-insensitive):
- * - "media" or "medium" → "media"
- * - "alta" or "high" → "alta"
- * - anything else (including "baja", "low", empty) → "baja"
+ * - "media" or "medium" → "medium"
+ * - "alta" or "high" → "high"
+ * - anything else (including "baja", "low", empty) → "low"
  *
- * This normalization ensures consistent difficulty values regardless of
- * the language (Spanish/English) used by the AI.
+ * This normalization ensures consistent English difficulty values
+ * aligned with the Difficulty domain enum (low, medium, high).
  *
  * FAILURE POLICY:
  * ==============
@@ -70,38 +70,39 @@
 import { ValidationError } from '../../errors/index.js';
 
 /**
- * Normalize difficulty string to canonical values
+ * Normalize difficulty string to canonical English values
  *
  * Legacy reference: docs/createHabitSeriesLegacy.dart:232-237
  *
  * Normalization rules (case-insensitive):
- * - "media" or "medium" → "media"
- * - "alta" or "high" → "alta"
- * - anything else → "baja" (default)
+ * - "media" or "medium" → "medium"
+ * - "alta" or "high" → "high"
+ * - anything else → "low" (default)
  *
- * This handles both Spanish and English difficulty values.
+ * This handles both Spanish and English difficulty values,
+ * normalizing to English values aligned with Difficulty domain enum.
  *
  * @param {string} difficultyStr - Raw difficulty string from AI
- * @returns {"baja"|"media"|"alta"} Normalized difficulty
+ * @returns {"low"|"medium"|"high"} Normalized English difficulty
  * @private
  */
 function normalizeDifficulty(difficultyStr) {
   if (!difficultyStr) {
-    return 'baja';
+    return 'low';
   }
 
   const normalized = difficultyStr.toString().toLowerCase().trim();
 
   if (['media', 'medium'].includes(normalized)) {
-    return 'media';
+    return 'medium';
   }
 
   if (['alta', 'high'].includes(normalized)) {
-    return 'alta';
+    return 'high';
   }
 
-  // Default to 'baja' for any other value (including 'baja', 'low', empty, invalid)
-  return 'baja';
+  // Default to 'low' for any other value (including 'baja', 'low', empty, invalid)
+  return 'low';
 }
 
 /**
@@ -218,8 +219,8 @@ function parseAction(actionJson, index) {
  * //   title: "Serie de Meditación",
  * //   description: "Una serie para practicar meditación diaria",
  * //   actions: [
- * //     { name: "Respiración", description: "...", difficulty: "baja" },
- * //     { name: "Concentración", description: "...", difficulty: "media" }
+ * //     { name: "Respiración", description: "...", difficulty: "low" },
+ * //     { name: "Concentración", description: "...", difficulty: "medium" }
  * //   ]
  * // }
  */
