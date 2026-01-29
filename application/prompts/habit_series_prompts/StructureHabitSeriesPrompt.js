@@ -1,4 +1,4 @@
-import { Difficulty } from '../../../domain/value_objects/habit_objects/Difficulty.js';
+import { Difficulty } from '../../../domain/value_objects/habit_objects/Difficulty.ts';
 
 /**
  * SECOND PASS — Structure Prompt
@@ -29,13 +29,13 @@ NO explanations. NO markdown. NO commentary. NO surrounding text.
 
 Extract EXACTLY this structure:
 {
-  "titulo": "",
-  "descripcion": "",
-  "acciones": [
+  "title": "",
+  "description": "",
+  "actions": [
     {
-      "nombre": "",
-      "descripcion": "",
-      "dificultad": ""
+      "name": "",
+      "description": "",
+      "difficulty": ""
     }
   ]
 }
@@ -53,13 +53,13 @@ Sin explicaciones, sin markdown, sin comentarios, sin texto adicional.
 
 Extrae EXACTAMENTE esta estructura:
 {
-  "titulo": "",
-  "descripcion": "",
-  "acciones": [
+  "title": "",
+  "description": "",
+  "actions": [
     {
-      "nombre": "",
-      "descripcion": "",
-      "dificultad": ""
+      "name": "",
+      "description": "",
+      "difficulty": ""
     }
   ]
 }
