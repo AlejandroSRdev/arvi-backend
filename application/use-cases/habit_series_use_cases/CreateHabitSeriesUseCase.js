@@ -30,7 +30,7 @@ import { InsufficientEnergyError } from '../../../domain/errors/index.js';
 import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
 import JsonSchemaHabitSeriesPrompt from '../../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
-import { HabitSeries } from '../../../domain/value_objects/habit_objects/HabitSeries.js';
+import { HabitSeries } from '../../../domain/value_objects/habit_objects/HabitSeries.ts';
 
 /**
  * Expected schema for habit series (AI output structure)
