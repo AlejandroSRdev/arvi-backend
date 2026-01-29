@@ -8,8 +8,8 @@
  * Use toDTO() to get a plain object for external communication.
  */
 
-import { Action, ActionDTO } from '../value_objects/habit_objects/Action.ts';
-import type { AIActionInput } from '../value_objects/habit_objects/Action.ts';
+import { Action } from '../value_objects/habit_objects/Action.ts';
+import type { ActionDTO, AIActionInput } from '../value_objects/habit_objects/Action.ts';
 import { Rank, calculateRankFromScore } from '../value_objects/habit_objects/Rank.ts';
 
 /**
