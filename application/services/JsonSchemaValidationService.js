@@ -205,15 +205,15 @@ function parseAIOutput(content) {
  *
  * @example
  * const schema = {
- *   "titulo": "",
- *   "descripcion": "",
- *   "acciones": [
- *     { "nombre": "", "descripcion": "", "dificultad": "" }
+ *   "title": "",
+ *   "description": "",
+ *   "actions": [
+ *     { "name": "", "description": "", "difficulty": "" }
  *   ]
  * };
  *
  * const validated = validateJSONSchema(aiOutput, schema);
- * // Returns: { titulo: "...", descripcion: "...", acciones: [...] }
+ * // Returns: { title: "...", description: "...", actions: [...] }
  */
 export function validateJSONSchema(aiOutput, schema) {
   if (!schema || typeof schema !== 'object') {

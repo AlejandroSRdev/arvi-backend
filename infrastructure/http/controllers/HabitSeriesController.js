@@ -76,13 +76,17 @@ function validateRequestBody(body) {
  *
  * Response (201 Created): Full Habit Series DTO
  * - id: string
- * - titulo: string
- * - descripcion: string
- * - acciones: Array<{nombre, descripcion, dificultad}>
- * - rango: 'bronze' | 'silver' | 'golden' | 'diamond'
- * - puntuacionTotal: number
- * - fechaCreacion: string (ISO)
- * - ultimaActividad: string (ISO)
+ * - title: string
+ * - description: string
+ * - actions: Array<{
+ *     name: string,
+ *     description: string,
+ *     difficulty: 'low' | 'medium' | 'high'
+ *   }>
+ * - rank: 'bronze' | 'silver' | 'golden' | 'diamond'
+ * - totalScore: number
+ * - createdAt: string (ISO)
+ * - lastActivityAt: string (ISO)
  */
 export async function createHabitSeriesEndpoint(req, res) {
   try {
