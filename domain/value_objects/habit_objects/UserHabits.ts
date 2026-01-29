@@ -8,7 +8,7 @@
  * Use toDTO() to get a plain object for external communication.
  */
 
-import { Rank } from './Rank.js';
+import { Rank } from './Rank.ts';
 
 /**
  * DTO interface for UserHabits (used in API responses).
