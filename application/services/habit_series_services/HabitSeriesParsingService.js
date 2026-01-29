@@ -9,8 +9,8 @@
  * This service extracts and normalizes data from schema-validated JSON
  * into a clean structure ready for domain entity instantiation.
  *
- * This corresponds to STEP 4️⃣ in the legacy implementation:
- * "PARSEO Y CREACIÓN FINAL" (lines 218-247 in legacy)
+ * This corresponds to STEP 4 in the legacy implementation:
+ * "PARSING AND FINAL CREATION" (lines 218-247 in legacy)
  *
  * CRITICAL: This service implements ONLY the parsing/extraction logic.
  * It stops BEFORE domain entity instantiation (lines 239-257 in legacy).
@@ -18,9 +18,9 @@
  * WHAT IT DOES:
  * ============
  * ✅ Accept a schema-validated JSON object
- * ✅ Extract required fields (titulo, descripcion, acciones)
+ * ✅ Extract required fields (title, description, actions)
  * ✅ Normalize difficulty values EXACTLY as legacy
- * ✅ Provide defaults for optional fields (nombre, descripcion in actions)
+ * ✅ Provide defaults for optional fields (name, description in actions)
  * ✅ Return a clean, structured DTO ready for domain layer
  * ✅ Throw explicit errors if required fields are missing or malformed
  *
@@ -28,7 +28,7 @@
  * ===================
  * ❌ Validate JSON schema (that's JsonSchemaValidationService's job)
  * ❌ Call AI or external services
- * ❌ Instantiate domain entities (Accion, SerieTematica)
+ * ❌ Instantiate domain entities (Action, HabitSeries)
  * ❌ Apply business rules or domain policies
  * ❌ Calculate scores or derived values
  * ❌ Add business logic (e.g., ID generation, ranking, timestamps)
@@ -54,7 +54,7 @@
  * DATA FLOW:
  * =========
  * Input:  Schema-validated JSON from JsonSchemaValidationService
- *         { titulo, descripcion, acciones: [{nombre, descripcion, dificultad}] }
+ *         { title, description, actions: [{name, description, difficulty}] }
  *
  * Output: Parsed DTO ready for domain layer
  *         { title, description, actions: [{name, description, difficulty}] }
@@ -108,7 +108,7 @@ function normalizeDifficulty(difficultyStr) {
 /**
  * Validate that a JSON object has the required top-level structure
  *
- * Required keys: titulo, descripcion, acciones
+ * Required keys: title, description, actions
  *
  * Legacy reference: docs/createHabitSeriesLegacy.dart:221-225
  *
@@ -117,25 +117,25 @@ function normalizeDifficulty(difficultyStr) {
  * @private
  */
 function validateRequiredKeys(json) {
-  const requiredKeys = ['titulo', 'descripcion', 'acciones'];
+  const requiredKeys = ['title', 'description', 'actions'];
 
   for (const key of requiredKeys) {
     if (!(key in json)) {
       throw new ValidationError(
-        `Estructura JSON incompleta: falta la clave "${key}"`
+        `Incomplete JSON structure: missing key "${key}"`
       );
     }
   }
 
-  if (!Array.isArray(json.acciones)) {
+  if (!Array.isArray(json.actions)) {
     throw new ValidationError(
-      'Estructura JSON incompleta: "acciones" debe ser un array'
+      'Incomplete JSON structure: "actions" must be an array'
     );
   }
 
-  if (json.acciones.length === 0) {
+  if (json.actions.length === 0) {
     throw new ValidationError(
-      'Estructura JSON incompleta: "acciones" no puede estar vacío'
+      'Incomplete JSON structure: "actions" cannot be empty'
     );
   }
 }
@@ -146,9 +146,9 @@ function validateRequiredKeys(json) {
  * Legacy reference: docs/createHabitSeriesLegacy.dart:229-246
  *
  * Extracts:
- * - nombre (with default if missing: "Acción sin nombre")
- * - descripcion (with default if missing: "Sin descripción")
- * - dificultad (normalized via normalizeDifficulty)
+ * - name (with default if missing: "Unnamed action")
+ * - description (with default if missing: "No description")
+ * - difficulty (normalized via normalizeDifficulty)
  *
  * @param {object} actionJson - Single action object from AI output
  * @param {number} index - Index in array (for error messages)
@@ -159,16 +159,16 @@ function validateRequiredKeys(json) {
 function parseAction(actionJson, index) {
   if (typeof actionJson !== 'object' || actionJson === null) {
     throw new ValidationError(
-      `Acción en índice ${index} es inválida: debe ser un objeto`
+      `Action at index ${index} is invalid: must be an object`
     );
   }
 
   // Extract fields with defaults (legacy lines 241-242)
-  const name = actionJson.nombre?.toString() || 'Acción sin nombre';
-  const description = actionJson.descripcion?.toString() || 'Sin descripción';
+  const name = actionJson.name?.toString() || 'Unnamed action';
+  const description = actionJson.description?.toString() || 'No description';
 
   // Normalize difficulty (legacy lines 232-237)
-  const rawDifficulty = actionJson.dificultad;
+  const rawDifficulty = actionJson.difficulty;
   const difficulty = normalizeDifficulty(rawDifficulty);
 
   return {
@@ -182,13 +182,13 @@ function parseAction(actionJson, index) {
  * Parse habit series data from schema-validated JSON
  *
  * This is the main parsing function that corresponds to the extraction
- * logic in legacy step 4️⃣ (lines 220-247), stopping BEFORE entity creation.
+ * logic in legacy step 4 (lines 220-247), stopping BEFORE entity creation.
  *
  * Legacy reference: docs/createHabitSeriesLegacy.dart:220-247
  *
  * Process:
  * 1. Validate required top-level keys exist
- * 2. Extract titulo and descripcion
+ * 2. Extract title and description
  * 3. Parse and normalize each action
  * 4. Return structured DTO ready for domain layer
  *
@@ -205,22 +205,22 @@ function parseAction(actionJson, index) {
  *
  * @example
  * const input = {
- *   titulo: "Serie de Meditación",
- *   descripcion: "Una serie para practicar meditación diaria",
- *   acciones: [
- *     { nombre: "Respiración", descripcion: "...", dificultad: "baja" },
- *     { nombre: "Concentración", descripcion: "...", dificultad: "media" }
+ *   title: "Meditation Series",
+ *   description: "A series to practice daily meditation",
+ *   actions: [
+ *     { name: "Breathing", description: "...", difficulty: "low" },
+ *     { name: "Focus", description: "...", difficulty: "medium" }
  *   ]
  * };
  *
  * const parsed = parseHabitSeriesData(input);
  * // Returns:
  * // {
- * //   title: "Serie de Meditación",
- * //   description: "Una serie para practicar meditación diaria",
+ * //   title: "Meditation Series",
+ * //   description: "A series to practice daily meditation",
  * //   actions: [
- * //     { name: "Respiración", description: "...", difficulty: "low" },
- * //     { name: "Concentración", description: "...", difficulty: "medium" }
+ * //     { name: "Breathing", description: "...", difficulty: "low" },
+ * //     { name: "Focus", description: "...", difficulty: "medium" }
  * //   ]
  * // }
  */
@@ -233,11 +233,11 @@ export function parseHabitSeriesData(validatedJSON) {
   validateRequiredKeys(validatedJSON);
 
   // 2. Extract top-level fields (legacy line 227)
-  const title = validatedJSON.titulo.toString();
-  const description = validatedJSON.descripcion.toString();
+  const title = validatedJSON.title.toString();
+  const description = validatedJSON.description.toString();
 
   // 3. Parse and normalize actions (legacy lines 229-246)
-  const actions = validatedJSON.acciones.map((actionJson, index) => {
+  const actions = validatedJSON.actions.map((actionJson, index) => {
     return parseAction(actionJson, index);
   });
 

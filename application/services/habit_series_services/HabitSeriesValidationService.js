@@ -1,74 +1,74 @@
 /**
  * Habit Series Validation Service (Application Layer)
  *
- * ARQUITECTURA: Hexagonal - Application Service
- * FECHA CREACIÓN: 2026-01-13
+ * ARCHITECTURE: Hexagonal - Application Service
+ * DATE: 2026-01-13
  *
- * ¿POR QUÉ ES UN APPLICATION SERVICE Y NO UN USE-CASE?
- * ==================================================
- * - Un USE-CASE representa una INTENCIÓN EXPLÍCITA del usuario/actor del sistema
- *   Ejemplo: "Crear una serie temática de hábitos", "Eliminar una serie"
+ * WHY IS THIS AN APPLICATION SERVICE AND NOT A USE-CASE?
+ * ======================================================
+ * - A USE-CASE represents an EXPLICIT USER INTENTION
+ *   Example: "Create a thematic habit series", "Delete a series"
  *
- * - Un APPLICATION SERVICE orquesta validaciones y lógica transversal que NO son
- *   intenciones del usuario, sino CONDICIONES PREVIAS para ejecutar un use-case.
- *   Ejemplo: "Verificar si el usuario puede crear una serie"
+ * - An APPLICATION SERVICE orchestrates validations and cross-cutting logic
+ *   that are NOT user intentions, but PRECONDITIONS for executing a use-case.
+ *   Example: "Check if the user can create a series"
  *
- * Este servicio NO representa una intención del usuario. Representa la orquestación
- * de validaciones necesarias ANTES de ejecutar el use-case real de creación.
+ * This service does NOT represent a user intention. It represents the orchestration
+ * of validations required BEFORE executing the actual creation use-case.
  *
- * RESPONSABILIDADES:
+ * RESPONSIBILITIES:
  * =================
- * 1. Cargar el usuario UNA SOLA VEZ (evita lecturas duplicadas)
- * 2. Determinar el plan efectivo (freemium + trial → trial)
- * 3. Validar acceso a la feature 'habits.series.create' usando PlanPolicy
- * 4. Validar el límite de series activas según el plan del usuario
- * 5. Retornar un resultado estructurado con información de la validación
+ * 1. Load the user ONCE (avoids duplicate reads)
+ * 2. Determine effective plan (freemium + trial → trial)
+ * 3. Validate access to the feature 'habits.series.create' using PlanPolicy
+ * 4. Validate the active series limit according to the user's plan
+ * 5. Return a structured result with validation information
  *
- * LO QUE NO HACE:
- * ==============
- * ❌ NO conoce HTTP (req/res, status codes)
- * ❌ NO persiste datos
- * ❌ NO genera contenido de series
- * ❌ NO es un middleware
- * ❌ NO depende de Express
+ * WHAT IT DOES NOT DO:
+ * ====================
+ * ❌ Does NOT know HTTP (req/res, status codes)
+ * ❌ Does NOT persist data
+ * ❌ Does NOT generate series content
+ * ❌ Is NOT a middleware
+ * ❌ Does NOT depend on Express
  *
- * LO QUE SÍ HACE:
- * ==============
- * ✅ Usa repositorios inyectados (inversión de dependencias)
- * ✅ Usa PlanPolicy del dominio para reglas de negocio
- * ✅ Lanza errores tipados de la capa de aplicación
- * ✅ Retorna objetos de decisión estructurados
- *
- * CONSUMIDORES:
- * ============
- * - HabitSeriesController (actualmente)
- * - CreateThematicHabitSeriesUseCase (futuro use-case de creación real)
- * - Cualquier otro flujo que necesite validar si se puede crear una serie
- *
- * CONSOLIDACIÓN:
+ * WHAT IT DOES:
  * =============
- * Este servicio REEMPLAZA Y CONSOLIDA:
- * - application/use-cases/ValidatePlanAccess.js
- *   → funciones: validateFeatureAccess + validateActiveSeriesLimit
- * - application/use-cases/createHabitSeries.js
- *   → función: createHabitSeries (que solo validaba, no creaba)
+ * ✅ Uses injected repositories (dependency inversion)
+ * ✅ Uses PlanPolicy from domain for business rules
+ * ✅ Throws typed errors from the application layer
+ * ✅ Returns structured decision objects
  *
- * Ambos archivos hacían lecturas duplicadas del usuario y validaciones redundantes.
- * Este servicio centraliza toda esa lógica en un único punto de orquestación.
+ * CONSUMERS:
+ * ==========
+ * - HabitSeriesController (currently)
+ * - CreateThematicHabitSeriesUseCase (future real creation use-case)
+ * - Any other flow that needs to validate if a series can be created
+ *
+ * CONSOLIDATION:
+ * ==============
+ * This service REPLACES AND CONSOLIDATES:
+ * - application/use-cases/ValidatePlanAccess.js
+ *   → functions: validateFeatureAccess + validateActiveSeriesLimit
+ * - application/use-cases/createHabitSeries.js
+ *   → function: createHabitSeries (which only validated, did not create)
+ *
+ * Both files made duplicate user reads and redundant validations.
+ * This service centralizes all that logic in a single orchestration point.
  */
 
 import { hasFeatureAccess, getPlan } from '../../../domain/policies/PlanPolicy.js';
 import { ValidationError, AuthorizationError, NotFoundError } from '../../errors/index.js';
 
 /**
- * Determina el plan efectivo del usuario considerando el estado del trial
+ * Determines the user's effective plan considering trial status
  *
- * Regla de negocio:
- * - Si el usuario tiene plan 'freemium' Y su trial está activo → plan efectivo es 'trial'
- * - En cualquier otro caso → el plan efectivo es el plan del usuario
+ * Business rule:
+ * - If user has 'freemium' plan AND trial is active → effective plan is 'trial'
+ * - In any other case → effective plan is the user's plan
  *
- * @param {object} user - Usuario de Firestore
- * @returns {string} - Plan efectivo ('freemium', 'trial', 'mini', 'base', 'pro')
+ * @param {object} user - Firestore user
+ * @returns {string} - Effective plan ('freemium', 'trial', 'mini', 'base', 'pro')
  */
 function determineEffectivePlan(user) {
   let effectivePlan = user.plan || 'freemium';
@@ -81,28 +81,28 @@ function determineEffectivePlan(user) {
 }
 
 /**
- * Validar si el usuario puede crear una nueva serie de hábitos
+ * Validate if the user can create a new habit series
  *
- * Realiza las siguientes validaciones en orden:
- * 1. El usuario existe en Firestore
- * 2. El usuario tiene acceso a la feature 'habits.series.create' según su plan
- * 3. El usuario no ha alcanzado el límite de series activas de su plan
+ * Performs the following validations in order:
+ * 1. The user exists in Firestore
+ * 2. The user has access to the feature 'habits.series.create' based on their plan
+ * 3. The user has not reached the active series limit for their plan
  *
- * @param {string} userId - ID del usuario (Firebase Auth UID)
- * @param {object} deps - Dependencias inyectadas
- * @param {object} deps.userRepository - Repositorio de usuarios
+ * @param {string} userId - User ID (Firebase Auth UID)
+ * @param {object} deps - Injected dependencies
+ * @param {object} deps.userRepository - User repository
  * @returns {Promise<{allowed: true} | {allowed: false, reason: string, ...}>}
  *
- * @throws {ValidationError} Si falta el userRepository
+ * @throws {ValidationError} If userRepository is missing
  *
- * Retorna:
- * - Si está permitido: { allowed: true }
- * - Si no está permitido: { allowed: false, reason: string, ...detalles }
+ * Returns:
+ * - If allowed: { allowed: true }
+ * - If not allowed: { allowed: false, reason: string, ...details }
  *
- * Posibles razones de rechazo:
- * - 'USER_NOT_FOUND': Usuario no existe en Firestore
- * - 'FEATURE_NOT_ALLOWED': El plan del usuario no tiene acceso a la feature
- * - 'LIMIT_REACHED': El usuario alcanzó el límite de series activas de su plan
+ * Possible rejection reasons:
+ * - 'USER_NOT_FOUND': User does not exist in Firestore
+ * - 'FEATURE_NOT_ALLOWED': User's plan does not have access to the feature
+ * - 'LIMIT_REACHED': User reached the active series limit for their plan
  */
 export async function assertCanCreateHabitSeries(userId, deps) {
   const { userRepository } = deps;
@@ -111,7 +111,7 @@ export async function assertCanCreateHabitSeries(userId, deps) {
     throw new ValidationError('Dependency required: userRepository');
   }
 
-  // 1. Cargar usuario UNA SOLA VEZ
+  // 1. Load user ONCE
   const user = await userRepository.getUser(userId);
 
   if (!user) {
@@ -121,11 +121,11 @@ export async function assertCanCreateHabitSeries(userId, deps) {
     };
   }
 
-  // 2. Determinar plan efectivo (considerando trial)
+  // 2. Determine effective plan (considering trial)
   const effectivePlan = determineEffectivePlan(user);
   const planConfig = getPlan(effectivePlan, user.trial?.activo);
 
-  // 3. Validar acceso a la feature 'habits.series.create'
+  // 3. Validate access to 'habits.series.create' feature
   const hasAccess = hasFeatureAccess(effectivePlan, 'habits.series.create');
 
   if (!hasAccess) {
@@ -137,7 +137,7 @@ export async function assertCanCreateHabitSeries(userId, deps) {
     };
   }
 
-  // 4. Validar límite de series activas
+  // 4. Validate active series limit
   const limits = user.limits || {};
   const activeSeriesCount = limits.activeSeriesCount || 0;
   const maxActiveSeries = planConfig.maxActiveSeries || 0;
@@ -152,7 +152,7 @@ export async function assertCanCreateHabitSeries(userId, deps) {
     };
   }
 
-  // ✅ Todas las validaciones pasaron
+  // All validations passed
   return {
     allowed: true,
     planId: effectivePlan,
