@@ -8,8 +8,8 @@
  * Use toDTO() to get a plain object for external communication.
  */
 
-import { Action, ActionDTO, AIActionInput } from './Action.js';
-import { Rank, calculateRankFromScore } from './Rank.js';
+import { Action, ActionDTO, AIActionInput } from './Action.ts';
+import { Rank, calculateRankFromScore } from './Rank.ts';
 
 /**
  * DTO interface for HabitSeries (used in API responses).
