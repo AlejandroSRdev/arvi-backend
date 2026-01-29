@@ -26,12 +26,12 @@ export interface HabitSeriesDTO {
 }
 
 /**
- * Input structure from AI output (Spanish keys).
+ * Input structure from AI output
  */
 export interface AIHabitSeriesInput {
-  readonly titulo: string;
-  readonly descripcion: string;
-  readonly acciones: readonly AIActionInput[];
+  readonly title: string;
+  readonly description: string;
+  readonly actions: readonly AIActionInput[];
 }
 
 export class HabitSeries {
@@ -66,7 +66,6 @@ export class HabitSeries {
 
   /**
    * Create a new HabitSeries from AI output.
-   * Maps Spanish keys to English and applies default values.
    *
    * @param id - Generated series ID
    * @param input - AI output with Spanish keys
@@ -74,14 +73,14 @@ export class HabitSeries {
    */
   static fromAIOutput(id: string, input: AIHabitSeriesInput): HabitSeries {
     const now = new Date();
-    const actions = input.acciones.map((actionInput, index) =>
+    const actions = input.actions.map((actionInput, index) =>
       Action.fromAIOutput(actionInput, `${id}_action_${index}`)
     );
 
     return new HabitSeries(
       id,
-      input.titulo,
-      input.descripcion,
+      input.title,
+      input.description,
       actions,
       Rank.BRONZE,
       0,

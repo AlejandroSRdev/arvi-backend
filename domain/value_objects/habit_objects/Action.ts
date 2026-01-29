@@ -32,12 +32,12 @@ export interface ActionFullDTO extends ActionDTO {
 }
 
 /**
- * Input structure from AI output (Spanish keys).
+ * Input structure from AI output
  */
 export interface AIActionInput {
-  readonly nombre: string;
-  readonly descripcion: string;
-  readonly dificultad: string;
+  readonly name: string;
+  readonly description: string;
+  readonly difficulty: string;
 }
 
 export class Action {
@@ -80,9 +80,9 @@ export class Action {
   static fromAIOutput(input: AIActionInput, id: string): Action {
     return new Action(
       id,
-      input.nombre,
-      input.descripcion,
-      parseDifficulty(input.dificultad),
+      input.name,
+      input.description,
+      parseDifficulty(input.difficulty),
       0,
       false,
       null,
