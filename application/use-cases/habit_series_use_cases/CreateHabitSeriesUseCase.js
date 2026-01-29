@@ -102,11 +102,11 @@ function validateSchema(data) {
     if (typeof action.name !== 'string' || !action.name.trim()) {
       return { valid: false, error: `actions[${i}].name is missing or invalid` };
     }
-    if (typeof action.descripcion !== 'string' || !action.descripcion.trim()) {
-      return { valid: false, error: `acciones[${i}].descripcion is missing or invalid` };
+    if (typeof action.description !== 'string' || !action.description.trim()) {
+      return { valid: false, error: `actions[${i}].description is missing or invalid` };
     }
-    if (typeof action.dificultad !== 'string' || !action.dificultad.trim()) {
-      return { valid: false, error: `acciones[${i}].dificultad is missing or invalid` };
+    if (typeof action.difficulty !== 'string' || !action.difficulty.trim()) {
+      return { valid: false, error: `actions[${i}].difficulty is missing or invalid` };
     }
   }
 
