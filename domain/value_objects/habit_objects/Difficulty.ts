@@ -29,11 +29,11 @@ export function parseDifficulty(value: string | null | undefined): Difficulty {
 
   const normalized = value.toLowerCase().trim();
 
-  if (['media', 'medium'].includes(normalized)) {
+  if (['medium'].includes(normalized)) {
     return Difficulty.MEDIUM;
   }
 
-  if (['alta', 'high'].includes(normalized)) {
+  if (['high'].includes(normalized)) {
     return Difficulty.HIGH;
   }
 

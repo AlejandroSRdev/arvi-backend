@@ -30,7 +30,7 @@ import { InsufficientEnergyError } from '../../../domain/errors/index.js';
 import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
 import JsonSchemaHabitSeriesPrompt from '../../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
-import { HabitSeries } from '../../../domain/value_objects/habit_objects/HabitSeries.ts';
+import { HabitSeries } from '../../../domain/entities/HabitSeries.ts';
 
 /**
  * Expected schema for habit series (AI output structure)
@@ -38,21 +38,21 @@ import { HabitSeries } from '../../../domain/value_objects/habit_objects/HabitSe
  */
 const HABIT_SERIES_SCHEMA = {
   type: 'object',
-  required: ['titulo', 'descripcion', 'acciones'],
+  required: ['title', 'description', 'actions'],
   properties: {
-    titulo: { type: 'string' },
-    descripcion: { type: 'string' },
-    acciones: {
+    title: { type: 'string' },
+    description: { type: 'string' },
+    actions: {
       type: 'array',
       minItems: 3,
       maxItems: 5,
       items: {
         type: 'object',
-        required: ['nombre', 'descripcion', 'dificultad'],
+        required: ['name', 'description', 'difficulty'],
         properties: {
-          nombre: { type: 'string' },
-          descripcion: { type: 'string' },
-          dificultad: { type: 'string' }
+          name: { type: 'string' },
+          description: { type: 'string' },
+          difficulty: { type: 'string' }
         }
       }
     }
@@ -78,29 +78,29 @@ function validateSchema(data) {
     return { valid: false, error: 'Data is not an object' };
   }
 
-  if (typeof data.titulo !== 'string' || !data.titulo.trim()) {
-    return { valid: false, error: 'Missing or invalid titulo' };
+  if (typeof data.title !== 'string' || !data.title.trim()) {
+    return { valid: false, error: 'Missing or invalid title' };
   }
 
-  if (typeof data.descripcion !== 'string' || !data.descripcion.trim()) {
-    return { valid: false, error: 'Missing or invalid descripcion' };
+  if (typeof data.description !== 'string' || !data.description.trim()) {
+    return { valid: false, error: 'Missing or invalid description' };
   }
 
-  if (!Array.isArray(data.acciones)) {
-    return { valid: false, error: 'acciones must be an array' };
+  if (!Array.isArray(data.actions)) {
+    return { valid: false, error: 'actions must be an array' };
   }
 
-  if (data.acciones.length < 3 || data.acciones.length > 5) {
-    return { valid: false, error: 'acciones must have between 3 and 5 items' };
+  if (data.actions.length < 3 || data.actions.length > 5) {
+    return { valid: false, error: 'actions must have between 3 and 5 items' };
   }
 
-  for (let i = 0; i < data.acciones.length; i++) {
-    const action = data.acciones[i];
+  for (let i = 0; i < data.actions.length; i++) {
+    const action = data.actions[i];
     if (!action || typeof action !== 'object') {
-      return { valid: false, error: `acciones[${i}] is not an object` };
+      return { valid: false, error: `actions[${i}] is not an object` };
     }
-    if (typeof action.nombre !== 'string' || !action.nombre.trim()) {
-      return { valid: false, error: `acciones[${i}].nombre is missing or invalid` };
+    if (typeof action.name !== 'string' || !action.name.trim()) {
+      return { valid: false, error: `actions[${i}].name is missing or invalid` };
     }
     if (typeof action.descripcion !== 'string' || !action.descripcion.trim()) {
       return { valid: false, error: `acciones[${i}].descripcion is missing or invalid` };
