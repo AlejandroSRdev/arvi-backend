@@ -8,7 +8,7 @@
  * Use toDTO() to get a plain object for external communication.
  */
 
-import { Difficulty, parseDifficulty } from './Difficulty.js';
+import { Difficulty, parseDifficulty } from './Difficulty.ts';
 
 /**
  * DTO interface for Action (used in API responses).
