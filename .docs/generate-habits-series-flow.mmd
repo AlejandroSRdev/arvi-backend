@@ -1,0 +1,67 @@
+flowchart TD
+    subgraph Infrastructure
+        A[HTTP POST /api/habits/series]
+        B{Valid request?}
+        ERR1[400 INVALID_REQUEST]
+
+        AI_ROUTER[AIProviderRouter]
+
+        AI1_EXEC[habit_series_creative]
+        AI2_EXEC[habit_series_structure]
+        AI3[OpenAIAdapter]
+        AI3_EXEC[json_conversion]
+
+        AI_ERR[502 AI_PROVIDER_ERROR]
+
+        SAVE[HabitSeriesRepository.save]
+        SAVE_ERR[500 PERSISTENCE_ERROR]
+
+        SUCCESS[201 CREATED with seriesId]
+    end
+
+    subgraph Application
+        UC[CreateHabitSeriesUseCase]
+
+        C[SanitizeUserInput]
+        D{Input valid?}
+        ERR2[422 INVALID_INPUT]
+
+        SCHEMA_VALIDATOR[SchemaValidator]
+        SCHEMA{Schema valid?}
+        SCHEMA_ERR[422 SCHEMA_VALIDATION_FAILED]
+    end
+
+    subgraph Domain
+        POLICY{HabitSeriesPolicy: isHabitSeriesFinal?}
+    end
+
+    A --> B
+    B -->|No| ERR1
+    B -->|Yes| UC
+
+    UC --> C
+    C --> D
+    D -->|No| ERR2
+    D -->|Yes| AI_ROUTER
+
+    AI_ROUTER --> AI1_EXEC
+    AI1_EXEC -->|Failure| AI_ERR
+    AI1_EXEC -->|Success| AI_ROUTER
+
+    AI_ROUTER --> AI2_EXEC
+    AI2_EXEC -->|Failure| AI_ERR
+    AI2_EXEC -->|Success| AI3
+
+    AI3 --> AI3_EXEC
+    AI3_EXEC -->|Failure| AI_ERR
+    AI3_EXEC -->|Success| SCHEMA_VALIDATOR
+
+    SCHEMA_VALIDATOR --> SCHEMA
+    SCHEMA -->|No| SCHEMA_ERR
+    SCHEMA -->|Yes| POLICY
+
+    POLICY -->|No| SUCCESS
+    POLICY -->|Yes| SAVE
+
+    SAVE -->|Failure| SAVE_ERR
+    SAVE -->|Success| SUCCESS
