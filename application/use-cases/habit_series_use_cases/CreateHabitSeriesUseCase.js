@@ -31,6 +31,7 @@ import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/Creati
 import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
 import JsonSchemaHabitSeriesPrompt from '../../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
 import { HabitSeries } from '../../../domain/entities/HabitSeries.ts';
+import { sanitizeUserInput } from '../../input/SanitizeUserInput.js';
 
 /**
  * Expected schema for habit series (AI output structure)
@@ -194,11 +195,17 @@ export async function createHabitSeries(userId, payload, deps) {
 
   const { language, assistantContext, testData } = payload;
 
+  // Sanitize raw user input once, before any AI processing
+  const sanitizedTestData = Object.fromEntries(
+    Object.entries(testData).map(([key, value]) => [key, sanitizeUserInput(value)])
+  );
+  const sanitizedContext = assistantContext ? sanitizeUserInput(assistantContext) : '';
+
   // Pass 1: Creative generation (human-readable text)
   const creativeMessages = CreativeHabitSeriesPrompt({
     language,
-    assistantContext: assistantContext || '',
-    testData
+    assistantContext: sanitizedContext,
+    testData: sanitizedTestData
   });
 
   const creativeConfig = getModelConfig('habit_series_creative');
