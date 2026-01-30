@@ -1,45 +1,39 @@
 /**
  * Gemini Adapter (Infrastructure Layer)
  *
- * MIGRADO DESDE: src/services/aiService.js (líneas 29-66, 134-173)
- * REFACTORIZADO: 2025-12-30
- * ALINEADO CON: frontend-reference/services/ai_service_refactor2.dart
+ * This adapter integrates Google Gemini as an external AI dependency,
+ * used exclusively for creative and semi-creative generation.
  *
- * IMPLEMENTA: domain/ports/IAIProvider.js
+ * It implements the IAIProvider port and acts as a pure translator between
+ * the application layer and the Gemini API:
+ * - Translates system messages into Gemini-compatible prompts
+ * - Executes the AI call using the Google Generative AI SDK
+ * - Translates the response back into a backend-friendly format
+ * - Computes token usage and energy consumption deterministically
  *
- * RESPONSABILIDADES:
- * - Implementar contrato IAIProvider usando Google Generative AI SDK
- * - Traducir input del dominio → llamada Gemini API
- * - Traducir respuesta Gemini → formato esperado por dominio
- * - Calcular tokensUsed (aproximación: text.length / 3.7)
- * - Calcular energyConsumed según fórmula original:
- *   ceil((responseTokens + promptTokens × 0.30) / 100)
+ * IMPORTANT:
+ * - Gemini is treated as a probabilistic generator.
+ * - It does NOT enforce schemas or domain constraints.
+ * - It does NOT make business decisions.
  *
- * NO CONTIENE:
- * - Lógica de prompts (eso está en el frontend)
- * - Flujos multi-pasada (eso está en el frontend)
- * - Decisiones de "qué generar" (eso está en el frontend)
- *
- * COMPORTAMIENTO ORIGINAL PRESERVADO:
- * - Cálculo de tokens Gemini: text.length / 3.7
- * - Cálculo de energía: ceil((response + prompt×0.30) / 100)
- * - Conversión de mensajes a formato Gemini
- * - forceJson → responseMimeType: 'application/json'
- * - temperature, maxOutputTokens según opciones
+ * Strict JSON and schema enforcement are intentionally handled
+ * by a separate OpenAI adapter, dedicated to structure-only transformations.
+ * This keeps creative generation and structural validation clearly separated.
  */
 
 import { getModel } from './GeminiConfig.js';
 import { IAIProvider } from '../../../domain/ports/IAIProvider.js';
 
 /**
- * Calcular tokens para Gemini (aproximación)
+ * Estimate token usage for Gemini responses.
  *
- * EXTRACCIÓN: src/services/aiService.js:38-41 (calculateGeminiTokens)
+ * This is a deterministic approximation based on the original implementation.
  *
- * Fórmula original: text.length / 3.7
+ * Formula:
+ *   tokens ≈ text.length / 3.7
  *
- * @param {string} text - Texto a calcular
- * @returns {number} - Número estimado de tokens
+ * @param {string} text
+ * @returns {number}
  */
 function calculateGeminiTokens(text) {
   if (!text || typeof text !== 'string') return 0;
@@ -47,48 +41,53 @@ function calculateGeminiTokens(text) {
 }
 
 /**
- * Calcular energía a consumir para Gemini
+ * Compute energy consumption for a Gemini call.
  *
- * EXTRACCIÓN: src/services/aiService.js:57-66 (calculateGeminiEnergy)
+ * Energy is derived from both prompt and response size,
+ * following the original backend formula:
  *
- * Fórmula original:
- * 1. tokens_prompt = calculateGeminiTokens(prompt)
- * 2. tokens_respuesta = calculateGeminiTokens(respuesta)
- * 3. total = respuesta + (prompt × 0.30)
- * 4. energia = ceil(total / 100)
+ * 1. promptTokens = calculateGeminiTokens(prompt)
+ * 2. responseTokens = calculateGeminiTokens(response)
+ * 3. total = responseTokens + (promptTokens × 0.30)
+ * 4. energy = ceil(total / 100)
  *
- * @param {string} prompt - Prompt enviado
- * @param {string} response - Respuesta recibida
- * @returns {number} - Energía a consumir
+ * @param {string} prompt
+ * @param {string} response
+ * @returns {number}
  */
 function calculateGeminiEnergy(prompt, response) {
   const tokensPrompt = calculateGeminiTokens(prompt);
-  const tokensRespuesta = calculateGeminiTokens(response);
-  const totalTokens = Math.round(tokensRespuesta + (tokensPrompt * 0.30));
-  const energia = Math.ceil(totalTokens / 100);
+  const tokensResponse = calculateGeminiTokens(response);
+  const totalTokens = Math.round(tokensResponse + (tokensPrompt * 0.30));
+  const energy = Math.ceil(totalTokens / 100);
 
-  console.log(`📊 [Gemini Energy] Prompt: ${tokensPrompt}t, Respuesta: ${tokensRespuesta}t, Total: ${totalTokens}t → Energía: ${energia}`);
+  console.log(
+    `📊 [Gemini Energy] Prompt: ${tokensPrompt}t, Response: ${tokensResponse}t, Total: ${totalTokens}t → Energy: ${energy}`
+  );
 
-  return energia;
+  return energy;
 }
 
 /**
- * Adapter de Gemini que implementa el port IAIProvider
+ * Gemini adapter implementing the IAIProvider port.
+ *
+ * This adapter performs no orchestration, validation, or flow control.
+ * All decisions about when and why Gemini is called belong to the use case.
  */
 export class GeminiAdapter extends IAIProvider {
+
   /**
-   * Llamada universal a Gemini
+   * Universal Gemini call.
    *
-   * EXTRACCIÓN: src/services/aiService.js:134-173
+   * @param {string} userId - User identifier (used only for logging)
+   * @param {Array<Object>} messages - [{ role, content }] prepared by the application layer
+   * @param {Object} options
+   * @param {string} options.model - Gemini model (default: gemini-2.5-flash)
+   * @param {number} options.temperature - Sampling temperature
+   * @param {number} options.maxTokens - Output token limit
+   * @param {boolean} options.forceJson - Included for interface parity (not used here)
    *
-   * @param {string} userId - ID del usuario (no usado por Gemini SDK, solo para logs)
-   * @param {Array<Object>} messages - Array de mensajes [{role: 'user'|'system'|'assistant', content: string}] (construidos por el frontend)
-   * @param {Object} options - Opciones de configuración
-   * @param {string} options.model - Modelo específico (default: 'gemini-2.5-flash')
-   * @param {number} options.temperature - Temperatura 0.0-1.0 (default: 0.7)
-   * @param {number} options.maxTokens - Límite de tokens (default: 1500)
-   * @param {boolean} options.forceJson - Forzar respuesta JSON (default: false)
-   * @returns {Promise<Object>} {content, model, tokensUsed, energyConsumed}
+   * @returns {Promise<Object>} { content, model, tokensUsed, energyConsumed }
    */
   async callAI(userId, messages, options = {}) {
     try {
@@ -96,79 +95,68 @@ export class GeminiAdapter extends IAIProvider {
         model = 'gemini-2.5-flash',
         temperature = 0.7,
         maxTokens = 1500,
-        forceJson = false,
+        forceJson = false, // intentionally unused
       } = options;
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:136
-      console.log(`🧠 [Gemini] Llamando modelo: ${model}`);
+      console.log(`🧠 [Gemini] Calling model: ${model}`);
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:138
       const geminiModel = getModel(model);
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:140-145
-      // Convertir mensajes a formato Gemini
+      // Convert messages to a single Gemini-compatible prompt
       const prompt = messages.map(m => {
         if (m.role === 'system') return `[SYSTEM INSTRUCTIONS]\n${m.content}`;
         if (m.role === 'assistant') return `[ASSISTANT]\n${m.content}`;
         return m.content;
       }).join('\n\n');
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:147-151
       const generationConfig = {
         temperature,
         maxOutputTokens: maxTokens,
       };
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:153-156
       const result = await geminiModel.generateContent({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig,
       });
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:158-159
       const content = result.response.text();
       const tokensUsed = calculateGeminiTokens(content);
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:161-163
-      // ✅ SOLO GEMINI CONSUME ENERGÍA (contenido creativo)
-      // Fórmula original de Flutter: ceil((responseTokens + promptTokens × 0.30) / 100)
-      const energyToConsume = calculateGeminiEnergy(prompt, content);
+      // Only Gemini consumes internal energy units (creative generation)
+      const energyConsumed = calculateGeminiEnergy(prompt, content);
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:165-170
       const response = {
         content,
         model,
         tokensUsed,
-        energyConsumed: energyToConsume,
+        energyConsumed,
       };
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:172
-      console.log(`✅ [Gemini] Respuesta recibida - Tokens: ${tokensUsed}, Energía: ${energyToConsume}`);
+      console.log(
+        `✅ [Gemini] Response received - Tokens: ${tokensUsed}, Energy: ${energyConsumed}`
+      );
 
       return response;
 
     } catch (error) {
-      console.error(`❌ [GeminiAdapter] Error en callAI: ${error.message}`);
-      throw new Error(`Error al llamar a Gemini: ${error.message}`);
+      console.error(`❌ [GeminiAdapter] callAI error: ${error.message}`);
+      throw new Error(`Gemini call failed: ${error.message}`);
     }
   }
 
   /**
-   * Llamada a IA con mapeo automático de modelo según tipo de función
+   * Convenience wrapper when a function type is provided.
    *
-   * NOTA: Este método delega la selección de modelo al use-case.
-   * En la práctica, el use-case usa ModelSelectionPolicy para
-   * determinar el modelo correcto antes de llamar a callAI.
+   * Model selection is intentionally handled by the use case
+   * (via ModelSelectionPolicy), not by this adapter.
    *
-   * @param {string} userId - ID del usuario
-   * @param {Array<Object>} messages - Array de mensajes [{role, content}] (construidos por el frontend)
-   * @param {string} functionType - Tipo de función (usado por ModelSelectionPolicy)
-   * @returns {Promise<Object>} {content, model, tokensUsed, energyConsumed}
+   * @param {string} userId
+   * @param {Array<Object>} messages
+   * @param {string} functionType
+   * @returns {Promise<Object>}
    */
   async callAIWithFunctionType(userId, messages, functionType) {
-    // Gemini usa gemini-2.5-flash por defecto para todas las funciones
-    // El use case determina el modelo apropiado vía ModelSelectionPolicy antes de llamar
-    return await this.callAI(userId, messages, {
+    return this.callAI(userId, messages, {
       model: 'gemini-2.5-flash',
       temperature: 0.7,
       maxTokens: 1500,
@@ -178,3 +166,4 @@ export class GeminiAdapter extends IAIProvider {
 }
 
 export default GeminiAdapter;
+
