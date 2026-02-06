@@ -15,7 +15,7 @@
  * Formatting, naming and structure are aligned with API consumers,
  * not with internal domain models.
  */
-export type HabitSeriesOutputDTO = {
+export class HabitSeriesOutputDTO {
   id: string;
   title: string;
   description: string;
