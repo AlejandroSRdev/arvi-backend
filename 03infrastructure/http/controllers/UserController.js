@@ -21,7 +21,7 @@
 import { getUserProfile, updateUserProfile, deleteUserAccount } from '../../../02application/use-cases/ManageUser.js';
 import { getSubscriptionStatus } from '../../../02application/use-cases/GetSubscriptionStatus.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { mapErrorToHttp } from '../errorMapper.js';
+import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/logger.js';
 
 // Dependency injection

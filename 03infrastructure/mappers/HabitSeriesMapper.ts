@@ -24,6 +24,8 @@ import { HabitSeriesOutputDTO } from "../dtos/HabitSeriesOutputDTO";
 export function toHabitSeriesOutputDTO(
   habitSeries: HabitSeries
 ): HabitSeriesOutputDTO {
+  console.log(`[MAPPER] [Infrastructure] toHabitSeriesOutputDTO called for id=${habitSeries.id}, rank=${habitSeries.getRank()}`);
+
   return {
     id: habitSeries.id,
     title: habitSeries.title,
