@@ -26,14 +26,20 @@ export function mapAIOutputToHabitSeries(
     actions: readonly { name: string; description: string; difficulty: string }[];
   }
 ): HabitSeries {
+  console.log(`[MAPPER] [Application] mapAIOutputToHabitSeries called for id=${id}, actions=${aiOutput.actions.length}`);
+
   const actions = aiOutput.actions.map((raw, index) =>
     Action.fromAIOutput(raw, `${id}_action_${index}`)
   );
 
-  return HabitSeries.create({
+  const habitSeries = HabitSeries.create({
     id,
     title: aiOutput.title,
     description: aiOutput.description,
     actions,
   });
+
+  console.log(`[MAPPER] [Application] mapAIOutputToHabitSeries OK → title="${habitSeries.title}", actions=${habitSeries.actions.length}`);
+
+  return habitSeries;
 }

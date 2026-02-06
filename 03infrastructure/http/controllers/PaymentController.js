@@ -26,7 +26,7 @@
 import { startPayment } from '../../../02application/use-cases/StartPayment.js';
 import { stripe } from '../../payment/stripe/StripeConfig.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { mapErrorToHttp } from '../errorMapper.js';
+import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/logger.js';
 
 /**
