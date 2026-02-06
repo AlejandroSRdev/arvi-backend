@@ -1,4 +1,4 @@
-import { Action, Rank, calculateRankFromScore } from "../value_objects/habit_objects";
+import { Action, Rank, calculateRankFromScore } from "../value_objects/habit_objects/index.ts";
 
 /**
  * HabitSeries (Domain Entity)
