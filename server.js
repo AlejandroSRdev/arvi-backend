@@ -24,17 +24,17 @@ import express from 'express';
 import cors from 'cors';
 
 // Importar rutas (Hexagonal Architecture)
-import authRoutes from './infrastructure/http/routes/auth.routes.js';
-import energyRoutes from './infrastructure/http/routes/energy.routes.js';
-import userRoutes from './infrastructure/http/routes/user.routes.js';
-import stripeRoutes from './infrastructure/http/routes/stripe.routes.js';
-import webhookRoutes from './infrastructure/http/routes/webhook.routes.js';
-import paymentRoutes from './infrastructure/http/routes/payment.routes.js';
-import habitSeriesRoutes from './infrastructure/http/routes/HabitSeriesRoutes.js';
-import executionSummaryRoutes from './infrastructure/http/routes/executionSummary.routes.js';
+import authRoutes from './03infrastructure/http/routes/auth.routes.js';
+import energyRoutes from './03infrastructure/http/routes/energy.routes.js';
+import userRoutes from './03infrastructure/http/routes/user.routes.js';
+import stripeRoutes from './03infrastructure/http/routes/stripe.routes.js';
+import webhookRoutes from './03infrastructure/http/routes/webhook.routes.js';
+import paymentRoutes from './03infrastructure/http/routes/payment.routes.js';
+import habitSeriesRoutes from './03infrastructure/http/routes/HabitSeriesRoutes.js';
+import executionSummaryRoutes from './03infrastructure/http/routes/executionSummary.routes.js';
 
 // Importar middleware (Hexagonal Architecture)
-import { errorHandler } from './infrastructure/http/middleware/errorHandler.js';
+import { errorHandler } from './03infrastructure/http/middleware/errorHandler.js';
 
 // ═══════════════════════════════════════════════════════════════
 // BOOTSTRAP - COMPOSICIÓN DE DEPENDENCIAS
@@ -53,23 +53,23 @@ import { errorHandler } from './infrastructure/http/middleware/errorHandler.js';
 // ═══════════════════════════════════════════════════════════════
 
 // Importar configuración Firebase (Hexagonal Architecture)
-import { initializeFirebase } from './infrastructure/persistence/firestore/FirebaseConfig.js';
+import { initializeFirebase } from './03infrastructure/persistence/firestore/FirebaseConfig.js';
 
 // Importar Adaptadores de Infraestructura (Repositories)
-import FirestoreUserRepository from './infrastructure/persistence/firestore/FirestoreUserRepository.js';
-import FirestoreEnergyRepository from './infrastructure/persistence/firestore/FirestoreEnergyRepository.js';
-import FirestoreHabitSeriesRepository from './infrastructure/persistence/firestore/FirestoreHabitSeriesRepository.js';
+import FirestoreUserRepository from './03infrastructure/persistence/firestore/FirestoreUserRepository.js';
+import FirestoreEnergyRepository from './03infrastructure/persistence/firestore/FirestoreEnergyRepository.js';
+import FirestoreHabitSeriesRepository from './03infrastructure/persistence/firestore/FirestoreHabitSeriesRepository.js';
 
 // Importar AI Provider Router (routes to correct adapter based on model)
-import AIProviderRouter from './infrastructure/ai/AIProviderRouter.js';
+import AIProviderRouter from './03infrastructure/ai/AIProviderRouter.js';
 
 // Importar Controllers para inyección de dependencias
-import { setDependencies as setAuthDeps } from './infrastructure/http/controllers/AuthController.js';
-import { setDependencies as setUserDeps } from './infrastructure/http/controllers/UserController.js';
-import { setDependencies as setEnergyDeps } from './infrastructure/http/controllers/EnergyController.js';
-import { setDependencies as setWebhookDeps } from './infrastructure/http/controllers/WebhookController.js';
-import { setDependencies as setHabitSeriesDeps } from './infrastructure/http/controllers/HabitSeriesController.js';
-import { setDependencies as setExecutionSummaryDeps } from './infrastructure/http/controllers/ExecutionSummaryController.js';
+import { setDependencies as setAuthDeps } from './03infrastructure/http/controllers/AuthController.js';
+import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
+import { setDependencies as setEnergyDeps } from './03infrastructure/http/controllers/EnergyController.js';
+import { setDependencies as setWebhookDeps } from './03infrastructure/http/controllers/WebhookController.js';
+import { setDependencies as setHabitSeriesDeps } from './03infrastructure/http/controllers/HabitSeriesController.js';
+import { setDependencies as setExecutionSummaryDeps } from './03infrastructure/http/controllers/ExecutionSummaryController.js';
 
 // Inicializar Firebase Admin SDK
 initializeFirebase();
@@ -77,8 +77,6 @@ initializeFirebase();
 // ───────────────────────────────────────────────────────────────
 // CREAR INSTANCIAS ÚNICAS DE ADAPTADORES
 // ───────────────────────────────────────────────────────────────
-// UNA SOLA instancia de cada repositorio para toda la aplicación.
-// Esto garantiza consistencia y facilita el testing.
 
 const userRepository = new FirestoreUserRepository();
 const energyRepository = new FirestoreEnergyRepository();
@@ -89,7 +87,6 @@ const aiProvider = new AIProviderRouter(); // Routes to Gemini/OpenAI based on m
 // INYECTAR DEPENDENCIAS EN CONTROLLERS
 // ───────────────────────────────────────────────────────────────
 // Llamar a setDependencies en CADA controller que lo requiera.
-// Este es el punto de composición que faltaba en la arquitectura.
 
 // AuthController requiere: userRepository
 setAuthDeps({
