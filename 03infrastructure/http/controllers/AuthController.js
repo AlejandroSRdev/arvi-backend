@@ -18,7 +18,6 @@
 
 import { createUser } from '../../../02application/use-cases/CreateUser.js';
 import { updateLastLogin } from '../../../02application/use-cases/ManageUser.js';
-import { validateEmail } from '../../../01domain/validators/InputValidator.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/logger.js';
