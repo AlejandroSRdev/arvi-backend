@@ -18,8 +18,8 @@
  * - Is a pure, deterministic translation layer.
  */
 
-import { HabitSeries } from "../../01domain/entities/HabitSeries";
-import { HabitSeriesOutputDTO } from "../dtos/HabitSeriesOutputDTO";
+import { HabitSeries } from "../../01domain/entities/HabitSeries.ts";
+import { HabitSeriesOutputDTO } from "../dtos/HabitSeriesOutputDTO.ts";
 
 export function toHabitSeriesOutputDTO(
   habitSeries: HabitSeries
