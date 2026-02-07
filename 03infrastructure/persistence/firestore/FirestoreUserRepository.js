@@ -27,6 +27,7 @@ export class FirestoreUserRepository extends IUserRepository {
 
     const persistenceModel = {
       email: user.email,
+      password: user.password,
       plan: user.plan,
 
       energy: {
@@ -60,6 +61,27 @@ export class FirestoreUserRepository extends IUserRepository {
       return null;
     }
 
+    return {
+      id: doc.id,
+      ...doc.data(),
+    };
+  }
+
+  /**
+   * Get user by email address
+   */
+  async getUserByEmail(email) {
+    const snapshot = await db
+      .collection(USERS_COLLECTION)
+      .where("email", "==", email)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const doc = snapshot.docs[0];
     return {
       id: doc.id,
       ...doc.data(),

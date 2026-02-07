@@ -18,6 +18,17 @@ export class IPasswordHasher {
   async hash(password) {
     throw new Error("Not implemented");
   }
+
+  /**
+   * Verify a raw password against a stored hash
+   *
+   * @param {string} password - Raw password to verify
+   * @param {string} hash - Stored hash to compare against
+   * @returns {Promise<boolean>} True if password matches
+   */
+  async verify(password, hash) {
+    throw new Error("Not implemented");
+  }
 }
 
 export default IPasswordHasher;

@@ -7,7 +7,7 @@
  * No external dependencies required.
  */
 
-import { scrypt, randomBytes } from "node:crypto";
+import { scrypt, randomBytes, timingSafeEqual } from "node:crypto";
 import { IPasswordHasher } from "../../01domain/ports/IPasswordHasher.js";
 
 export class PasswordHasher extends IPasswordHasher {
@@ -24,6 +24,21 @@ export class PasswordHasher extends IPasswordHasher {
       scrypt(password, salt, 64, (err, derivedKey) => {
         if (err) reject(err);
         resolve(`${salt}:${derivedKey.toString("hex")}`);
+      });
+    });
+  }
+
+  /**
+   * Verify a raw password against a stored "salt:hash" string.
+   * Uses timingSafeEqual to prevent timing attacks.
+   */
+  async verify(password, storedHash) {
+    const [salt, hash] = storedHash.split(":");
+
+    return new Promise((resolve, reject) => {
+      scrypt(password, salt, 64, (err, derivedKey) => {
+        if (err) reject(err);
+        resolve(timingSafeEqual(Buffer.from(hash, "hex"), derivedKey));
       });
     });
   }

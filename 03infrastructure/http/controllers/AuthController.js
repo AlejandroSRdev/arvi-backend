@@ -11,7 +11,7 @@
  */
 
 import { createUser } from '../../../02application/use-cases/auth/CreateUser.js';
-import { updateLastLogin } from '../../../02application/use-cases/ManageUser.js';
+import { loginUser } from '../../../02application/use-cases/auth/LoginUser.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/logger.js';
@@ -66,27 +66,31 @@ export async function register(req, res) {
 
 /**
  * POST /api/auth/login
- * Update last login
+ * Authenticate user with email and password
  */
 export async function login(req, res) {
   try {
-    const userId = req.user?.uid;
+    const { email, password } = req.body;
 
-    if (!userId) {
-      const err = new Error('Unauthenticated user');
-      err.code = 'AUTHENTICATION_ERROR';
+    // HTTP input validation
+    if (!email || !password) {
+      const err = new Error('Email and password are required');
+      err.code = 'VALIDATION_ERROR';
       throw err;
     }
 
-    await updateLastLogin(userId, { userRepository });
-
-    logger.success(`Login successful: ${userId}`);
+    const { userId } = await loginUser(email, password, {
+      userRepository,
+      passwordHasher,
+    });
 
     const token = jwt.sign(
       { userId },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
+
+    logger.success(`Login successful: ${userId}`);
 
     res.status(HTTP_STATUS.OK).json({
       token,

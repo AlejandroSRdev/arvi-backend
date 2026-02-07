@@ -27,6 +27,16 @@ export class IUserRepository {
   }
 
   /**
+   * Retrieve a user by email address
+   *
+   * @param {string} email - User email
+   * @returns {Promise<Object | null>} User data or null if not found
+   */
+  async getUserByEmail(email) {
+    throw new Error("Not implemented");
+  }
+
+  /**
    * Retrieve a user by Stripe customer identifier
    *
    * NOTE:
