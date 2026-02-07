@@ -9,11 +9,19 @@
  * are enforced by the owning entity (User), not by this value object.
  */
 export class Energy {
+    currentAmount: number;
+    maxAmount: number;
+    lastRechargedAt: Date | null;
+
     constructor(
-        public currentAmount: number,
-        public maxAmount: number,
-        public lastRechargedAt: Date | null
-    ) {}
+        currentAmount: number,
+        maxAmount: number,
+        lastRechargedAt: Date | null
+    ) {
+        this.currentAmount = currentAmount;
+        this.maxAmount = maxAmount;
+        this.lastRechargedAt = lastRechargedAt;
+    }
 
     /**
      * Creates initial energy state with full charge and no recharge history.
