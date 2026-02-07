@@ -1,22 +1,16 @@
 /**
  * Auth Controller (Infrastructure - HTTP Layer)
  *
- * MIGRADO DESDE: src/controllers/authController.js
- * REFACTORIZADO: 2025-12-29
- * ARQUITECTURA: Hexagonal (Ports & Adapters)
+ * Architecture: Hexagonal (Ports & Adapters)
  *
- * RESPONSABILIDAD ÚNICA:
- * - Adaptar HTTP (req/res) → Use Cases
- * - Validar input HTTP
- * - Traducir errores a status codes
- * - NO contiene lógica de negocio
- *
- * LÓGICA MOVIDA A:
- * - application/use-cases/CreateUser.js
- * - application/use-cases/ManageUser.js:updateLastLogin
+ * Single Responsibility:
+ * - Adapt HTTP (req/res) to Use Cases
+ * - Validate HTTP input
+ * - Translate errors to HTTP status codes
+ * - Contains NO business logic
  */
 
-import { createUser } from '../../../02application/use-cases/CreateUser.js';
+import { createUser } from '../../../02application/use-cases/auth/CreateUser.js';
 import { updateLastLogin } from '../../../02application/use-cases/ManageUser.js';
 import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
@@ -26,47 +20,44 @@ import jwt from 'jsonwebtoken';
 
 // Dependency injection
 let userRepository;
+let passwordHasher;
 
 export function setDependencies(deps) {
   userRepository = deps.userRepository;
+  passwordHasher = deps.passwordHasher;
 }
 
 /**
  * POST /api/auth/register
- * Registrar nuevo usuario
+ * Register a new user
  */
 export async function register(req, res) {
   try {
-    const { email, userId } = req.body;
+    const { email, password, userId } = req.body;
 
-    // Validaciones HTTP
-    if (!email || !userId) {
-      const err = new Error('Email and userId are required');
-      err.code = 'VALIDATION_ERROR';
+    // HTTP input validation
+    if (!email || !password || !userId) {
+      const err = new Error("Email, password and userId are required");
+      err.code = "VALIDATION_ERROR";
       throw err;
     }
 
-    if (!validateEmail(email)) {
-      const err = new Error('Invalid email');
-      err.code = 'VALIDATION_ERROR';
-      throw err;
-    }
+    await createUser(userId, email, password, { userRepository, passwordHasher });
 
-    const newUser = await createUser(userId, { email }, { userRepository });
-
-    logger.success(`Usuario registrado: ${userId}`);
+    logger.success(`User registered: ${userId}`);
 
     res.status(HTTP_STATUS.CREATED).json({
       success: true,
-      message: 'User registered successfully',
+      message: "User registered successfully",
       user: {
         id: userId,
-        email: newUser.email,
-        plan: newUser.plan,
+        email,
+        password,
+        plan: "pro", // TEMPORARY: matches current use case behavior
       },
     });
   } catch (err) {
-    logger.error('Error en register:', err);
+    logger.error("Error in register:", err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
@@ -75,21 +66,21 @@ export async function register(req, res) {
 
 /**
  * POST /api/auth/login
- * Actualizar último login
+ * Update last login
  */
 export async function login(req, res) {
   try {
     const userId = req.user?.uid;
 
     if (!userId) {
-      const err = new Error('Usuario no autenticado');
+      const err = new Error('Unauthenticated user');
       err.code = 'AUTHENTICATION_ERROR';
       throw err;
     }
 
     await updateLastLogin(userId, { userRepository });
 
-    logger.success(`Login exitoso: ${userId}`);
+    logger.success(`Login successful: ${userId}`);
 
     const token = jwt.sign(
       { userId },
@@ -102,7 +93,7 @@ export async function login(req, res) {
       userId,
     });
   } catch (err) {
-    logger.error('Error en login:', err);
+    logger.error('Error in login:', err);
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);

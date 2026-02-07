@@ -8,7 +8,19 @@
  * All mutations and rule enforcement are handled by the owning
  * entity (User), ensuring consistency and centralized control.
  */
-export type Limits = {
+export class Limits {
     readonly maxActiveSeries: number;
     readonly activeSeriesCount: number;
+
+    constructor(maxActiveSeries: number, activeSeriesCount: number) {
+        this.maxActiveSeries = maxActiveSeries;
+        this.activeSeriesCount = activeSeriesCount;
+    }
+
+    /**
+     * PRO plan limits: high ceiling, no practical restrictions.
+     */
+    static pro(): Limits {
+        return new Limits(100, 0);
+    }
 }

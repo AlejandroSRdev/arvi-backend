@@ -1,83 +1,56 @@
 /**
  * Firestore User Repository (Infrastructure)
  *
- * ORIGEN: src/models/User.js (líneas 19-199)
- * IMPLEMENTA: domain/ports/IUserRepository.js
- * AJUSTADO: 2025-12-30 - Eliminado updateUserPlan() (fuga de lógica de negocio)
+ * Implements: IUserRepository
  *
- * Responsabilidades:
- * - CRUD de usuarios en Firestore
- * - Queries de usuarios
- * - Transacciones de usuario
+ * Responsibilities:
+ * - Persist User domain entities in Firestore
  *
- * NOTA: updateUserPlan() fue eliminado del puerto.
- * Los casos de uso ahora usan updateUser() genérico con cálculos previos de energía.
+ * This adapter contains NO business logic.
+ * It only maps domain entities to persistence format.
  */
 
-import { IUserRepository } from '../../../01domain/ports/IUserRepository.js';
-import { db, FieldValue, Timestamp } from './FirebaseConfig.js';
+import { IUserRepository } from "../../../01domain/ports/IUserRepository.js";
+import { db, FieldValue } from "./FirebaseConfig.js";
 
-const USERS_COLLECTION = 'users';
+const USERS_COLLECTION = "users";
 
 export class FirestoreUserRepository extends IUserRepository {
   /**
-   * Crear un nuevo usuario en Firestore
-   * ORIGEN: src/models/User.js:19-68
+   * Persist a User domain entity
+   *
+   * All domain decisions (plan, energy, limits, trial)
+   * must be made BEFORE calling this method.
    */
-  async createUser(userId, data) {
-    const userRef = db.collection(USERS_COLLECTION).doc(userId);
+  async save(user) {
+    const userRef = db.collection(USERS_COLLECTION).doc(user.id);
 
-    const userData = {
-      email: data.email,
-      createdAt: FieldValue.serverTimestamp(),
-      lastLoginAt: FieldValue.serverTimestamp(),
+    const persistenceModel = {
+      email: user.email,
+      plan: user.plan,
 
-      // Plan y suscripción
-      plan: data.plan || 'freemium',
-      stripeCustomerId: data.stripeCustomerId || null,
-      subscriptionId: null,
-      subscriptionStatus: null,
-
-      // Campos de cancelación (estándar SaaS)
-      cancelAtPeriodEnd: false,
-      currentPeriodEnd: null,
-      canceledAt: null,
-
-      // Energía
-      energia: {
-        actual: data.energiaInicial || 0,
-        maxima: data.energiaMaxima || 0,
-        ultimaRecarga: Timestamp.now(),
-        consumoTotal: 0,
+      energy: {
+        currentAmount: user.energy.currentAmount,
+        maxAmount: user.energy.maxAmount,
+        lastRechargedAt: user.energy.lastRechargedAt,
       },
 
-      // Trial
       trial: {
-        activo: false,
-        startTimestamp: null,
-        expiresAt: null,
+        durationDays: user.trial.durationDays,
+        startedAt: user.trial.startedAt,
       },
 
-      // Límites de uso
       limits: {
-        weeklySummariesUsed: 0,
-        weeklySummariesResetAt: Timestamp.now(),
-        activeSeriesCount: 0,
+        maxActiveSeries: user.limits.maxActiveSeries,
+        activeSeriesCount: user.limits.activeSeriesCount,
       },
-
-      // Asistente (opcional, se crea después)
-      assistant: null,
-
-      ...data,
     };
 
-    await userRef.set(userData);
-    return userData;
+    await userRef.set(persistenceModel);
   }
 
   /**
-   * Obtener usuario por ID
-   * ORIGEN: src/models/User.js:73-85
+   * Get user by ID
    */
   async getUser(userId) {
     const userRef = db.collection(USERS_COLLECTION).doc(userId);
@@ -94,8 +67,7 @@ export class FirestoreUserRepository extends IUserRepository {
   }
 
   /**
-   * Obtener usuario por Stripe Customer ID
-   * ORIGEN: src/models/User.js:90-106
+   * Get user by Stripe Customer ID
    */
   async getUserByCustomerId(customerId) {
     const snapshot = await db
@@ -116,8 +88,7 @@ export class FirestoreUserRepository extends IUserRepository {
   }
 
   /**
-   * Actualizar datos de usuario
-   * ORIGEN: src/models/User.js:111-120
+   * Update user data
    */
   async updateUser(userId, data) {
     const userRef = db.collection(USERS_COLLECTION).doc(userId);
@@ -131,8 +102,7 @@ export class FirestoreUserRepository extends IUserRepository {
   }
 
   /**
-   * Eliminar usuario
-   * ORIGEN: src/models/User.js:136-139
+   * Delete user
    */
   async deleteUser(userId) {
     const userRef = db.collection(USERS_COLLECTION).doc(userId);
@@ -140,8 +110,7 @@ export class FirestoreUserRepository extends IUserRepository {
   }
 
   /**
-   * Actualizar último login
-   * ORIGEN: src/models/User.js:125-131
+   * Update last login timestamp
    */
   async updateLastLogin(userId) {
     const userRef = db.collection(USERS_COLLECTION).doc(userId);
@@ -152,8 +121,7 @@ export class FirestoreUserRepository extends IUserRepository {
   }
 
   /**
-   * Incrementar contador de resúmenes semanales
-   * ORIGEN: src/models/User.js:166-173
+   * Increment weekly summaries counter
    */
   async incrementWeeklySummaries(userId) {
     const userRef = db.collection(USERS_COLLECTION).doc(userId);
@@ -165,8 +133,7 @@ export class FirestoreUserRepository extends IUserRepository {
   }
 
   /**
-   * Incrementar contador de series activas
-   * ORIGEN: src/models/User.js:179-186
+   * Increment active series counter
    */
   async incrementActiveSeries(userId) {
     const userRef = db.collection(USERS_COLLECTION).doc(userId);
@@ -178,8 +145,7 @@ export class FirestoreUserRepository extends IUserRepository {
   }
 
   /**
-   * Decrementar contador de series activas
-   * ORIGEN: src/models/User.js:192-199
+   * Decrement active series counter
    */
   async decrementActiveSeries(userId) {
     const userRef = db.collection(USERS_COLLECTION).doc(userId);

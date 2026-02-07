@@ -9,7 +9,20 @@
  * (e.g. current time vs trial window), ensuring a single
  * source of truth and avoiding duplicated state.
  */
-export type Trial = {
+export class Trial {
     readonly durationDays: number;
     readonly startedAt: Date;
+
+    constructor(durationDays: number, startedAt: Date) {
+        this.durationDays = durationDays;
+        this.startedAt = startedAt;
+    }
+
+    /**
+     * Represents a trial that has already expired (no active trial).
+     * Uses epoch + 1 day to satisfy domain invariants.
+     */
+    static inactive(): Trial {
+        return new Trial(1, new Date(0));
+    }
 }

@@ -10,13 +10,14 @@
  */
 
 import { Trial } from "../value_objects/user_objects/Trial.ts";
-import { Energy } from "../value_objects/user_objects/energy.ts";
+import { Energy } from "../value_objects/user_objects/Energy.ts";
 import { Limits } from "../value_objects/user_objects/Limits.ts";
 
 export class User {
   readonly id: string;
   readonly email: string;
   readonly password: string;
+  plan: string;
   readonly trial: Trial;
   energy: Energy;
   limits: Limits;
@@ -25,9 +26,10 @@ export class User {
     id: string,
     email: string,
     password: string,
+    plan: string,
     trial: Trial,
     energy: Energy,
-    limits: Limits
+    limits: Limits,
   ) {
     // ─────────────────────────────
     // Identity & credentials
@@ -65,6 +67,14 @@ export class User {
 
     if (password === "") {
       throw new Error("User password cannot be empty");
+    }
+
+    if (typeof plan !== "string") {
+      throw new Error("Invalid user plan type");
+    }
+
+    if (plan === "") {
+      throw new Error("User plan cannot be empty");
     }
 
     // ─────────────────────────────
@@ -147,9 +157,36 @@ export class User {
     this.id = id;
     this.email = normalizedEmail;
     this.password = password;
+    this.plan = plan;
     this.trial = trial;
     this.energy = energy;
     this.limits = limits;
+  }
+
+ /**
+   * Factory method
+   *
+   * This is the ONLY valid entry point to create a User.
+   * All invariants are enforced here.
+   */
+  public static create(params: {
+    id: string;
+    email: string;
+    password: string;
+    plan: string;
+    trial: Trial;
+    energy: Energy;
+    limits: Limits;
+  }): User {
+    return new User(
+      params.id,
+      params.email,
+      params.password,
+      params.plan,
+      params.trial,
+      params.energy,
+      params.limits
+    );
   }
 }
 

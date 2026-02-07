@@ -63,6 +63,9 @@ import FirestoreHabitSeriesRepository from './03infrastructure/persistence/fires
 // Importar AI Provider Router (routes to correct adapter based on model)
 import AIProviderRouter from './03infrastructure/ai/AIProviderRouter.js';
 
+// Importar Password Hasher
+import PasswordHasher from './03infrastructure/security/PasswordHasher.js';
+
 // Importar Controllers para inyección de dependencias
 import { setDependencies as setAuthDeps } from './03infrastructure/http/controllers/AuthController.js';
 import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
@@ -82,15 +85,17 @@ const userRepository = new FirestoreUserRepository();
 const energyRepository = new FirestoreEnergyRepository();
 const habitSeriesRepository = new FirestoreHabitSeriesRepository();
 const aiProvider = new AIProviderRouter(); // Routes to Gemini/OpenAI based on model
+const passwordHasher = new PasswordHasher();
 
 // ───────────────────────────────────────────────────────────────
 // INYECTAR DEPENDENCIAS EN CONTROLLERS
 // ───────────────────────────────────────────────────────────────
 // Llamar a setDependencies en CADA controller que lo requiera.
 
-// AuthController requiere: userRepository
+// AuthController requiere: userRepository, passwordHasher
 setAuthDeps({
-  userRepository
+  userRepository,
+  passwordHasher,
 });
 
 // UserController requiere: userRepository

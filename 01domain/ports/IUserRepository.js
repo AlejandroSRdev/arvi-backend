@@ -1,103 +1,130 @@
 /**
  * User Repository Port (Interface)
  *
- * PATRÓN: Hexagonal Architecture - Port
- * EXTRACCIÓN: src/models/User.js
+ * PATTERN: Hexagonal Architecture – Port
  *
- * Define QUÉ necesita el dominio para trabajar con usuarios.
- * NO define CÓMO se implementa (sin Firestore, sin SDKs).
+ * Defines WHAT the domain/application needs in order
+ * to persist and retrieve users.
  *
- * Implementaciones esperadas:
- * - infrastructure/persistence/firestore/FirestoreUserRepository.js
+ * This interface is completely infrastructure-agnostic:
+ * - No Firestore
+ * - No SDKs
+ * - No persistence details
+ *
+ * Expected implementations:
+ * - infrastructure/persistence/firestore/FirestoreUserRepository
  */
 
-/**
- * Contrato de repositorio de usuarios
- *
- * Todas las operaciones extraídas de src/models/User.js (líneas 19-199)
- */
 export class IUserRepository {
   /**
-   * Obtener usuario por ID
-   * @param {string} userId - ID del usuario
-   * @returns {Promise<Object|null>} Usuario o null si no existe
+   * Retrieve a user by its identifier
+   *
+   * @param {string} userId - User identifier
+   * @returns {Promise<User | null>} User entity or null if not found
    */
   async getUser(userId) {
-    throw new Error('Not implemented');
+    throw new Error("Not implemented");
   }
 
   /**
-   * Obtener usuario por Stripe Customer ID
-   * @param {string} customerId - Stripe Customer ID
-   * @returns {Promise<Object|null>} Usuario o null si no existe
+   * Retrieve a user by Stripe customer identifier
+   *
+   * NOTE:
+   * This method is kept for future billing integration.
+   * It is not used in the current authentication flow.
+   *
+   * @param {string} customerId - Stripe customer ID
+   * @returns {Promise<User | null>} User entity or null if not found
    */
   async getUserByCustomerId(customerId) {
-    throw new Error('Not implemented');
+    throw new Error("Not implemented");
   }
 
   /**
-   * Crear un nuevo usuario
-   * @param {string} userId - ID del usuario
-   * @param {Object} data - Datos del usuario
-   * @returns {Promise<Object>} Usuario creado
+   * Persist a new user
+   *
+   * The user MUST be a fully constructed domain entity.
+   * All invariants and business rules must be enforced
+   * before calling this method.
+   *
+   * @param {User} user - User domain entity
+   * @returns {Promise<void>}
    */
-  async createUser(userId, data) {
-    throw new Error('Not implemented');
+  async save(user) {
+    throw new Error("Not implemented");
   }
 
   /**
-   * Actualizar datos de usuario
-   * @param {string} userId - ID del usuario
-   * @param {Object} data - Datos a actualizar
-   * @returns {Promise<Object>} Usuario actualizado
+   * Update an existing user
+   *
+   * NOTE:
+   * This method is reserved for future use cases where
+   * the domain explicitly allows partial updates.
+   *
+   * @param {User} user - Updated user domain entity
+   * @returns {Promise<void>}
    */
-  async updateUser(userId, data) {
-    throw new Error('Not implemented');
+  async update(user) {
+    throw new Error("Not implemented");
   }
 
   /**
-   * Eliminar usuario
-   * @param {string} userId - ID del usuario
+   * Delete a user by identifier
+   *
+   * @param {string} userId - User identifier
    * @returns {Promise<void>}
    */
   async deleteUser(userId) {
-    throw new Error('Not implemented');
+    throw new Error("Not implemented");
   }
 
   /**
-   * Actualizar último login
-   * @param {string} userId - ID del usuario
+   * Update last login timestamp
+   *
+   * NOTE:
+   * This is a technical concern triggered by authentication,
+   * not by user domain rules.
+   *
+   * @param {string} userId - User identifier
    * @returns {Promise<void>}
    */
   async updateLastLogin(userId) {
-    throw new Error('Not implemented');
+    throw new Error("Not implemented");
   }
 
   /**
-   * Incrementar contador de resúmenes semanales
-   * @param {string} userId - ID del usuario
+   * Increment weekly summaries usage counter
+   *
+   * NOTE:
+   * This method exists for usage tracking use cases.
+   * The decision to increment must always come from
+   * the application/domain layer.
+   *
+   * @param {string} userId - User identifier
    * @returns {Promise<void>}
    */
   async incrementWeeklySummaries(userId) {
-    throw new Error('Not implemented');
+    throw new Error("Not implemented");
   }
 
   /**
-   * Incrementar contador de series activas
-   * @param {string} userId - ID del usuario
+   * Increment active series count
+   *
+   * @param {string} userId - User identifier
    * @returns {Promise<void>}
    */
   async incrementActiveSeries(userId) {
-    throw new Error('Not implemented');
+    throw new Error("Not implemented");
   }
 
   /**
-   * Decrementar contador de series activas
-   * @param {string} userId - ID del usuario
+   * Decrement active series count
+   *
+   * @param {string} userId - User identifier
    * @returns {Promise<void>}
    */
   async decrementActiveSeries(userId) {
-    throw new Error('Not implemented');
+    throw new Error("Not implemented");
   }
 }
 
