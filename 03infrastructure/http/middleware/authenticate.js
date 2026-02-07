@@ -1,73 +1,78 @@
 /**
  * Authentication Middleware (Infrastructure - HTTP)
  *
- * MIGRADO DESDE: src/middleware/auth.js (COMPLETO)
- * SIN CAMBIOS DE COMPORTAMIENTO
+ * Verifies JWTs issued by this backend (HS256, signed with JWT_SECRET).
+ * Sets req.user on successful verification.
  *
- * Responsabilidades:
- * - Validación de Firebase Auth tokens
- * - Decodificación de tokens
- * - Agregar usuario a req.user
+ * Exports:
+ * - authenticate: rejects request if token is missing or invalid
+ * - optionalAuth: continues without user if token is absent or invalid
  */
 
-import { auth } from '../../persistence/firestore/FirebaseConfig.js';
+import jwt from 'jsonwebtoken';
 import { AuthenticationError } from '../../../02application/application_errors/AuthenticationError.js';
 
 /**
- * Middleware para validar Firebase Auth token
- * MIGRADO DESDE: src/middleware/auth.js:authenticate (líneas 13-37)
+ * Extract and verify a Bearer token from the Authorization header.
+ * Returns the decoded payload or null if extraction fails.
+ */
+function verifyToken(req) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+  return jwt.verify(token, process.env.JWT_SECRET);
+}
+
+/**
+ * Required authentication middleware.
+ * Rejects with AuthenticationError if token is missing or invalid.
  */
 export async function authenticate(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
+    const decoded = verifyToken(req);
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AuthenticationError('Token de autenticación no proporcionado');
+    if (!decoded) {
+      throw new AuthenticationError('Authentication token not provided');
     }
 
-    const token = authHeader.split('Bearer ')[1];
-
-    // Verificar token con Firebase Admin
-    const decodedToken = await auth.verifyIdToken(token);
-
-    // Agregar usuario al request
+    // uid kept as alias for backward compatibility with existing controllers
     req.user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
+      id: decoded.userId,
+      uid: decoded.userId,
     };
 
     next();
   } catch (error) {
-  console.error('❌ [Auth] Error validando token:', error.message);
-  return next(
-    error instanceof AuthenticationError
-      ? error
-      : new AuthenticationError('Token inválido o expirado')
-  );
-}
+    return next(
+      error instanceof AuthenticationError
+        ? error
+        : new AuthenticationError('Invalid or expired token')
+    );
+  }
 }
 
 /**
- * Middleware opcional: permite requests sin autenticación
- * MIGRADO DESDE: src/middleware/auth.js:optionalAuth (líneas 42-61)
+ * Optional authentication middleware.
+ * Continues without user if token is absent or invalid.
  */
 export async function optionalAuth(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
+    const decoded = verifyToken(req);
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split('Bearer ')[1];
-      const decodedToken = await auth.verifyIdToken(token);
-
+    if (decoded) {
       req.user = {
-        uid: decodedToken.uid,
-        email: decodedToken.email,
+        id: decoded.userId,
+        uid: decoded.userId,
       };
     }
 
     next();
   } catch (error) {
-    // Si falla, continuar sin usuario
+    // Token invalid — continue without user
     next();
   }
 }
