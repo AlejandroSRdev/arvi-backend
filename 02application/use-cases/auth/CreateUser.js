@@ -19,7 +19,7 @@
 import { ValidationError } from "../errors/index.js";
 import { User } from "../../../01domain/entities/User.ts";
 import { Trial } from "../../../01domain/value_objects/user_objects/Trial.ts";
-import { Energy } from "../../../01domain/value_objects/user_objects/energy.ts";
+import { Energy } from "../../../01domain/value_objects/user_objects/Energy.ts";
 import { Limits } from "../../../01domain/value_objects/user_objects/Limits.ts";
 
 /**
