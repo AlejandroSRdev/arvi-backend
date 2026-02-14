@@ -17,7 +17,8 @@
  */
 
 import { IHabitSeriesRepository } from '../../../01domain/ports/HabitSeriesRepository.js';
-import { db, FieldValue, Timestamp } from './FirebaseConfig.js';
+import { InsufficientEnergyError } from '../../../01domain/domain_errors/insufficientEnergyError.js';
+import { db, FieldValue } from './FirebaseConfig.js';
 
 export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
   /**
@@ -76,6 +77,80 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
     }
 
     return { id: seriesId };
+  }
+
+  /**
+   * Atomic creation: persist series, deduct energy, increment counter.
+   *
+   * Runs inside a single Firestore transaction so all operations
+   * succeed or fail together. No partial state is possible.
+   *
+   * @param {string} userId - User ID
+   * @param {object} seriesData - Parsed series data from AI
+   * @param {number} totalEnergyConsumed - Total energy to deduct
+   * @returns {Promise<{id: string}>} - ID of the created series
+   */
+  async atomicCommitCreation(userId, seriesData, totalEnergyConsumed) {
+    if (!userId) {
+      throw new Error('userId is required for atomic commit');
+    }
+
+    if (!seriesData) {
+      throw new Error('seriesData is required for atomic commit');
+    }
+
+    const userRef = db.collection('users').doc(userId);
+
+    const result = await db.runTransaction(async (transaction) => {
+      // Re-read user document inside transaction
+      const userDoc = await transaction.get(userRef);
+
+      if (!userDoc.exists) {
+        throw new Error('User not found');
+      }
+
+      const userData = userDoc.data();
+      const currentEnergy = userData.energy?.currentAmount || 0;
+
+      // Validate energy inside transaction (authoritative check)
+      if (currentEnergy < totalEnergyConsumed) {
+        throw new InsufficientEnergyError(totalEnergyConsumed, currentEnergy);
+      }
+
+      // Prepare series data
+      let parsedData = seriesData;
+      if (typeof seriesData === 'string') {
+        parsedData = JSON.parse(seriesData);
+      }
+
+      const seriesId = parsedData.id || Date.now().toString();
+      const seriesRef = userRef.collection('habitSeries').doc(seriesId);
+
+      const dataToStore = {
+        ...parsedData,
+        id: seriesId,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      // Persist habit series
+      transaction.set(seriesRef, dataToStore);
+
+      // Deduct energy and increment counter
+      const newEnergy = currentEnergy - totalEnergyConsumed;
+      const currentTotalConsumption = userData.energy?.totalConsumption || 0;
+
+      transaction.update(userRef, {
+        'energy.currentAmount': newEnergy,
+        'energy.totalConsumption': currentTotalConsumption + totalEnergyConsumed,
+        'limits.activeSeriesCount': FieldValue.increment(1),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      return { id: seriesId };
+    });
+
+    return result;
   }
 
   /**

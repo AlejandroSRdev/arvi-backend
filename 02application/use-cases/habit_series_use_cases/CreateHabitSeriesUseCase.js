@@ -2,22 +2,21 @@
  * Create Habit Series Use Case (Application Layer)
  *
  * ARCHITECTURE: Hexagonal (Ports & Adapters)
- * DATE: 2026-01-19
  *
- * Orchestrates the full flow of habit series creation via AI.
+ * Orchestrates the full flow of habit series creation via AI
+ * with deferred energy consumption and a single atomic commit.
  *
  * Flow:
- * 1. Pre-AI validation (plan, feature access, limit)
- * 2. AI execution (3 passes: creative → structure → schema)
- * 3. Post-AI validation (schema compliance)
- * 4. Persistence
- * 5. Counter increment
+ * 1. Pre-AI validation (user, plan, feature access, limit, energy)
+ * 2. AI execution (3 passes: creative -> structure -> schema)
+ * 3. Energy accumulation
+ * 4. Post-AI validation (schema compliance)
+ * 5. Atomic commit (persist series + deduct energy + increment counter)
  * 6. Return success result
  *
  * Dependencies (injected):
  * - userRepository: IUserRepository
  * - habitSeriesRepository: IHabitSeriesRepository
- * - energyRepository: IEnergyRepository
  * - aiProvider: IAIProvider
  */
 
@@ -25,6 +24,7 @@ import { hasFeatureAccess, getPlan } from '../../../01domain/policies/PlanPolicy
 import { getModelConfig } from '../../../01domain/policies/ModelSelectionPolicy.js';
 import { generateAIResponse } from '../../services/AIExecutionService.js';
 import { ValidationError, AuthorizationError } from '../errors/index.js';
+import { InsufficientEnergyError } from '../../../01domain/errors/index.js';
 
 import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
@@ -34,7 +34,6 @@ import { sanitizeUserInput } from '../../input/SanitizeUserInput.js';
 
 /**
  * Expected schema for habit series (AI output structure)
- * Note: AI prompts use Spanish keys; this schema validates AI output.
  */
 const HABIT_SERIES_SCHEMA = {
   type: 'object',
@@ -114,21 +113,24 @@ function validateSchema(data) {
 }
 
 /**
- * Create a habit series via AI
+ * Create a habit series via AI with atomic energy consumption.
+ *
+ * Energy is accumulated in memory during AI passes and deducted
+ * in a single atomic transaction together with persistence and
+ * counter increment. No partial state is possible.
  *
  * @param {string} userId - User ID
  * @param {Object} payload - Request payload
  * @param {string} payload.language - Language code ('en' | 'es')
  * @param {string} payload.assistantContext - Serialized assistant context
  * @param {Record<string, string>} payload.testData - User test responses
- * @param {Object} payload.difficultyLabels - Difficulty label translations
  * @param {Object} deps - Injected dependencies
- * @returns {Promise<HabitSeriesDTO>} The complete habit series as persisted
+ * @returns {Promise<HabitSeries>} The habit series domain entity
  */
 export async function createHabitSeries(userId, payload, deps) {
   console.log(`[USE-CASE] [Habit Series] CreateHabitSeries started for user ${userId}`);
 
-  const { userRepository, habitSeriesRepository, energyRepository, aiProvider } = deps;
+  const { userRepository, habitSeriesRepository, aiProvider } = deps;
 
   // Validate dependencies
   if (!userRepository) {
@@ -136,9 +138,6 @@ export async function createHabitSeries(userId, payload, deps) {
   }
   if (!habitSeriesRepository) {
     throw new ValidationError('Dependency required: habitSeriesRepository');
-  }
-  if (!energyRepository) {
-    throw new ValidationError('Dependency required: energyRepository');
   }
   if (!aiProvider) {
     throw new ValidationError('Dependency required: aiProvider');
@@ -182,11 +181,18 @@ export async function createHabitSeries(userId, payload, deps) {
     );
   }
 
+  // 1.5 Validate user has sufficient energy (read-only pre-check)
+  const currentEnergy = user.energy?.currentAmount || 0;
+  if (currentEnergy <= 0) {
+    throw new InsufficientEnergyError(1, currentEnergy);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 2: AI EXECUTION (3 passes)
+  // STEP 2: AI EXECUTION (3 passes) — energy accumulated, not deducted
   // ═══════════════════════════════════════════════════════════════════════
 
   const { language, assistantContext, testData } = payload;
+  let totalEnergyConsumed = 0;
 
   // Sanitize raw user input once, before any AI processing
   const sanitizedTestData = Object.fromEntries(
@@ -209,14 +215,16 @@ export async function createHabitSeries(userId, payload, deps) {
       model: creativeConfig.model,
       temperature: creativeConfig.temperature,
       maxTokens: creativeConfig.maxTokens,
-      forceJson: false
+      forceJson: false,
+      step: 'creative'
     },
-    { aiProvider, energyRepository }
+    { aiProvider }
   );
 
+  totalEnergyConsumed += creativeResponse.energyConsumed;
   const rawCreativeText = creativeResponse.content;
 
-  // Pass 2: Structure extraction (text → JSON)
+  // Pass 2: Structure extraction (text -> JSON)
   const structureMessages = StructureHabitSeriesPrompt({
     language,
     rawText: rawCreativeText
@@ -230,11 +238,13 @@ export async function createHabitSeries(userId, payload, deps) {
       model: structureConfig.model,
       temperature: structureConfig.temperature,
       maxTokens: structureConfig.maxTokens,
-      forceJson: true
+      forceJson: true,
+      step: 'structure'
     },
-    { aiProvider, energyRepository }
+    { aiProvider }
   );
 
+  totalEnergyConsumed += structureResponse.energyConsumed;
   const rawStructuredText = structureResponse.content;
 
   // Pass 3: Schema enforcement (strict JSON validation)
@@ -251,10 +261,19 @@ export async function createHabitSeries(userId, payload, deps) {
       model: schemaConfig.model,
       temperature: schemaConfig.temperature,
       maxTokens: schemaConfig.maxTokens,
-      forceJson: true
+      forceJson: true,
+      step: 'schema'
     },
-    { aiProvider, energyRepository }
+    { aiProvider }
   );
+
+  totalEnergyConsumed += schemaResponse.energyConsumed;
+
+  console.log('[ENERGY_ACCUMULATED]', {
+    totalEnergyConsumed,
+    userId,
+    timestamp: new Date().toISOString()
+  });
 
   // ═══════════════════════════════════════════════════════════════════════
   // STEP 3: POST-AI VALIDATION
@@ -281,22 +300,43 @@ export async function createHabitSeries(userId, payload, deps) {
   console.log('[SCHEMA] [Habit Series] Schema validation OK');
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 4: PERSISTENCE
+  // STEP 4: ATOMIC COMMIT (persist + energy deduction + counter)
   // ═══════════════════════════════════════════════════════════════════════
 
-  const persistResult = await habitSeriesRepository.createFromAI(userId, parsedSeries);
-  const seriesId = persistResult.id;
+  console.log('[ATOMIC_COMMIT_START]', {
+    userId,
+    totalEnergyConsumed,
+    timestamp: new Date().toISOString()
+  });
+
+  let seriesId;
+  try {
+    const persistResult = await habitSeriesRepository.atomicCommitCreation(
+      userId,
+      parsedSeries,
+      totalEnergyConsumed
+    );
+    seriesId = persistResult.id;
+
+    console.log('[ATOMIC_COMMIT_SUCCESS]', {
+      userId,
+      totalEnergyConsumed,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[ATOMIC_COMMIT_FAILURE]', {
+      userId,
+      totalEnergyConsumed,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+
+    throw error;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STEP 5: SIDE EFFECTS (counter increment)
+  // STEP 5: RETURN HABIT SERIES ENTITY
   // ═══════════════════════════════════════════════════════════════════════
-
-  await userRepository.incrementActiveSeries(userId);
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 6: RETURN HABIT SERIES ENTITY
-  // ═══════════════════════════════════════════════════════════════════════
-  // Map AI output to domain entity for consistent mapping to DTO
 
   const habitSeries = mapAIOutputToHabitSeries(seriesId, parsedSeries);
 

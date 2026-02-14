@@ -38,6 +38,22 @@ export class IHabitSeriesRepository {
   async delete(userId, seriesId) {
     throw new Error('Not implemented');
   }
+
+  /**
+   * Atomic creation of a habit series with energy deduction and counter increment.
+   *
+   * All operations (persist series, deduct energy, increment counter) must
+   * execute atomically. If any step fails, no changes are committed.
+   *
+   * @param {string} userId - User ID
+   * @param {object} seriesData - Parsed series data from AI
+   * @param {number} totalEnergyConsumed - Total energy to deduct
+   * @returns {Promise<{id: string}>} - ID of the created series
+   * @throws {Error} - If energy is insufficient or persistence fails
+   */
+  async atomicCommitCreation(userId, seriesData, totalEnergyConsumed) {
+    throw new Error('Not implemented');
+  }
 }
 
 export default IHabitSeriesRepository;
