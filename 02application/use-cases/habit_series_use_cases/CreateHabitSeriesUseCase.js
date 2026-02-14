@@ -7,7 +7,7 @@
  * Orchestrates the full flow of habit series creation via AI.
  *
  * Flow:
- * 1. Pre-AI validation (plan, feature access, limit, energy)
+ * 1. Pre-AI validation (plan, feature access, limit)
  * 2. AI execution (3 passes: creative → structure → schema)
  * 3. Post-AI validation (schema compliance)
  * 4. Persistence
@@ -25,7 +25,6 @@ import { hasFeatureAccess, getPlan } from '../../../01domain/policies/PlanPolicy
 import { getModelConfig } from '../../../01domain/policies/ModelSelectionPolicy.js';
 import { generateAIResponse } from '../../services/AIExecutionService.js';
 import { ValidationError, AuthorizationError } from '../errors/index.js';
-import { InsufficientEnergyError } from '../../../01domain/errors/index.js';
 
 import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
@@ -181,12 +180,6 @@ export async function createHabitSeries(userId, payload, deps) {
     throw new AuthorizationError(
       `Active series limit reached: ${activeSeriesCount}/${maxActiveSeries}`
     );
-  }
-
-  // 1.5 Validate energy availability
-  const energyData = await energyRepository.getEnergy(userId);
-  if (!energyData || energyData.actual <= 0) {
-    throw new InsufficientEnergyError(1, energyData?.actual || 0);
   }
 
   // ═══════════════════════════════════════════════════════════════════════
