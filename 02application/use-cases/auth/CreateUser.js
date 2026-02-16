@@ -15,9 +15,9 @@
  * - Transport concerns
  * - Direct access to Firestore
  */
-
+import { randomUUID } from "crypto";
 import { ValidationError } from "../errors/index.js";
-import { User } from "../../../01domain/entities/User.ts";
+import { User } from "../../../01domain/entities/user.ts";
 import { Trial } from "../../../01domain/value_objects/user_objects/Trial.ts";
 import { Energy } from "../../../01domain/value_objects/user_objects/Energy.ts";
 import { Limits } from "../../../01domain/value_objects/user_objects/Limits.ts";
@@ -25,7 +25,6 @@ import { Limits } from "../../../01domain/value_objects/user_objects/Limits.ts";
 /**
  * Create a new user in the system
  *
- * @param {string} userId - User ID (provided by Firebase Auth)
  * @param {string} email - User email (validated at HTTP layer)
  * @param {string} password - Raw user password (validated at HTTP layer)
  * @param {Object} deps - Injected dependencies
@@ -34,7 +33,7 @@ import { Limits } from "../../../01domain/value_objects/user_objects/Limits.ts";
  *
  * @returns {Promise<void>}
  */
-export async function createUser(userId, email, password, deps) {
+export async function createUser(email, password, deps) {
   const { userRepository, passwordHasher } = deps;
 
   if (!userRepository) {
@@ -43,10 +42,6 @@ export async function createUser(userId, email, password, deps) {
 
   if (!passwordHasher) {
     throw new ValidationError("Dependency required: passwordHasher");
-  }
-
-  if (!userId) {
-    throw new ValidationError("User ID is required");
   }
 
   if (!email) {
@@ -59,6 +54,9 @@ export async function createUser(userId, email, password, deps) {
 
   // Hash password before entering the domain
   const passwordHash = await passwordHasher.hash(password);
+
+  // Generate a unique user ID
+  const userId = randomUUID();
 
   // TEMPORARY: Users are created with PRO plan by default
   // to validate limits and system coherence during early stages.

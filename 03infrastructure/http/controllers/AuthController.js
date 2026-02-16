@@ -33,16 +33,16 @@ export function setDependencies(deps) {
  */
 export async function register(req, res) {
   try {
-    const { email, password, userId } = req.body;
+    const { email, password } = req.body;
 
     // HTTP input validation
-    if (!email || !password || !userId) {
-      const err = new Error("Email, password and userId are required");
+    if (!email || !password ) {
+      const err = new Error("Email or password are required");
       err.code = "VALIDATION_ERROR";
       throw err;
     }
 
-    await createUser(userId, email, password, { userRepository, passwordHasher });
+    await createUser( email, password, { userRepository, passwordHasher });
 
     logger.success(`User registered: ${userId}`);
 
