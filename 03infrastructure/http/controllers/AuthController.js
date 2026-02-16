@@ -42,7 +42,11 @@ export async function register(req, res) {
       throw err;
     }
 
-    await createUser( email, password, { userRepository, passwordHasher });
+    const { userId } = await createUser(
+      email,
+      password,
+      { userRepository, passwordHasher }
+    );
 
     logger.success(`User registered: ${userId}`);
 
