@@ -9,6 +9,7 @@
  * - Create the User domain entity
  * - Define initial plan, energy, trial, and limits
  * - Persist the user via IUserRepository
+ * - Returns the new user ID
  *
  * Does NOT contain:
  * - HTTP validation
@@ -71,6 +72,8 @@ export async function createUser(email, password, deps) {
   });
 
   await userRepository.save(user);
+
+  return { userId };
 }
 
 export default {
