@@ -15,7 +15,7 @@
  * - Acceso directo a Firestore
  */
 
-import { ValidationError, NotFoundError } from './errors/index.js';
+import { ValidationError, NotFoundError } from "../../errors/index.ts";
 
 /**
  * Obtener estado de suscripción del usuario

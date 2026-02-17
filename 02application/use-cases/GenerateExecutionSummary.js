@@ -26,7 +26,7 @@
  */
 
 import { validateFeatureAccess, validateWeeklySummariesLimit } from './ValidatePlanAccess.js';
-import { ValidationError } from './errors/index.js';
+import { ValidationError } from "../../errors/index.ts";
 
 /**
  * Validar si el usuario puede generar un resumen de ejecución
