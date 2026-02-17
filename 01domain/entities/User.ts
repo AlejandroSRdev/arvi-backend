@@ -9,9 +9,9 @@
  * (databases, payment providers, external services).
  */
 
-import { Trial } from "../value_objects/user_objects/Trial.ts";
-import { Energy } from "../value_objects/user_objects/Energy.ts";
-import { Limits } from "../value_objects/user_objects/Limits.ts";
+import { Trial } from "../value_objects/user_objects/Trial.js";
+import { Energy } from "../value_objects/user_objects/Energy.js";
+import { Limits } from "../value_objects/user_objects/Limits.js";
 
 export class User {
   readonly id: string;
