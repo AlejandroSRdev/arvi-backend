@@ -1,4 +1,4 @@
-import { BaseError } from '../base/BaseError.ts';
+import { BaseError } from '../base/BaseError.js';
 
 /** Thrown when the user has already consumed their trial. */
 export class TrialAlreadyUsedError extends BaseError<

@@ -22,18 +22,21 @@
   "author": "Arvi Team",
   "license": "UNLICENSED",
   "dependencies": {
-    "express": "^4.19.2",
+    "@google/generative-ai": "^0.1.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "helmet": "^7.1.0",
-    "stripe": "^16.6.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.1.0",
     "firebase-admin": "^13.6.0",
+    "helmet": "^7.1.0",
     "openai": "^4.20.0",
-    "@google/generative-ai": "^0.1.3",
-    "express-rate-limit": "^7.1.0"
+    "stripe": "^16.6.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.2.3",
+    "nodemon": "^3.0.2",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,5 +1,5 @@
-import { BaseError } from '../base/BaseError.ts';
-import { InfrastructureErrorCode } from './infrastructureErrorCodes.ts';
+import { BaseError } from '../base/BaseError.js';
+import { InfrastructureErrorCode } from './infrastructureErrorCodes.js';
 
 /**
  * Abstract base for all infrastructure-level errors.

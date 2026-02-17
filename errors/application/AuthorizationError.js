@@ -1,4 +1,4 @@
-import { BaseError } from '../base/BaseError.ts';
+import { BaseError } from '../base/BaseError.js';
 
 /** Thrown when an authenticated user lacks permission for the requested action. */
 export class AuthorizationError extends BaseError<

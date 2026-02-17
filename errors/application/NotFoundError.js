@@ -1,4 +1,4 @@
-import { BaseError } from '../base/BaseError.ts';
+import { BaseError } from '../base/BaseError.js';
 
 interface Metadata {
   readonly entity: string;

@@ -67,7 +67,7 @@
  * Legacy reference: docs/createHabitSeriesLegacy.dart:218-247
  */
 
-import { ValidationError } from '../../../errors/index.ts';
+import { ValidationError } from '../../../errors/index.js';
 
 /**
  * Normalize difficulty string to canonical English values
