@@ -20,7 +20,7 @@
 import { determineEffectivePlan } from './ValidatePlanAccess.js';
 import { needsDailyRecharge } from '../../01domain/entities/Energy.js';
 import { getPlan } from '../../01domain/policies/PlanPolicy.js';
-import { ValidationError } from './errors/index.js';
+import { ValidationError } from "../../errors/index.ts";
 
 /**
  * Obtener energía actual del usuario (con recarga automática si corresponde)
