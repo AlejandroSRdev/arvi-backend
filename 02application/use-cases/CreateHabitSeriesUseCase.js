@@ -20,21 +20,21 @@
  * - aiProvider: IAIProvider
  */
 
-import { hasFeatureAccess, getPlan } from '../../../01domain/policies/PlanPolicy.js';
-import { getModelConfig } from '../../../01domain/policies/ModelSelectionPolicy.js';
-import { generateAIResponse } from '../../services/AIExecutionService.js';
+import { hasFeatureAccess, getPlan } from '../../01domain/policies/PlanPolicy.js';
+import { getModelConfig } from '../../01domain/policies/ModelSelectionPolicy.js';
+import { generateAIResponse } from '../services/AIExecutionService.js';
 import {
   ValidationError,
   AuthorizationError,
   InsufficientEnergyError,
   MaxActiveSeriesReachedError,
-} from '../../../errors/index.ts';
+} from '../../errors/index.ts';
 
-import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
-import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
-import JsonSchemaHabitSeriesPrompt from '../../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
-import { mapAIOutputToHabitSeries } from '../../mappers/HabitSeriesFromAIMapper.ts';
-import { sanitizeUserInput } from '../../input/SanitizeUserInput.js';
+import CreativeHabitSeriesPrompt from '../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
+import StructureHabitSeriesPrompt from '../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
+import JsonSchemaHabitSeriesPrompt from '../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
+import { mapAIOutputToHabitSeries } from '../mappers/HabitSeriesFromAIMapper.ts';
+import { sanitizeUserInput } from '../input/SanitizeUserInput.js';
 
 /**
  * Expected schema for habit series (AI output structure)

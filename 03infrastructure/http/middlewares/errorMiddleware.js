@@ -14,7 +14,7 @@
 
 import { BaseError } from '../../../errors/base/BaseError.ts';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
-import { logger } from '../../logger/logger.js';
+import { logger } from '../../logger/Logger.js';
 
 /**
  * Express error middleware (must have 4 parameters for Express to recognize it)
