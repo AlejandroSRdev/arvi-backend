@@ -1,4 +1,4 @@
-import { BaseError } from '../base/BaseError';
+import { BaseError } from '../base/BaseError.ts';
 
 /** Thrown when input validation fails at the application boundary. */
 export class ValidationError extends BaseError<

@@ -1,4 +1,4 @@
-import { InfrastructureError } from './InfrastructureError';
+import { InfrastructureError } from './InfrastructureError.ts';
 
 interface Metadata {
   readonly provider: string;

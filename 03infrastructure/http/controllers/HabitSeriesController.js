@@ -23,7 +23,7 @@ import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { toHabitSeriesOutputDTO } from '../../mappers/HabitSeriesMapper.ts';
 import { logger } from '../../logger/logger.js';
-import { ValidationError, AuthenticationError } from '../../../errors/index.js';
+import { ValidationError, AuthenticationError } from '../../../errors/index.ts';
 
 // Dependency injection
 let userRepository;

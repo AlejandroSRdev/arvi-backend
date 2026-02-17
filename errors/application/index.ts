@@ -1,5 +1,5 @@
-export { ApplicationErrorCode } from './applicationErrorCodes';
-export { ValidationError } from './ValidationError';
-export { AuthenticationError } from './AuthenticationError';
-export { AuthorizationError } from './AuthorizationError';
-export { NotFoundError } from './NotFoundError';
+export { ApplicationErrorCode } from './applicationErrorCodes.ts';
+export { ValidationError } from './ValidationError.ts';
+export { AuthenticationError } from './AuthenticationError.ts';
+export { AuthorizationError } from './AuthorizationError.ts';
+export { NotFoundError } from './NotFoundError.ts';

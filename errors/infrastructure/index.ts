@@ -1,7 +1,7 @@
-export { InfrastructureErrorCode } from './infrastructureErrorCodes';
-export { InfrastructureError } from './InfrastructureError';
-export { AITemporaryUnavailableError } from './AITemporaryUnavailableError';
-export { AIProviderFailureError } from './AIProviderFailureError';
-export { DataAccessFailureError } from './DataAccessFailureError';
-export { TransactionFailureError } from './TransactionFailureError';
-export { UnknownInfrastructureError } from './UnknownInfrastructureError';
+export { InfrastructureErrorCode } from './infrastructureErrorCodes.ts';
+export { InfrastructureError } from './InfrastructureError.ts';
+export { AITemporaryUnavailableError } from './AITemporaryUnavailableError.ts';
+export { AIProviderFailureError } from './AIProviderFailureError.ts';
+export { DataAccessFailureError } from './DataAccessFailureError.ts';
+export { TransactionFailureError } from './TransactionFailureError.ts';
+export { UnknownInfrastructureError } from './UnknownInfrastructureError.ts';

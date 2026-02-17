@@ -1,4 +1,4 @@
-import { BaseError } from '../base/BaseError';
+import { BaseError } from '../base/BaseError.ts';
 
 interface Metadata {
   readonly limit: number;
