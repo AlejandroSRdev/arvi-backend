@@ -1,4 +1,4 @@
-import { BaseError } from '../base/BaseError';
+import { BaseError } from '../base/BaseError.ts';
 
 /** Thrown when a request lacks valid authentication credentials. */
 export class AuthenticationError extends BaseError<

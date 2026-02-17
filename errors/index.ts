@@ -1,11 +1,11 @@
-export { BaseError } from './base/BaseError';
+export { BaseError } from './base/BaseError.ts';
 
 export {
   DomainErrorCode,
   InsufficientEnergyError,
   TrialAlreadyUsedError,
   MaxActiveSeriesReachedError,
-} from './domain';
+} from './domain/index.ts';
 
 export {
   ApplicationErrorCode,
@@ -13,7 +13,7 @@ export {
   AuthenticationError,
   AuthorizationError,
   NotFoundError,
-} from './application';
+} from './application/index.ts';
 
 export {
   InfrastructureErrorCode,
@@ -23,4 +23,4 @@ export {
   DataAccessFailureError,
   TransactionFailureError,
   UnknownInfrastructureError,
-} from './infrastructure';
+} from './infrastructure/index.ts';

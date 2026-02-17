@@ -1,4 +1,4 @@
-import { InfrastructureError } from './InfrastructureError';
+import { InfrastructureError } from './InfrastructureError.ts';
 
 /** Thrown when an infrastructure failure cannot be classified. */
 export class UnknownInfrastructureError extends InfrastructureError<
