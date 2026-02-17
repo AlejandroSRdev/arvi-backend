@@ -58,7 +58,7 @@
  */
 
 import { hasFeatureAccess, getPlan } from '../../../01domain/policies/PlanPolicy.js';
-import { ValidationError, AuthorizationError, NotFoundError } from '../../../errors/index.ts';
+import { ValidationError, AuthorizationError, NotFoundError } from '../../../errors/index.js';
 
 /**
  * Determines the user's effective plan considering trial status

@@ -17,7 +17,7 @@
  */
 
 import { PLANS } from '../../01domain/policies/PlanPolicy.js';
-import { ValidationError, NotFoundError, AuthorizationError, TrialAlreadyUsedError } from "../../errors/index.ts";
+import { ValidationError, NotFoundError, AuthorizationError, TrialAlreadyUsedError } from "../../errors/index.js";
 
 /**
  * Activar trial de 48 horas (solo si nunca lo ha usado)

@@ -32,7 +32,7 @@
 
 
 import { getModelConfig } from '../../01domain/policies/ModelSelectionPolicy.js';
-import { ValidationError } from '../../errors/index.ts';
+import { ValidationError } from '../../errors/index.js';
 
 /**
  * Execute an AI call and return content with energy consumed.

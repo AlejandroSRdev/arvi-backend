@@ -28,7 +28,7 @@ import {
   AuthorizationError,
   InsufficientEnergyError,
   MaxActiveSeriesReachedError,
-} from '../../errors/index.ts';
+} from '../../errors/index.js';
 
 import CreativeHabitSeriesPrompt from '../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
