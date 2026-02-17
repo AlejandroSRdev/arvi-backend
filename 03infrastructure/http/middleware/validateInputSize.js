@@ -33,7 +33,7 @@
  * - Responder con errores HTTP apropiados
  */
 
-import { logger } from '../../logger/logger.js';
+import { ValidationError } from '../../../errors/index.ts';
 
 /**
  * Calcula el tamaño aproximado en bytes de un objeto JSON
@@ -77,15 +77,9 @@ export function validateInputSize(config) {
         const bodySize = getBodySize(req.body);
 
         if (bodySize > maxBodySize) {
-          logger.error(`[ValidateInputSize] Body demasiado grande: ${bodySize} bytes (max: ${maxBodySize})`);
-
-          return res.status(413).json({
-            error: 'PAYLOAD_TOO_LARGE',
-            field: 'body',
-            limit: maxBodySize,
-            actual: bodySize,
-            message: `El tamaño del body (${bodySize} bytes) excede el límite de ${maxBodySize} bytes`,
-          });
+          throw new ValidationError(
+            `Body size (${bodySize} bytes) exceeds limit of ${maxBodySize} bytes`
+          );
         }
       }
 
@@ -95,17 +89,7 @@ export function validateInputSize(config) {
           const validation = validateField(req.body, fieldPath, rules);
 
           if (!validation.valid) {
-            logger.error(`[ValidateInputSize] Validación fallida en campo: ${fieldPath}`);
-            logger.error(`  → Límite: ${validation.limit}`);
-            logger.error(`  → Actual: ${validation.actual}`);
-
-            return res.status(413).json({
-              error: 'PAYLOAD_TOO_LARGE',
-              field: fieldPath,
-              limit: validation.limit,
-              actual: validation.actual,
-              message: validation.message,
-            });
+            throw new ValidationError(validation.message);
           }
         }
       }
@@ -113,11 +97,7 @@ export function validateInputSize(config) {
       // 3. Validación exitosa
       next();
     } catch (error) {
-      logger.error('[ValidateInputSize] Error durante validación:', error);
-      return res.status(500).json({
-        error: 'VALIDATION_ERROR',
-        message: 'Error al validar el tamaño del input',
-      });
+      next(error);
     }
   };
 }
