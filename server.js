@@ -1,17 +1,17 @@
 /**
  * Arvi Backend Server - Composition Root
  *
- * ARQUITECTURA HEXAGONAL - REFACTORIZADO: 2025-12-30
+ * HEXAGONAL ARCHITECTURE - REFACTORED: 2025-12-30
  *
- * Responsabilidades (Composition Root):
- * - Configurar Express y middlewares globales
- * - Inicializar adaptadores de infraestructura (Firebase, Stripe)
- * - Conectar rutas HTTP a controladores
- * - Manejo de errores global
- * - NO contiene lógica de negocio
- * - NO accede directamente a servicios externos
+ * Responsibilities (Composition Root):
+ * - Configure Express and global middlewares
+ * - Initialize infrastructure adapters (Firebase, Stripe)
+ * - Connect HTTP routes to controllers
+ * - Global error handling
+ * - Does NOT contain business logic
+ * - Does NOT access external services directly
  *
- * Backend unificado que incluye:
+ * Unified backend that includes:
  * - Stripe (checkout, webhooks)
  * - AI Service (chat, JSON conversion)
  * - Energy Management
@@ -23,36 +23,35 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 
-// Importar rutas (Hexagonal Architecture)
-import authRoutes from './03infrastructure/http/routes/auth.routes.js';
-import energyRoutes from './03infrastructure/http/routes/energy.routes.js';
-import userRoutes from './03infrastructure/http/routes/user.routes.js';
-import stripeRoutes from './03infrastructure/http/routes/stripe.routes.js';
+// Import routes (Hexagonal Architecture)
+import authRoutes from './03infrastructure/http/routes/Auth.routes.js';
+import energyRoutes from './03infrastructure/http/routes/Energy.routes.js';
+import userRoutes from './03infrastructure/http/routes/User.routes.js';
 import habitSeriesRoutes from './03infrastructure/http/routes/HabitSeriesRoutes.js';
 
-// Importar middleware (Hexagonal Architecture)
+// Import middleware (Hexagonal Architecture)
 import { errorMiddleware } from './03infrastructure/http/middlewares/errorMiddleware.js';
 
 // ═══════════════════════════════════════════════════════════════
-// BOOTSTRAP - COMPOSICIÓN DE DEPENDENCIAS
+// BOOTSTRAP - DEPENDENCY COMPOSITION
 // ═══════════════════════════════════════════════════════════════
-// Este es el ÚNICO lugar donde se crean instancias de adaptadores
-// y se inyectan en los controllers mediante setDependencies.
+// This is the ONLY place where adapter instances are created
+// and injected into controllers via setDependencies.
 //
-// ARQUITECTURA HEXAGONAL - INYECCIÓN DE DEPENDENCIAS:
-// 1. Crear instancias ÚNICAS de adaptadores de infraestructura
-// 2. Inyectar en TODOS los controllers que las requieran
-// 3. NO permitir que controllers o use cases creen instancias propias
-// 4. Facilitar testing (permite inyectar mocks en lugar de instancias reales)
+// HEXAGONAL ARCHITECTURE - DEPENDENCY INJECTION:
+// 1. Create UNIQUE instances of infrastructure adapters
+// 2. Inject into ALL controllers that require them
+// 3. Do NOT allow controllers or use cases to create their own instances
+// 4. Facilitate testing (allows injecting mocks instead of real instances)
 //
-// IMPORTANTE: Este patrón cierra correctamente la arquitectura hexagonal
-// sin modificar la lógica de negocio existente.
+// IMPORTANT: This pattern properly closes the hexagonal architecture
+// without modifying existing business logic.
 // ═══════════════════════════════════════════════════════════════
 
-// Importar configuración Firebase (Hexagonal Architecture)
+// Import Firebase configuration (Hexagonal Architecture)
 import { initializeFirebase } from './03infrastructure/persistence/firestore/FirebaseConfig.js';
 
-// Importar Adaptadores de Infraestructura (Repositories)
+// Import Infrastructure Adapters (Repositories)
 import FirestoreUserRepository from './03infrastructure/persistence/firestore/FirestoreUserRepository.js';
 import FirestoreEnergyRepository from './03infrastructure/persistence/firestore/FirestoreEnergyRepository.js';
 import FirestoreHabitSeriesRepository from './03infrastructure/persistence/firestore/FirestoreHabitSeriesRepository.js';
@@ -60,20 +59,20 @@ import FirestoreHabitSeriesRepository from './03infrastructure/persistence/fires
 // Importar AI Provider Router (routes to correct adapter based on model)
 import AIProviderRouter from './03infrastructure/ai/AIProviderRouter.js';
 
-// Importar Password Hasher
+// Import Password Hasher
 import PasswordHasher from './03infrastructure/security/PasswordHasher.js';
 
-// Importar Controllers para inyección de dependencias
+// Import Controllers for dependency injection
 import { setDependencies as setAuthDeps } from './03infrastructure/http/controllers/AuthController.js';
 import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
 import { setDependencies as setEnergyDeps } from './03infrastructure/http/controllers/EnergyController.js';
 import { setDependencies as setHabitSeriesDeps } from './03infrastructure/http/controllers/HabitSeriesController.js';
 
-// Inicializar Firebase Admin SDK
+// Initialize Firebase Admin SDK
 initializeFirebase();
 
 // ───────────────────────────────────────────────────────────────
-// CREAR INSTANCIAS ÚNICAS DE ADAPTADORES
+// CREATE UNIQUE ADAPTER INSTANCES
 // ───────────────────────────────────────────────────────────────
 
 const userRepository = new FirestoreUserRepository();
@@ -83,29 +82,29 @@ const aiProvider = new AIProviderRouter(); // Routes to Gemini/OpenAI based on m
 const passwordHasher = new PasswordHasher();
 
 // ───────────────────────────────────────────────────────────────
-// INYECTAR DEPENDENCIAS EN CONTROLLERS
+// INJECT DEPENDENCIES INTO CONTROLLERS
 // ───────────────────────────────────────────────────────────────
-// Llamar a setDependencies en CADA controller que lo requiera.
+// Call setDependencies on EACH controller that requires it.
 
-// AuthController requiere: userRepository, passwordHasher
+// AuthController requires: userRepository, passwordHasher
 setAuthDeps({
   userRepository,
   passwordHasher,
 });
 
-// UserController requiere: userRepository
+// UserController requires: userRepository
 setUserDeps({
   userRepository
 });
 
-// EnergyController requiere: energyRepository, userRepository
+// EnergyController requires: energyRepository, userRepository
 setEnergyDeps({
   energyRepository,
   userRepository
 });
 
 
-// HabitSeriesController requiere: userRepository, habitSeriesRepository, energyRepository, aiProvider
+// HabitSeriesController requires: userRepository, habitSeriesRepository, energyRepository, aiProvider
 setHabitSeriesDeps({
   userRepository,
   habitSeriesRepository,
@@ -116,13 +115,13 @@ setHabitSeriesDeps({
 const app = express();
 
 // ═══════════════════════════════════════════════════════════════
-// CONFIGURACIÓN GENERAL
+// GENERAL CONFIGURATION
 // ═══════════════════════════════════════════════════════════════
 
 app.set('trust proxy', 1);
 app.use(cors());
 
-// JSON parser para el resto de rutas
+// JSON parser for all routes
 app.use(express.json());
 
 // ═══════════════════════════════════════════════════════════════
@@ -157,27 +156,27 @@ app.get('/', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-// RUTAS API (NUEVA ARQUITECTURA)
+// API ROUTES (NEW ARCHITECTURE)
 // ═══════════════════════════════════════════════════════════════
 
-app.use('/api/auth', authRoutes);       // ✅ Autenticación
-app.use('/api/energy', energyRoutes);   // ✅ Gestión de energía
-app.use('/api/user', userRoutes);       // ✅ Gestión de usuarios
-app.use('/api/stripe', stripeRoutes);   // ✅ Pagos y suscripciones (legacy)
-app.use('/api/payments', paymentRoutes); // ✅ Inicio de pagos
-app.use('/api/habits', habitSeriesRoutes); // ✅ Series de hábitos
-app.use('/api/execution-summaries', executionSummaryRoutes); // ✅ Resúmenes de ejecución
-app.use('/api/webhooks', webhookRoutes); // ✅ Webhooks de Stripe
+app.use('/api/auth', authRoutes);       // ✅ Authentication
+app.use('/api/energy', energyRoutes);   // ✅ Energy management
+app.use('/api/user', userRoutes);       // ✅ User management
+app.use('/api/stripe', stripeRoutes);   // ✅ Payments and subscriptions (legacy)
+app.use('/api/payments', paymentRoutes); // ✅ Payment initiation
+app.use('/api/habits', habitSeriesRoutes); // ✅ Habit series
+app.use('/api/execution-summaries', executionSummaryRoutes); // ✅ Execution summaries
+app.use('/api/webhooks', webhookRoutes); // ✅ Stripe webhooks
 
 // ═══════════════════════════════════════════════════════════════
-// MANEJO DE ERRORES GLOBAL
+// GLOBAL ERROR HANDLING
 // ═══════════════════════════════════════════════════════════════
 
-// Ruta no encontrada
+// Route not found
 app.use((req, res) => {
   res.status(404).json({
     error: true,
-    message: `Ruta no encontrada: ${req.method} ${req.path}`,
+    message: `Route not found: ${req.method} ${req.path}`,
     availableEndpoints: [
       'GET /health',
       'GET /',
@@ -196,7 +195,7 @@ app.use((req, res) => {
 app.use(errorMiddleware);
 
 // ═══════════════════════════════════════════════════════════════
-// INICIO DEL SERVIDOR
+// SERVER STARTUP
 // ═══════════════════════════════════════════════════════════════
 
 const PORT = process.env.PORT || 4242;
@@ -205,20 +204,20 @@ app.listen(PORT, () => {
   console.log('═══════════════════════════════════════════════════════════');
   console.log('  🚀 ARVI Backend Server v2.0.1');
   console.log('═══════════════════════════════════════════════════════════');
-  console.log(`  📡 Puerto:          ${PORT}`);
-  console.log(`  🌍 Entorno:         ${process.env.NODE_ENV || 'development'}`);
+  console.log(`  📡 Port:            ${PORT}`);
+  console.log(`  🌍 Environment:     ${process.env.NODE_ENV || 'development'}`);
   console.log(`  🔗 URL:             http://localhost:${PORT}`);
   console.log('');
-  console.log('  ✅ Rutas activas:');
+  console.log('  ✅ Active routes:');
   console.log('     • GET  /health                       - Health check');
-  console.log('     • GET  /                             - Info API');
-  console.log('     • POST /api/ai/json-convert          - Conversión JSON');
-  console.log('     • GET  /api/energy                   - Consultar energía');
-  console.log('     • POST /api/habits/series            - Crear serie de hábitos via IA');
-  console.log('     • POST /api/execution-summaries      - Validar generación resumen ejecución');
-  console.log('     • POST /api/payments/start           - Iniciar pago');
-  console.log('     • POST /api/stripe/create-checkout   - Crear sesión Stripe (legacy)');
-  console.log('     • POST /api/webhooks/stripe          - Webhook Stripe');
+  console.log('     • GET  /                             - API info');
+  console.log('     • POST /api/ai/json-convert          - JSON conversion');
+  console.log('     • GET  /api/energy                   - Query energy');
+  console.log('     • POST /api/habits/series            - Create habit series via AI');
+  console.log('     • POST /api/execution-summaries      - Validate execution summary generation');
+  console.log('     • POST /api/payments/start           - Start payment');
+  console.log('     • POST /api/stripe/create-checkout   - Create Stripe session (legacy)');
+  console.log('     • POST /api/webhooks/stripe          - Stripe webhook');
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');
