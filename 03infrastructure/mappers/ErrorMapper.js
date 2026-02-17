@@ -78,6 +78,60 @@ export function mapErrorToHttp(error) {
   }
 
   // ─────────────────────────────────────────────
+  // INFRASTRUCTURE ERRORS
+  // ─────────────────────────────────────────────
+
+  if (error.code === 'AI_TEMPORARY_UNAVAILABLE') {
+    return {
+      status: HTTP_STATUS.SERVICE_UNAVAILABLE,
+      body: {
+        error: 'AI_UNAVAILABLE',
+        message: 'AI service temporarily unavailable',
+      },
+    };
+  }
+
+  if (error.code === 'AI_PROVIDER_FAILURE') {
+    return {
+      status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      body: {
+        error: 'AI_FAILURE',
+        message: 'AI provider failure',
+      },
+    };
+  }
+
+  if (error.code === 'DATA_ACCESS_FAILURE') {
+    return {
+      status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      body: {
+        error: 'DATA_ERROR',
+        message: 'Data access failure',
+      },
+    };
+  }
+
+  if (error.code === 'TRANSACTION_FAILURE') {
+    return {
+      status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      body: {
+        error: 'TRANSACTION_ERROR',
+        message: 'Transaction failed',
+      },
+    };
+  }
+
+  if (error.code === 'UNKNOWN_INFRASTRUCTURE_ERROR') {
+    return {
+      status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+      body: {
+        error: 'INTERNAL_SERVER_ERROR',
+        message: 'Internal server error',
+      },
+    };
+  }
+
+  // ─────────────────────────────────────────────
   // FALLBACK (UNEXPECTED ERRORS)
   // ─────────────────────────────────────────────
 

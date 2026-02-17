@@ -23,8 +23,12 @@
 import { hasFeatureAccess, getPlan } from '../../../01domain/policies/PlanPolicy.js';
 import { getModelConfig } from '../../../01domain/policies/ModelSelectionPolicy.js';
 import { generateAIResponse } from '../../services/AIExecutionService.js';
-import { ValidationError, AuthorizationError } from '../errors/index.js';
-import { InsufficientEnergyError } from '../../../01domain/errors/index.js';
+import {
+  ValidationError,
+  AuthorizationError,
+  InsufficientEnergyError,
+  MaxActiveSeriesReachedError,
+} from '../../../errors/index.js';
 
 import CreativeHabitSeriesPrompt from '../../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
@@ -176,9 +180,7 @@ export async function createHabitSeries(userId, payload, deps) {
   const maxActiveSeries = planConfig.maxActiveSeries || 0;
 
   if (activeSeriesCount >= maxActiveSeries) {
-    throw new AuthorizationError(
-      `Active series limit reached: ${activeSeriesCount}/${maxActiveSeries}`
-    );
+    throw new MaxActiveSeriesReachedError(maxActiveSeries, activeSeriesCount);
   }
 
   // 1.5 Validate user has sufficient energy (read-only pre-check)

@@ -13,8 +13,7 @@
 import { createUser } from '../../../02application/use-cases/auth/CreateUser.js';
 import { loginUser } from '../../../02application/use-cases/auth/LoginUser.js';
 import { HTTP_STATUS } from '../httpStatus.js';
-import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
-import { logger } from '../../logger/logger.js';
+import { ValidationError } from '../../../errors/index.js';
 import jwt from 'jsonwebtoken';
 
 
@@ -31,15 +30,13 @@ export function setDependencies(deps) {
  * POST /api/auth/register
  * Register a new user
  */
-export async function register(req, res) {
+export async function register(req, res, next) {
   try {
     const { email, password } = req.body;
 
     // HTTP input validation
-    if (!email || !password ) {
-      const err = new Error("Email or password are required");
-      err.code = "VALIDATION_ERROR";
-      throw err;
+    if (!email || !password) {
+      throw new ValidationError("Email and password are required");
     }
 
     const { userId } = await createUser(
@@ -48,9 +45,7 @@ export async function register(req, res) {
       { userRepository, passwordHasher }
     );
 
-    logger.success(`User registered: ${userId}`);
-
-    res.status(HTTP_STATUS.CREATED).json({
+    return res.status(HTTP_STATUS.CREATED).json({
       success: true,
       message: "User registered successfully",
       user: {
@@ -61,10 +56,7 @@ export async function register(req, res) {
       },
     });
   } catch (err) {
-    logger.error("Error in register:", err);
-
-    const httpError = mapErrorToHttp(err);
-    res.status(httpError.status).json(httpError.body);
+    return next(err);
   }
 }
 
@@ -72,15 +64,13 @@ export async function register(req, res) {
  * POST /api/auth/login
  * Authenticate user with email and password
  */
-export async function login(req, res) {
+export async function login(req, res, next) {
   try {
     const { email, password } = req.body;
 
     // HTTP input validation
     if (!email || !password) {
-      const err = new Error('Email and password are required');
-      err.code = 'VALIDATION_ERROR';
-      throw err;
+      throw new ValidationError('Email and password are required');
     }
 
     const { userId } = await loginUser(email, password, {
@@ -94,17 +84,12 @@ export async function login(req, res) {
       { expiresIn: '1h' }
     );
 
-    logger.success(`Login successful: ${userId}`);
-
-    res.status(HTTP_STATUS.OK).json({
+    return res.status(HTTP_STATUS.OK).json({
       token,
       userId,
     });
   } catch (err) {
-    logger.error('Error in login:', err);
-
-    const httpError = mapErrorToHttp(err);
-    res.status(httpError.status).json(httpError.body);
+    return next(err);
   }
 }
 

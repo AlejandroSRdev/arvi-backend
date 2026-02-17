@@ -33,6 +33,8 @@
  * - Responder con errores HTTP apropiados
  */
 
+import { logger } from '../../logger/logger.js';
+
 /**
  * Calcula el tamaño aproximado en bytes de un objeto JSON
  * MIGRADO DESDE: src/middleware/validateInputSize.js:getBodySize (líneas 34-36)
@@ -75,7 +77,7 @@ export function validateInputSize(config) {
         const bodySize = getBodySize(req.body);
 
         if (bodySize > maxBodySize) {
-          logError(`[ValidateInputSize] Body demasiado grande: ${bodySize} bytes (max: ${maxBodySize})`);
+          logger.error(`[ValidateInputSize] Body demasiado grande: ${bodySize} bytes (max: ${maxBodySize})`);
 
           return res.status(413).json({
             error: 'PAYLOAD_TOO_LARGE',
@@ -93,9 +95,9 @@ export function validateInputSize(config) {
           const validation = validateField(req.body, fieldPath, rules);
 
           if (!validation.valid) {
-            logError(`[ValidateInputSize] Validación fallida en campo: ${fieldPath}`);
-            logError(`  → Límite: ${validation.limit}`);
-            logError(`  → Actual: ${validation.actual}`);
+            logger.error(`[ValidateInputSize] Validación fallida en campo: ${fieldPath}`);
+            logger.error(`  → Límite: ${validation.limit}`);
+            logger.error(`  → Actual: ${validation.actual}`);
 
             return res.status(413).json({
               error: 'PAYLOAD_TOO_LARGE',
@@ -111,7 +113,7 @@ export function validateInputSize(config) {
       // 3. Validación exitosa
       next();
     } catch (error) {
-      logError('[ValidateInputSize] Error durante validación:', error);
+      logger.error('[ValidateInputSize] Error durante validación:', error);
       return res.status(500).json({
         error: 'VALIDATION_ERROR',
         message: 'Error al validar el tamaño del input',

@@ -23,6 +23,8 @@
 
 import { getModel } from './GeminiConfig.js';
 import { IAIProvider } from '../../../01domain/ports/IAIProvider.js';
+import { InfrastructureError } from '../../infrastructure_errors/InfrastructureError.js';
+import { logger } from '../../logger/logger.js';
 
 /**
  * Estimate token usage for Gemini responses.
@@ -139,8 +141,41 @@ export class GeminiAdapter extends IAIProvider {
       return response;
 
     } catch (error) {
-      console.error(`❌ [GeminiAdapter] callAI error: ${error.message}`);
-      throw new Error(`Gemini call failed: ${error.message}`);
+      const metadata = {
+        provider: 'gemini',
+        originalMessage: error.message,
+        timestamp: new Date().toISOString(),
+      };
+
+      logger.error('[GeminiAdapter] callAI failed', { ...metadata, stack: error.stack });
+
+      // Timeout, network, and DNS errors → transient unavailability
+      if (
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ECONNABORTED' ||
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ENOTFOUND' ||
+        error.code === 'EAI_AGAIN' ||
+        error.name === 'AbortError' ||
+        error.message?.includes('timeout')
+      ) {
+        throw new InfrastructureError('AI_TEMPORARY_UNAVAILABLE', metadata);
+      }
+
+      // Provider rejections, auth errors, 4xx/5xx responses
+      if (
+        error.status ||
+        error.response?.status ||
+        error.code === 'PERMISSION_DENIED' ||
+        error.code === 'INVALID_ARGUMENT' ||
+        error.message?.includes('API key') ||
+        error.message?.includes('quota')
+      ) {
+        throw new InfrastructureError('AI_PROVIDER_FAILURE', metadata);
+      }
+
+      // Fallback: unknown infrastructure error
+      throw new InfrastructureError('UNKNOWN_INFRASTRUCTURE_ERROR', metadata);
     }
   }
 

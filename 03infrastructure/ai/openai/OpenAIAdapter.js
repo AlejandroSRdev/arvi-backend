@@ -27,6 +27,8 @@
 
 import { openai } from './OpenAIConfig.js';
 import { IAIProvider } from '../../../01domain/ports/IAIProvider.js';
+import { InfrastructureError } from '../../infrastructure_errors/InfrastructureError.js';
+import { logger } from '../../logger/logger.js';
 
 /**
  * Adapter de OpenAI que implementa el port IAIProvider
@@ -55,8 +57,7 @@ export class OpenAIAdapter extends IAIProvider {
         forceJson = false,
       } = options;
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:108
-      console.log(`🤖 [OpenAI] Llamando modelo: ${model}`);
+      logger.info(`[OpenAI] Calling model: ${model}`);
 
       // EXTRACCIÓN EXACTA: src/services/aiService.js:110-116
       // Llamada a OpenAI API con opciones exactas
@@ -84,14 +85,46 @@ export class OpenAIAdapter extends IAIProvider {
         energyConsumed: 0, // GPT NO consume energía
       };
 
-      // EXTRACCIÓN EXACTA: src/services/aiService.js:132
-      console.log(`✅ [OpenAI] Respuesta recibida - Tokens: ${tokensUsed}, Energía: 0 (GPT no consume)`);
+      logger.info(`[OpenAI] Response received - Tokens: ${tokensUsed}, Energy: 0 (GPT does not consume)`);
 
       return response;
 
     } catch (error) {
-      console.error(`❌ [OpenAIAdapter] Error en callAI: ${error.message}`);
-      throw new Error(`Error al llamar a OpenAI: ${error.message}`);
+      const metadata = {
+        provider: 'openai',
+        originalMessage: error.message,
+        timestamp: new Date().toISOString(),
+      };
+
+      logger.error('[OpenAIAdapter] callAI failed', { ...metadata, stack: error.stack });
+
+      // Timeout, network, and DNS errors → transient unavailability
+      if (
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ECONNABORTED' ||
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ENOTFOUND' ||
+        error.code === 'EAI_AGAIN' ||
+        error.name === 'AbortError' ||
+        error.message?.includes('timeout')
+      ) {
+        throw new InfrastructureError('AI_TEMPORARY_UNAVAILABLE', metadata);
+      }
+
+      // Provider rejections, auth errors, 4xx/5xx responses
+      if (
+        error.status ||
+        error.response?.status ||
+        error.code === 'PERMISSION_DENIED' ||
+        error.code === 'INVALID_ARGUMENT' ||
+        error.message?.includes('API key') ||
+        error.message?.includes('quota')
+      ) {
+        throw new InfrastructureError('AI_PROVIDER_FAILURE', metadata);
+      }
+
+      // Fallback: unknown infrastructure error
+      throw new InfrastructureError('UNKNOWN_INFRASTRUCTURE_ERROR', metadata);
     }
   }
 

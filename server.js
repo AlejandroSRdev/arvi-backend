@@ -34,7 +34,7 @@ import habitSeriesRoutes from './03infrastructure/http/routes/HabitSeriesRoutes.
 import executionSummaryRoutes from './03infrastructure/http/routes/executionSummary.routes.js';
 
 // Importar middleware (Hexagonal Architecture)
-import { errorHandler } from './03infrastructure/http/middleware/errorHandler.js';
+import { errorMiddleware } from './03infrastructure/http/middleware/errorMiddleware.js';
 
 // ═══════════════════════════════════════════════════════════════
 // BOOTSTRAP - COMPOSICIÓN DE DEPENDENCIAS
@@ -206,8 +206,8 @@ app.use((req, res) => {
   });
 });
 
-// Error handler global
-app.use(errorHandler);
+// Global error middleware (must be registered AFTER all routes)
+app.use(errorMiddleware);
 
 // ═══════════════════════════════════════════════════════════════
 // INICIO DEL SERVIDOR
