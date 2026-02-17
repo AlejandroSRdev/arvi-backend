@@ -18,8 +18,6 @@
  * - application/use-cases/GetSubscriptionStatus.js
  */
 
-import { getUserProfile, updateUserProfile, deleteUserAccount } from '../../../02application/use-cases/ManageUser.js';
-import { getSubscriptionStatus } from '../../../02application/use-cases/GetSubscriptionStatus.js';
 import { HTTP_STATUS } from '../HttpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/Logger.js';
