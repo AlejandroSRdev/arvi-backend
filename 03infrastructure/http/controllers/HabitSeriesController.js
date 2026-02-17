@@ -17,12 +17,12 @@
  * - Schema validation
  */
 
-import { createHabitSeries } from '../../../02application/use-cases/habit_series_use_cases/CreateHabitSeriesUseCase.js';
-import { deleteHabitSeries } from '../../../02application/use-cases/habit_series_use_cases/deleteHabitSeries.js';
-import { HTTP_STATUS } from '../httpStatus.js';
+import { createHabitSeries } from '../../../02application/use-cases/CreateHabitSeriesUseCase.js';
+import { deleteHabitSeries } from '../../../02application/use-cases/deleteHabitSeries.js';
+import { HTTP_STATUS } from '../HttpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { toHabitSeriesOutputDTO } from '../../mappers/HabitSeriesMapper.ts';
-import { logger } from '../../logger/logger.js';
+import { logger } from '../../logger/Logger.js';
 import { ValidationError, AuthenticationError } from '../../../errors/index.ts';
 
 // Dependency injection

@@ -20,9 +20,9 @@
 import { getUserEnergy } from '../../../02application/use-cases/ConsumeEnergy.js';
 import { activateTrial } from '../../../02application/use-cases/ActivateTrial.js';
 import { getTrialStatus } from '../../../02application/use-cases/GetTrialStatus.js';
-import { HTTP_STATUS } from '../httpStatus.js';
+import { HTTP_STATUS } from '../HttpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
-import { logger } from '../../logger/logger.js';
+import { logger } from '../../logger/Logger.js';
 
 // Dependency injection
 let energyRepository;

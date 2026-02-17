@@ -10,7 +10,7 @@
 
 import express from 'express';
 import { createHabitSeriesEndpoint, deleteHabitSeriesEndpoint } from '../controllers/HabitSeriesController.js';
-import { authenticate } from '../middleware/authenticate.js';
+import { authenticate } from '../middlewares/authenticate.js';
 
 const router = express.Router();
 

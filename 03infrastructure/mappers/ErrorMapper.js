@@ -1,4 +1,4 @@
-import { HTTP_STATUS } from '../http/httpStatus.js';
+import { HTTP_STATUS } from '../http/HttpStatus.js';
 
 /**
  * Maps domain/application errors to HTTP responses.

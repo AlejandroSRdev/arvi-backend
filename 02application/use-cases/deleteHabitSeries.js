@@ -21,7 +21,7 @@
  * - Transacciones complejas (se hace en orden seguro)
  */
 
-import { ValidationError } from '../../../errors/index.ts';
+import { ValidationError } from '../../errors/index.ts';
 
 /**
  * Eliminar una serie de hábitos

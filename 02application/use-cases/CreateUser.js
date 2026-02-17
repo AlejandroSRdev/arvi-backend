@@ -17,11 +17,11 @@
  * - Direct access to Firestore
  */
 import { randomUUID } from "crypto";
-import { ValidationError } from "../../../errors/index.ts";
-import { User } from "../../../01domain/entities/User.ts";
-import { Trial } from "../../../01domain/value_objects/user_objects/Trial.ts";
-import { Energy } from "../../../01domain/value_objects/user_objects/Energy.ts";
-import { Limits } from "../../../01domain/value_objects/user_objects/Limits.ts";
+import { ValidationError } from "../../errors/index.ts";
+import { User } from "../../01domain/entities/User.ts";
+import { Trial } from "../../01domain/value_objects/user_objects/Trial.ts";
+import { Energy } from "../../01domain/value_objects/user_objects/Energy.ts";
+import { Limits } from "../../01domain/value_objects/user_objects/Limits.ts";
 
 /**
  * Create a new user in the system

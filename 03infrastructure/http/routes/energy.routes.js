@@ -14,7 +14,7 @@ import {
   activateTrialEndpoint,
   getTrialStatusEndpoint,
 } from '../controllers/EnergyController.js';
-import { authenticate } from '../middleware/authenticate.js';
+import { authenticate } from '../middlewares/authenticate.js';
 
 const router = express.Router();
 

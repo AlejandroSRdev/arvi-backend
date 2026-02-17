@@ -10,8 +10,8 @@
 
 import express from 'express';
 import { register, login } from '../controllers/AuthController.js';
-import { authenticate } from '../middleware/authenticate.js';
-import { authRateLimiter } from '../middleware/rateLimiter.js';
+import { authenticate } from '../middlewares/authenticate.js';
+import { authRateLimiter } from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 

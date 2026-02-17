@@ -28,13 +28,10 @@ import authRoutes from './03infrastructure/http/routes/auth.routes.js';
 import energyRoutes from './03infrastructure/http/routes/energy.routes.js';
 import userRoutes from './03infrastructure/http/routes/user.routes.js';
 import stripeRoutes from './03infrastructure/http/routes/stripe.routes.js';
-import webhookRoutes from './03infrastructure/http/routes/webhook.routes.js';
-import paymentRoutes from './03infrastructure/http/routes/payment.routes.js';
 import habitSeriesRoutes from './03infrastructure/http/routes/HabitSeriesRoutes.js';
-import executionSummaryRoutes from './03infrastructure/http/routes/executionSummary.routes.js';
 
 // Importar middleware (Hexagonal Architecture)
-import { errorMiddleware } from './03infrastructure/http/middleware/errorMiddleware.js';
+import { errorMiddleware } from './03infrastructure/http/middlewares/errorMiddleware.js';
 
 // ═══════════════════════════════════════════════════════════════
 // BOOTSTRAP - COMPOSICIÓN DE DEPENDENCIAS
@@ -70,9 +67,7 @@ import PasswordHasher from './03infrastructure/security/PasswordHasher.js';
 import { setDependencies as setAuthDeps } from './03infrastructure/http/controllers/AuthController.js';
 import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
 import { setDependencies as setEnergyDeps } from './03infrastructure/http/controllers/EnergyController.js';
-import { setDependencies as setWebhookDeps } from './03infrastructure/http/controllers/WebhookController.js';
 import { setDependencies as setHabitSeriesDeps } from './03infrastructure/http/controllers/HabitSeriesController.js';
-import { setDependencies as setExecutionSummaryDeps } from './03infrastructure/http/controllers/ExecutionSummaryController.js';
 
 // Inicializar Firebase Admin SDK
 initializeFirebase();
@@ -109,10 +104,6 @@ setEnergyDeps({
   userRepository
 });
 
-// WebhookController requiere: userRepository
-setWebhookDeps({
-  userRepository
-});
 
 // HabitSeriesController requiere: userRepository, habitSeriesRepository, energyRepository, aiProvider
 setHabitSeriesDeps({
@@ -120,11 +111,6 @@ setHabitSeriesDeps({
   habitSeriesRepository,
   energyRepository,
   aiProvider
-});
-
-// ExecutionSummaryController requiere: userRepository
-setExecutionSummaryDeps({
-  userRepository
 });
 
 const app = express();
