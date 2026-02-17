@@ -23,6 +23,7 @@ import { HTTP_STATUS } from '../httpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { toHabitSeriesOutputDTO } from '../../mappers/HabitSeriesMapper.ts';
 import { logger } from '../../logger/logger.js';
+import { ValidationError, AuthenticationError } from '../../../errors/index.js';
 
 // Dependency injection
 let userRepository;
@@ -89,27 +90,18 @@ function validateRequestBody(body) {
  * - createdAt: string (ISO)
  * - lastActivityAt: string (ISO)
  */
-export async function createHabitSeriesEndpoint(req, res) {
+export async function createHabitSeriesEndpoint(req, res, next) {
   try {
     const userId = req.user?.uid;
 
     if (!userId) {
-      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
-        error: 'AUTHENTICATION_ERROR',
-        message: 'User not authenticated',
-      });
+      throw new AuthenticationError('User not authenticated');
     }
-
-    const testKeys = req.body.testData ? Object.keys(req.body.testData) : [];
-    console.log(`[START] [Habit Series] Request received for user ${userId}, language=${req.body.language}, testKeys=[${testKeys.join(', ')}]`);
 
     // Syntactic validation of HTTP input
     const validation = validateRequestBody(req.body);
     if (!validation.valid) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'VALIDATION_ERROR',
-        message: validation.error,
-      });
+      throw new ValidationError(validation.error);
     }
 
     // Transform HTTP DTO to Application Contract input
@@ -127,17 +119,11 @@ export async function createHabitSeriesEndpoint(req, res) {
       aiProvider,
     });
 
-    logger.success(`[Habit Series] Created for user ${userId}, seriesId: ${habitSeries.id}`);
-
     const responseDTO = toHabitSeriesOutputDTO(habitSeries);
 
-    // Return full Habit Series DTO in response
-    res.status(HTTP_STATUS.CREATED).json(responseDTO);
+    return res.status(HTTP_STATUS.CREATED).json(responseDTO);
   } catch (err) {
-    logger.error('[Habit Series] Error in create:', err);
-
-    const httpError = mapErrorToHttp(err);
-    res.status(httpError.status).json(httpError.body);
+    return next(err);
   }
 }
 

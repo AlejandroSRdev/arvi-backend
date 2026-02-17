@@ -1,102 +1,112 @@
-# Project Manifest
+Error Refactor — Phase 1
+Objective
 
-## Goal
-Backend service implemented in Node.js whose responsibility is to expose
-application use-cases in a clean, testable, and scalable way, enforcing
-strict separation between business logic and external concerns.
+Refactor the backend to use the new TypeScript error architecture located in /errors.
 
-The system prioritizes architectural clarity, correctness, and long-term
-maintainability over premature optimization or technology-driven refactors.
+The goal is:
 
----
+Remove raw Error() usage.
 
-## Stack
-- Runtime: Node.js (>=18)
-- Language: JavaScript (Node ecosystem)
-- HTTP Framework: Express (used as a thin adapter only)
-- Database: Firebase (Firestore)
-- Hosting / Infrastructure: Render
-- AI / LLM APIs:
-  - OpenAI API
-  - Google Gemini API
-- RAG: Not implemented at this stage
+Replace all error throwing with typed error classes.
 
----
+Ensure correct error layer responsibility.
 
-## Architecture
-- Style: Hexagonal Architecture (Ports & Adapters)
-- Core layers:
-  - domain/
-  - application/
-  - infrastructure/
+Remove HTTP logic from use cases.
 
-### Architectural rules (non-negotiable)
+Prepare the system for a global error middleware.
 
-#### domain/
-- Contains pure business logic only
-- No dependencies on frameworks, databases, HTTP, Firebase, or AI SDKs
-- No imports from application or infrastructure
-- Contains entities, value objects, and domain services
-- Fully testable in isolation
+Architectural Rules
 
-#### application/
-- Orchestrates use-cases
-- Depends on domain
-- Defines ports (interfaces) for:
-  - persistence
-  - external services (AI, third-party APIs)
-- Contains no framework- or vendor-specific code
-- No imports from Express, Firebase, OpenAI, or Gemini
+Domain layer:
 
-#### infrastructure/
-- Implements adapters:
-  - HTTP controllers (Express)
-  - Firebase persistence adapters
-  - OpenAI and Gemini API adapters
-- Depends on application and domain
-- Contains all framework-, SDK-, and vendor-specific code
+Must only throw domain error classes.
 
-#### Dependency direction
-infrastructure → application → domain  
-(strictly enforced)
+Must not depend on application or infrastructure.
 
----
+Must not log.
 
-## Conventions
-- One use-case per file in the application layer
-- Use-cases are explicit and intention-revealing
-- Controllers are thin: no business logic
-- Validation occurs at the boundaries (HTTP adapters)
-- Errors are explicit and propagated, never swallowed
-- External services (Firebase, OpenAI, Gemini) are accessed only through ports
+Must not include HTTP logic.
 
----
+Application layer:
 
-## Non-goals
-- No microservices for core backend logic
-- No business logic in controllers or adapters
-- No Firebase SDK usage outside infrastructure
-- No AI logic inside the domain layer
-- No RAG or vector databases at this stage
-- No premature performance or cost optimization
-- No full backend refactor driven solely by technology choice
+Must throw application errors (ValidationError, AuthenticationError, etc.).
 
----
+Must not include HTTP logic.
 
-## Current constraints
-- Preserve hexagonal integrity while iterating
-- Prefer clarity and explicitness over speed
-- Keep external dependencies replaceable
-- Minimize coupling to vendors (Firebase, OpenAI, Gemini)
+Must not log.
 
----
+Infrastructure layer:
 
-## Planned evolution (explicit, not implemented yet)
-- Advanced AI pipelines (RAG, embeddings, retrieval, evaluation) will be
-  implemented as a **separate microservice**.
-- This microservice will be built in **Python**, using **FastAPI**.
-- The main Node.js backend will interact with it via **HTTP**.
-- The core backend will remain free of AI pipeline logic.
-- This evolution will occur only when RAG is required by product needs,
-  not before.
+Must wrap external failures using infrastructure error classes.
+
+Must include cause when wrapping external errors.
+
+Controllers:
+
+Must only:
+
+Return success response.
+
+Call next(err) on failure.
+
+Must not call mapErrorToHttp.
+
+Must not log.
+
+No middleware implementation yet (until Phase 4).
+
+Scope of Refactor
+Phase 1:
+
+createHabitSeries use case
+
+Its domain services
+
+Its infrastructure dependencies
+
+Phase 2:
+
+register use case
+
+login use case
+
+related validation logic
+
+Phase 3:
+
+Clean controllers for above routes
+
+Remove mapErrorToHttp usage from controllers
+
+Phase 4:
+
+Implement global error middleware
+
+Centralize logging
+
+Connect mapErrorToHttp
+
+Non-Goals
+
+No changes to business logic.
+
+No changes to HTTP routes.
+
+No new features.
+
+No database schema changes.
+
+No performance optimizations.
+
+Expected Outcome
+
+After refactor:
+
+All errors are instances of BaseError subclasses.
+
+No raw Error() remains in business code.
+
+Controllers are thin.
+
+System ready for global error middleware.
 

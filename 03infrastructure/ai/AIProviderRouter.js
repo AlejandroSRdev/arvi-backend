@@ -20,6 +20,8 @@
 import { GeminiAdapter } from './gemini/GeminiAdapter.js';
 import { OpenAIAdapter } from './openai/OpenAIAdapter.js';
 import { IAIProvider } from '../../01domain/ports/IAIProvider.js';
+import { InfrastructureError } from '../infrastructure_errors/InfrastructureError.js';
+import { logger } from '../logger/logger.js';
 
 /**
  * Router that implements IAIProvider and delegates to the correct adapter
@@ -40,26 +42,32 @@ export class AIProviderRouter extends IAIProvider {
    */
   getAdapterForModel(model) {
     if (!model || typeof model !== 'string') {
-      throw new Error('INVALID_MODEL: Model name is required');
+      throw new InfrastructureError('AI_PROVIDER_FAILURE', {
+        reason: 'INVALID_MODEL',
+        message: 'Model name is required',
+        timestamp: new Date().toISOString(),
+      });
     }
 
     // OpenAI models
     if (model.startsWith('gpt-') || model.startsWith('o1-')) {
-      console.log(`🔀 [AIRouter] Routing to OpenAIAdapter for model: ${model}`);
+      logger.info(`[AIRouter] Routing to OpenAIAdapter for model: ${model}`);
       return this.openaiAdapter;
     }
 
     // Gemini models
     if (model.startsWith('gemini-')) {
-      console.log(`🔀 [AIRouter] Routing to GeminiAdapter for model: ${model}`);
+      logger.info(`[AIRouter] Routing to GeminiAdapter for model: ${model}`);
       return this.geminiAdapter;
     }
 
     // Fail-fast: unknown model prefix
-    throw new Error(
-      `UNKNOWN_MODEL_PROVIDER: No adapter configured for model "${model}". ` +
-      `Expected prefix: 'gpt-', 'o1-', or 'gemini-'`
-    );
+    throw new InfrastructureError('AI_PROVIDER_FAILURE', {
+      reason: 'UNKNOWN_MODEL_PROVIDER',
+      model,
+      message: `No adapter configured for model "${model}". Expected prefix: 'gpt-', 'o1-', or 'gemini-'`,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   /**

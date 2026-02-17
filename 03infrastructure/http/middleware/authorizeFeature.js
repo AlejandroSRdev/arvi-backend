@@ -17,6 +17,7 @@
  */
 
 import { hasFeatureAccess } from '../../../01domain/policies/PlanPolicy.js';
+import { logger } from '../../logger/logger.js';
 
 // Dependency injection - será inyectada en runtime
 let userRepository;
@@ -49,7 +50,7 @@ export function authorizeFeature(featureKey) {
       const user = await userRepository.getUser(userId);
 
       if (!user) {
-        logError(`[AuthorizeFeature] Usuario no encontrado: ${userId}`);
+        logger.error(`[AuthorizeFeature] Usuario no encontrado: ${userId}`);
         return res.status(404).json({
           error: 'USER_NOT_FOUND',
           message: 'Usuario no encontrado en la base de datos',
@@ -92,7 +93,7 @@ export function authorizeFeature(featureKey) {
 
       next();
     } catch (error) {
-      logError('[AuthorizeFeature] Error:', error);
+      logger.error('[AuthorizeFeature] Error:', error);
       return res.status(500).json({
         error: 'AUTHORIZATION_ERROR',
         message: 'Error al verificar permisos',

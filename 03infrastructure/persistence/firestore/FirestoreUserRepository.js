@@ -12,6 +12,7 @@
 
 import { IUserRepository } from "../../../01domain/ports/IUserRepository.js";
 import { db, FieldValue } from "./FirebaseConfig.js";
+import { DataAccessFailureError } from "../../../errors/index.js";
 
 const USERS_COLLECTION = "users";
 
@@ -23,48 +24,58 @@ export class FirestoreUserRepository extends IUserRepository {
    * must be made BEFORE calling this method.
    */
   async save(user) {
-    const userRef = db.collection(USERS_COLLECTION).doc(user.id);
+    try {
+      const userRef = db.collection(USERS_COLLECTION).doc(user.id);
 
-    const persistenceModel = {
-      email: user.email,
-      password: user.password,
-      plan: user.plan,
+      const persistenceModel = {
+        email: user.email,
+        password: user.password,
+        plan: user.plan,
 
-      energy: {
-        currentAmount: user.energy.currentAmount,
-        maxAmount: user.energy.maxAmount,
-        lastRechargedAt: user.energy.lastRechargedAt,
-      },
+        energy: {
+          currentAmount: user.energy.currentAmount,
+          maxAmount: user.energy.maxAmount,
+          lastRechargedAt: user.energy.lastRechargedAt,
+        },
 
-      trial: {
-        durationDays: user.trial.durationDays,
-        startedAt: user.trial.startedAt,
-      },
+        trial: {
+          durationDays: user.trial.durationDays,
+          startedAt: user.trial.startedAt,
+        },
 
-      limits: {
-        maxActiveSeries: user.limits.maxActiveSeries,
-        activeSeriesCount: user.limits.activeSeriesCount,
-      },
-    };
+        limits: {
+          maxActiveSeries: user.limits.maxActiveSeries,
+          activeSeriesCount: user.limits.activeSeriesCount,
+        },
+      };
 
-    await userRef.set(persistenceModel);
+      await userRef.set(persistenceModel);
+    } catch (error) {
+      if (error.code) throw error;
+      throw new DataAccessFailureError({ operation: 'save', collection: USERS_COLLECTION, cause: error });
+    }
   }
 
   /**
    * Get user by ID
    */
   async getUser(userId) {
-    const userRef = db.collection(USERS_COLLECTION).doc(userId);
-    const doc = await userRef.get();
+    try {
+      const userRef = db.collection(USERS_COLLECTION).doc(userId);
+      const doc = await userRef.get();
 
-    if (!doc.exists) {
-      return null;
+      if (!doc.exists) {
+        return null;
+      }
+
+      return {
+        id: doc.id,
+        ...doc.data(),
+      };
+    } catch (error) {
+      if (error.code) throw error;
+      throw new DataAccessFailureError({ operation: 'getUser', collection: USERS_COLLECTION, cause: error });
     }
-
-    return {
-      id: doc.id,
-      ...doc.data(),
-    };
   }
 
   /**
