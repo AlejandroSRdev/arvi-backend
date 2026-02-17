@@ -202,7 +202,7 @@ const PORT = process.env.PORT || 4242;
 app.listen(PORT, () => {
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('  🚀 ARVI Backend Server v2.0.1');
+  console.log('  🚀 ARVI Backend Server v2.0.2');
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`  📡 Port:            ${PORT}`);
   console.log(`  🌍 Environment:     ${process.env.NODE_ENV || 'development'}`);
