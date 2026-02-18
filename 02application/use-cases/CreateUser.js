@@ -18,10 +18,10 @@
  */
 import { randomUUID } from "crypto";
 import { ValidationError } from "../../errors/Index.js";
-import { User } from "../../01domain/entities/User.ts";
-import { Trial } from "../../01domain/value_objects/user_objects/Trial.ts";
-import { Energy } from "../../01domain/value_objects/user_objects/Energy.ts";
-import { Limits } from "../../01domain/value_objects/user_objects/Limits.ts";
+import { User } from "../../01domain/entities/User.js";
+import { Trial } from "../../01domain/value_objects/user_objects/Trial.js";
+import { Energy } from "../../01domain/value_objects/user_objects/Energy.js";
+import { Limits } from "../../01domain/value_objects/user_objects/Limits.js";
 
 /**
  * Create a new user in the system

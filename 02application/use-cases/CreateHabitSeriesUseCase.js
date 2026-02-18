@@ -28,12 +28,12 @@ import {
   AuthorizationError,
   InsufficientEnergyError,
   MaxActiveSeriesReachedError,
-} from '../../errors/index.js';
+} from '../../errors/Index.js';
 
 import CreativeHabitSeriesPrompt from '../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
 import JsonSchemaHabitSeriesPrompt from '../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
-import { mapAIOutputToHabitSeries } from '../mappers/HabitSeriesFromAIMapper.ts';
+import { mapAIOutputToHabitSeries } from '../mappers/HabitSeriesFromAIMapper.js';
 import { sanitizeUserInput } from '../input/SanitizeUserInput.js';
 
 /**
