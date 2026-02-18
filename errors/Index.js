@@ -4,14 +4,14 @@ export {
   InsufficientEnergyError,
   TrialAlreadyUsedError,
   MaxActiveSeriesReachedError,
-} from './domain/index.js';
+} from './domain/Index.js';
 
 export {
   ValidationError,
   AuthenticationError,
   AuthorizationError,
   NotFoundError,
-} from './application/index.js';
+} from './application/Index.js';
 
 export {
   InfrastructureError,
@@ -20,4 +20,4 @@ export {
   DataAccessFailureError,
   TransactionFailureError,
   UnknownInfrastructureError,
-} from './infrastructure/index.js';
+} from './infrastructure/Index.js';
