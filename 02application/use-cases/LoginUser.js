@@ -13,7 +13,7 @@
  * - Direct access to Firestore
  */
 
-import { ValidationError, AuthenticationError } from "../../errors/index.js";
+import { ValidationError, AuthenticationError } from "../../errors/Index.js";
 
 /**
  * Authenticate a user by email and password
