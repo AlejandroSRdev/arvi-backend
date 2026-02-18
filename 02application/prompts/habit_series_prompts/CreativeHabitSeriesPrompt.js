@@ -1,4 +1,4 @@
-import { Difficulty } from '../../../01domain/value_objects/habit_objects/Difficulty.ts';
+import { Difficulty } from '../../../01domain/value_objects/habits/Difficulty.js';
 
 /**
  * FIRST PASS — Creative Prompt

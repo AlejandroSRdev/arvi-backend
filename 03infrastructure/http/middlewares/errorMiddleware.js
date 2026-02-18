@@ -12,7 +12,7 @@
  * This is the ONLY place where errors are logged and translated to HTTP.
  */
 
-import { BaseError } from '../../../errors/base/BaseError.ts';
+import { BaseError } from '../../../errors/base/BaseError.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/Logger.js';
 

@@ -18,10 +18,9 @@
  */
 
 import { createHabitSeries } from '../../../02application/use-cases/CreateHabitSeriesUseCase.js';
-import { deleteHabitSeries } from '../../../02application/use-cases/deleteHabitSeries.js';
 import { HTTP_STATUS } from '../HttpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
-import { toHabitSeriesOutputDTO } from '../../mappers/HabitSeriesMapper.ts';
+import { toHabitSeriesOutputDTO } from '../../mappers/HabitSeriesMapper.js';
 import { logger } from '../../logger/Logger.js';
 import { ValidationError, AuthenticationError } from '../../../errors/index.js';
 
@@ -151,7 +150,7 @@ export async function deleteHabitSeriesEndpoint(req, res) {
       });
     }
 
-    await deleteHabitSeries({ userId, seriesId, habitSeriesRepository, userRepository });
+    await habitSeriesRepository.delete(userId, seriesId);
 
     logger.success(`[Habit Series] Deleted for user ${userId}, seriesId: ${seriesId}`);
 

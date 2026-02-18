@@ -8,8 +8,8 @@
  * fully agnostic of AI concerns.
  */
 
-const HabitSeries = require("../../01domain/entities/HabitSeries.js");
-const Action = require("../../01domain/value_objects/habits/Action.js");
+import { HabitSeries } from "../../01domain/entities/HabitSeries.js";
+import { Action } from "../../01domain/value_objects/habits/Action.js";
 
 /**
  * Maps parsed AI output into a HabitSeries domain entity.
@@ -40,6 +40,4 @@ function mapAIOutputToHabitSeries(
   return habitSeries;
 }
 
-module.exports = {
-  mapAIOutputToHabitSeries
-};
+export { mapAIOutputToHabitSeries };

@@ -20,7 +20,7 @@
 import { GeminiAdapter } from './gemini/GeminiAdapter.js';
 import { OpenAIAdapter } from './openai/OpenAIAdapter.js';
 import { IAIProvider } from '../../01domain/ports/IAIProvider.js';
-import { InfrastructureError } from '../infrastructure_errors/InfrastructureError.js';
+import { InfrastructureError } from '../../errors/infrastructure/InfrastructureError.js';
 import { logger } from '../logger/Logger.js';
 
 /**

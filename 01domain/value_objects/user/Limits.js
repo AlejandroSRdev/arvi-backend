@@ -22,4 +22,5 @@ class Limits {
     }
 }
 
-module.exports = Limits;
+export { Limits };
+export default Limits;

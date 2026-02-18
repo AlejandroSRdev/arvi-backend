@@ -24,4 +24,5 @@ class Trial {
     }
 }
 
-module.exports = Trial;
+export { Trial };
+export default Trial;
