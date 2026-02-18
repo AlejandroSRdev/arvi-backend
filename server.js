@@ -1,22 +1,7 @@
 /**
  * Arvi Backend Server - Composition Root
  *
- * HEXAGONAL ARCHITECTURE - REFACTORED: 2025-12-30
- *
- * Responsibilities (Composition Root):
- * - Configure Express and global middlewares
- * - Initialize infrastructure adapters (Firebase, Stripe)
- * - Connect HTTP routes to controllers
- * - Global error handling
- * - Does NOT contain business logic
- * - Does NOT access external services directly
- *
- * Unified backend that includes:
- * - Stripe (checkout, webhooks)
- * - AI Service (chat, JSON conversion)
- * - Energy Management
- * - User Management
- * - Authentication
+ * This file serves as the entry point for the Arvi backend application.
  */
 
 import 'dotenv/config';
@@ -140,17 +125,13 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     message: '🚀 ARVI Backend API',
-    version: '2.0.1',
+    version: '1.0.0',
     endpoints: {
       health: 'GET /health',
       auth: 'POST /api/auth/login, POST /api/auth/register',
       energy: 'GET /api/energy, POST /api/energy/consume',
       user: 'GET /api/user/profile, PATCH /api/user/profile',
       habits: 'POST /api/habits/series',
-      executionSummaries: 'POST /api/execution-summaries',
-      payments: 'POST /api/payments/start',
-      stripe: 'POST /api/stripe/create-checkout (legacy)',
-      webhook: 'POST /api/webhooks/stripe',
     },
   });
 });
@@ -162,11 +143,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);       // ✅ Authentication
 app.use('/api/energy', energyRoutes);   // ✅ Energy management
 app.use('/api/user', userRoutes);       // ✅ User management
-app.use('/api/stripe', stripeRoutes);   // ✅ Payments and subscriptions (legacy)
-app.use('/api/payments', paymentRoutes); // ✅ Payment initiation
 app.use('/api/habits', habitSeriesRoutes); // ✅ Habit series
-app.use('/api/execution-summaries', executionSummaryRoutes); // ✅ Execution summaries
-app.use('/api/webhooks', webhookRoutes); // ✅ Stripe webhooks
 
 // ═══════════════════════════════════════════════════════════════
 // GLOBAL ERROR HANDLING
@@ -180,13 +157,10 @@ app.use((req, res) => {
     availableEndpoints: [
       'GET /health',
       'GET /',
-      'POST /api/ai/json-convert',
+      'POST /api/auth/login',
+      'POST /api/auth/register',
       'GET /api/energy',
       'POST /api/habits/series',
-      'POST /api/execution-summaries',
-      'POST /api/payments/start',
-      'POST /api/stripe/create-checkout',
-      'POST /api/webhooks/stripe',
     ],
   });
 });
@@ -202,7 +176,7 @@ const PORT = process.env.PORT || 4242;
 app.listen(PORT, () => {
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
-  console.log('  🚀 ARVI Backend Server v2.0.2');
+  console.log('  🚀 ARVI Backend Server v1.0.0');
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`  📡 Port:            ${PORT}`);
   console.log(`  🌍 Environment:     ${process.env.NODE_ENV || 'development'}`);
@@ -211,13 +185,10 @@ app.listen(PORT, () => {
   console.log('  ✅ Active routes:');
   console.log('     • GET  /health                       - Health check');
   console.log('     • GET  /                             - API info');
-  console.log('     • POST /api/ai/json-convert          - JSON conversion');
+  console.log('     • POST /api/auth/login              - User login');
+  console.log('     • POST /api/auth/register           - User registration');
   console.log('     • GET  /api/energy                   - Query energy');
   console.log('     • POST /api/habits/series            - Create habit series via AI');
-  console.log('     • POST /api/execution-summaries      - Validate execution summary generation');
-  console.log('     • POST /api/payments/start           - Start payment');
-  console.log('     • POST /api/stripe/create-checkout   - Create Stripe session (legacy)');
-  console.log('     • POST /api/webhooks/stripe          - Stripe webhook');
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');
