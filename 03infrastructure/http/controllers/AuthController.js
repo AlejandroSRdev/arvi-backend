@@ -13,7 +13,7 @@
 import { createUser } from '../../../02application/use-cases/CreateUser.js';
 import { loginUser } from '../../../02application/use-cases/LoginUser.js';
 import { HTTP_STATUS } from '../HttpStatus.js';
-import { ValidationError } from '../../../errors/index.js';
+import { ValidationError } from '../../../errors/Index.js';
 import jwt from 'jsonwebtoken';
 
 
