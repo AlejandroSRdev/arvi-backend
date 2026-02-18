@@ -18,12 +18,10 @@
  * - Is a pure, deterministic translation layer.
  */
 
-import { HabitSeries } from "../../01domain/entities/HabitSeries.ts";
-import { HabitSeriesOutputDTO } from "../dtos/HabitSeriesOutputDTO.ts";
+const HabitSeries = require("../../01domain/entities/HabitSeries.js");
+const HabitSeriesOutputDTO = require("../dtos/HabitSeriesOutputDTO.js");
 
-export function toHabitSeriesOutputDTO(
-  habitSeries: HabitSeries
-): HabitSeriesOutputDTO {
+function toHabitSeriesOutputDTO(habitSeries) {
   console.log(`[MAPPER] [Infrastructure] toHabitSeriesOutputDTO called for id=${habitSeries.id}, rank=${habitSeries.getRank()}`);
 
   return {
@@ -47,3 +45,7 @@ export function toHabitSeriesOutputDTO(
     lastActivityAt: habitSeries.lastActivityAt.toISOString(),
   };
 }
+
+module.exports = {
+  toHabitSeriesOutputDTO
+};

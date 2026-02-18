@@ -45,7 +45,7 @@
  * Legacy reference: docs/createHabitSeriesLegacy.dart:203-216
  */
 
-import { ValidationError } from '../application_errors/index.js';
+import { ValidationError } from '../../errors/Index.js';
 
 /**
  * Validates that a value is a non-empty string

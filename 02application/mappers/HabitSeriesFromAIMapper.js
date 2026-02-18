@@ -8,8 +8,8 @@
  * fully agnostic of AI concerns.
  */
 
-import { HabitSeries } from "../../01domain/entities/HabitSeries.ts";
-import { Action } from "../../01domain/value_objects/habit_objects/Action.ts";
+const HabitSeries = require("../../01domain/entities/HabitSeries.js");
+const Action = require("../../01domain/value_objects/habits/Action.js");
 
 /**
  * Maps parsed AI output into a HabitSeries domain entity.
@@ -18,14 +18,10 @@ import { Action } from "../../01domain/value_objects/habit_objects/Action.ts";
  * @param aiOutput - Validated AI output with title, description, and actions
  * @returns A valid HabitSeries domain entity
  */
-export function mapAIOutputToHabitSeries(
-  id: string,
-  aiOutput: {
-    title: string;
-    description: string;
-    actions: readonly { name: string; description: string; difficulty: string }[];
-  }
-): HabitSeries {
+function mapAIOutputToHabitSeries(
+  id,
+  aiOutput
+) {
   console.log(`[MAPPER] [Application] mapAIOutputToHabitSeries called for id=${id}, actions=${aiOutput.actions.length}`);
 
   const actions = aiOutput.actions.map((raw, index) =>
@@ -43,3 +39,7 @@ export function mapAIOutputToHabitSeries(
 
   return habitSeries;
 }
+
+module.exports = {
+  mapAIOutputToHabitSeries
+};

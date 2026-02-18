@@ -2,7 +2,7 @@
 // Responsible for validating, cleaning and normalizing raw user input strings
 // before any token counting, energy calculation or LLM invocation occurs.
 
-import { ValidationError } from '../../errors/index.js';
+import { ValidationError } from '../../errors/Index.js';
 
 /**
  * Sanitizes and normalizes raw user input.

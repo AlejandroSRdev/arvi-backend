@@ -1,0 +1,14 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "plugins": ["import"],
+  "extends": ["eslint:recommended"],
+  "rules": {
+    "import/no-unresolved": "error"
+  }
+}
