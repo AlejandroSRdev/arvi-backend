@@ -8,9 +8,9 @@
  * Completely agnostic of infrastructure concerns.
  */
 
-import { Trial } from "../value_objects/user_objects/Trial.js";
-import { Energy } from "../value_objects/user_objects/Energy.js";
-import { Limits } from "../value_objects/user_objects/Limits.js";
+import { Trial } from "../value_objects/user/Trial.js";
+import { Energy } from "../value_objects/user/Energy.js";
+import { Limits } from "../value_objects/user/Limits.js";
 
 export class User {
   /**
