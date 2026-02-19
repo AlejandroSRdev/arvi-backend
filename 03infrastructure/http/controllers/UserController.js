@@ -21,6 +21,12 @@
 import { HTTP_STATUS } from '../HttpStatus.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/Logger.js';
+import {
+  getUserProfile,
+  updateUserProfile,
+  deleteUserAccount,
+  getSubscriptionStatus,
+} from '../../../02application/use-cases/ManageUser.js';
 
 // Dependency injection
 let userRepository;

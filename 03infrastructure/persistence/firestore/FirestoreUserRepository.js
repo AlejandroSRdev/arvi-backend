@@ -12,7 +12,7 @@
 
 import { IUserRepository } from "../../../01domain/ports/IUserRepository.js";
 import { db, FieldValue } from "./FirebaseConfig.js";
-import { DataAccessFailureError } from "../../../errors/index.js";
+import { DataAccessFailureError } from "../../../errors/Index.js";
 
 const USERS_COLLECTION = "users";
 

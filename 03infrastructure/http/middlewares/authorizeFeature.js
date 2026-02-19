@@ -17,7 +17,7 @@
  */
 
 import { hasFeatureAccess } from '../../../01domain/policies/PlanPolicy.js';
-import { logger } from '../../logger/logger.js';
+import { logger } from '../../logger/Logger.js';
 
 // Dependency injection - será inyectada en runtime
 let userRepository;

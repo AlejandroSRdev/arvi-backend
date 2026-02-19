@@ -22,7 +22,7 @@ import {
   ValidationError,
   DataAccessFailureError,
   TransactionFailureError,
-} from '../../../errors/index.js';
+} from '../../../errors/Index.js';
 import { db, FieldValue } from './FirebaseConfig.js';
 
 export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {

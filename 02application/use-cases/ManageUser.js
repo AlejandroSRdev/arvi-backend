@@ -129,9 +129,38 @@ export async function deleteUserAccount(userId, deps) {
   await userRepository.deleteUser(userId);
 }
 
+/**
+ * Obtener estado de suscripción del usuario
+ *
+ * @param {string} userId - ID del usuario
+ * @param {Object} deps - Dependencias inyectadas {userRepository}
+ * @returns {Promise<Object>} Estado de suscripción
+ */
+export async function getSubscriptionStatus(userId, deps) {
+  const { userRepository } = deps;
+
+  if (!userRepository) {
+    throw new ValidationError('Dependency required: userRepository');
+  }
+
+  const user = await userRepository.getUser(userId);
+
+  if (!user) {
+    throw new NotFoundError('User');
+  }
+
+  return {
+    plan: user.plan,
+    subscriptionStatus: user.subscriptionStatus || null,
+    stripeCustomerId: user.stripeCustomerId || null,
+    trial: user.trial || null,
+  };
+}
+
 export default {
   getUserProfile,
   updateUserProfile,
   updateLastLogin,
   deleteUserAccount,
+  getSubscriptionStatus,
 };

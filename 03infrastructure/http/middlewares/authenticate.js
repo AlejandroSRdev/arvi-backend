@@ -10,7 +10,7 @@
  */
 
 import jwt from 'jsonwebtoken';
-import { AuthenticationError } from '../../../errors/index.js';
+import { AuthenticationError } from '../../../errors/Index.js';
 
 /**
  * Extract and verify a Bearer token from the Authorization header.

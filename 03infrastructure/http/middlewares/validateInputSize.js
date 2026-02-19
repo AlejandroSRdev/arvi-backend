@@ -33,7 +33,7 @@
  * - Responder con errores HTTP apropiados
  */
 
-import { ValidationError } from '../../../errors/index.js';
+import { ValidationError } from '../../../errors/Index.js';
 
 /**
  * Calcula el tamaño aproximado en bytes de un objeto JSON

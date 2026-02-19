@@ -9,7 +9,7 @@
 
 import { scrypt, randomBytes, timingSafeEqual } from "node:crypto";
 import { IPasswordHasher } from "../../01domain/ports/IPasswordHasher.js";
-import { UnknownInfrastructureError } from "../../errors/index.js";
+import { UnknownInfrastructureError } from "../../errors/Index.js";
 
 export class PasswordHasher extends IPasswordHasher {
   /**
