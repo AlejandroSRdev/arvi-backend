@@ -2,93 +2,106 @@
 
 ## Overview
 
-This repository contains the backend service of the system, implemented in **Node.js** and designed with a strong emphasis on **architectural clarity, correctness, and long-term maintainability**.
+Arvi Backend Service is a Node.js backend designed to support AI-assisted workflows and core business operations.
 
-The backend has two primary responsibilities:
+The system is built with a focus on:
 
-1. **Validate and enforce business rules** through explicit application use-cases.
-2. **Orchestrate AI workflows** by coordinating calls to external LLM providers in a controlled, observable, and replaceable manner.
+- Clear architectural boundaries
+- Explicit business logic
+- Controlled integration with external services
+- Maintainability over time
 
-The system is intentionally designed to keep business logic, infrastructure concerns, and AI integrations clearly separated.
+This repository represents an evolving backend system, progressively refined under real deployment constraints.
 
 ---
 
-## Core Responsibilities
+## Responsibilities
 
-### Business Logic
-- Enforce domain rules and invariants.
-- Expose explicit, intention-revealing use-cases.
-- Prevent leakage of business logic into controllers or infrastructure code.
+The backend is responsible for:
 
-### AI Orchestration
-- Coordinate interactions with external AI providers (OpenAI, Gemini).
-- Control when, how, and under which constraints AI calls are executed.
-- Keep AI usage isolated from domain logic to ensure testability and replaceability.
+1. Enforcing domain rules and invariants through explicit use cases.
+2. Orchestrating AI-assisted operations via external providers.
+3. Managing authentication, user data, and core application flows.
+4. Exposing HTTP endpoints through a thin Express adapter.
 
-> **Important**  
-> The backend does not implement AI pipelines or model-specific logic.  
-> It acts as an **orchestrator**, not as an AI engine.
+The service acts as an orchestrator of external capabilities rather than embedding AI or infrastructure logic directly into the core.
 
 ---
 
 ## Architecture
 
-The backend follows **Hexagonal Architecture (Ports & Adapters)**.
+The project follows a **Hexagonal Architecture (Ports & Adapters)** approach.
 
-domain/ → Pure business logic
-application/ → Use-cases and orchestration
-infrastructure/ → HTTP, database, and external service adapters
+domain/ → Business logic (framework-agnostic)
+application/ → Use cases and orchestration
+infrastructure/ → HTTP layer, database, and external adapters
 
----
 
-### Key Principles
-- Dependencies always point inward.
-- The domain layer is framework-agnostic.
-- External services (Firebase, AI APIs) are accessed only via defined ports.
-- HTTP controllers are thin and contain no business logic.
+### Design Principles
+
+- Dependencies point inward.
+- The domain layer does not depend on frameworks or external services.
+- Controllers remain thin and contain no business logic.
+- Infrastructure concerns are isolated from core logic.
+
+This structure supports testability, replaceability of external services, and controlled system evolution.
 
 ---
 
 ## Tech Stack
 
 - **Runtime:** Node.js (>=18)
-- **Language:** JavaScript/TypeScript
-- **HTTP Framework:** Express (used as a thin adapter)
+- **Language:** JavaScript (ES Modules)
+- **HTTP Framework:** Express
 - **Database:** Firebase (Firestore)
 - **Hosting:** Render
 - **AI Providers:** OpenAI API, Google Gemini API
 
 ---
 
-## AI Design Philosophy
+## AI Integration
 
-AI is treated as an **external capability**, not as core business logic.
+AI providers are accessed through infrastructure adapters.
 
-- No AI SDKs are used inside the domain or application layers.
-- AI providers are accessed through infrastructure adapters.
-- The backend remains agnostic to specific models or vendors.
+- The domain layer has no knowledge of AI implementations.
+- The application layer coordinates AI calls when required.
+- Provider-specific details remain isolated.
 
-This design allows future evolution (e.g. RAG, embeddings, evaluation pipelines)
-without destabilizing the core system.
+This allows the backend to remain stable even if AI vendors or models change.
 
 ---
 
-## Planned Evolution
+## Deployment & Operation
 
-Advanced AI pipelines (such as RAG, embeddings, and retrieval logic) are **not implemented in this service**.
+The service is deployed in a production environment and supports:
 
-When required by product needs, they will be introduced as a **separate Python-based microservice (FastAPI)**, communicating with this backend via HTTP.
+- User authentication flows
+- AI-assisted feature execution
+- Structured error handling
+- Controlled trace logging
 
-This ensures:
-- Clean separation of concerns
-- Independent scalability
-- No architectural erosion of the core backend
+Observability and operational practices are continuously refined as usage evolves.
+
+---
+
+## Evolution
+
+Advanced AI pipelines (e.g., RAG or embedding-based retrieval systems) are not implemented in this service.
+
+If required, they will be introduced as a separate service to preserve architectural boundaries and scalability.
 
 ---
 
 ## Non-Goals
 
-- No microservices for core backend logic
-- No business logic in controllers
-- No AI logic in the domain layer
-- No technology-driven refactors without product justification
+- No business logic inside controllers
+- No direct AI logic inside the domain layer
+- No unnecessary microservice fragmentation
+- No technology-driven refactors without clear justification
+
+---
+
+## Author
+
+Designed and maintained by  
+Alejandro Saavedra Ruiz

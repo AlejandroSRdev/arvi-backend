@@ -34,6 +34,8 @@ export async function register(req, res, next) {
   try {
     const { email, password } = req.body;
 
+    console.log(`[${new Date().toISOString()}] AUTH_REGISTER_ATTEMPT email=${email}`);
+
     // HTTP input validation
     if (!email || !password) {
       throw new ValidationError("Email and password are required");
@@ -44,6 +46,8 @@ export async function register(req, res, next) {
       password,
       { userRepository, passwordHasher }
     );
+
+    console.log(`AUTH_REGISTER_SUCCESS userId=${userId}`);
 
     return res.status(HTTP_STATUS.CREATED).json({
       success: true,
@@ -56,6 +60,7 @@ export async function register(req, res, next) {
       },
     });
   } catch (err) {
+    console.error(`AUTH_REGISTER_ERROR error=${err.constructor.name} message=${err.message}`);
     return next(err);
   }
 }
@@ -67,6 +72,8 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
   try {
     const { email, password } = req.body;
+
+    console.log(`[${new Date().toISOString()}] AUTH_LOGIN_ATTEMPT email=${email}`);
 
     // HTTP input validation
     if (!email || !password) {
@@ -84,11 +91,14 @@ export async function login(req, res, next) {
       { expiresIn: '1h' }
     );
 
+    console.log(`AUTH_LOGIN_SUCCESS userId=${userId}`);
+
     return res.status(HTTP_STATUS.OK).json({
       token,
       userId,
     });
   } catch (err) {
+    console.error(`AUTH_LOGIN_ERROR error=${err.constructor.name} message=${err.message}`);
     return next(err);
   }
 }

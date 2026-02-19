@@ -90,7 +90,6 @@ function validateRequestBody(body) {
  * - lastActivityAt: string (ISO)
  */
 export async function createHabitSeriesEndpoint(req, res, next) {
-  console.log("████████ REQUEST CONFIRMED 2026-02-19 ████████");
   try {
     const userId = req.user?.uid;
 
