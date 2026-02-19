@@ -18,11 +18,11 @@
  */
 
 import { createHabitSeries } from '../../../02application/use-cases/CreateHabitSeriesUseCase.js';
-import { HTTP_STATUS } from '../HttpStatus.js';
+import { AuthenticationError, ValidationError } from '../../../errors/Index.js';
+import { logger } from '../../logger/Logger.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { toHabitSeriesOutputDTO } from '../../mappers/HabitSeriesMapper.js';
-import { logger } from '../../logger/Logger.js';
-import { ValidationError, AuthenticationError } from '../../../errors/Index.js';
+import { HTTP_STATUS } from '../HttpStatus.js';
 
 // Dependency injection
 let userRepository;
@@ -90,6 +90,7 @@ function validateRequestBody(body) {
  * - lastActivityAt: string (ISO)
  */
 export async function createHabitSeriesEndpoint(req, res, next) {
+  console.log("████████ REQUEST CONFIRMED 2026-02-19 ████████");
   try {
     const userId = req.user?.uid;
 

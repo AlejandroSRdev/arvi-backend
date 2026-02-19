@@ -4,15 +4,15 @@
  * This file serves as the entry point for the Arvi backend application.
  */
 
+import cors from 'cors';
 import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
 
 // Import routes (Hexagonal Architecture)
 import authRoutes from './03infrastructure/http/routes/Auth.routes.js';
 import energyRoutes from './03infrastructure/http/routes/Energy.routes.js';
-import userRoutes from './03infrastructure/http/routes/User.routes.js';
 import habitSeriesRoutes from './03infrastructure/http/routes/HabitSeriesRoutes.js';
+import userRoutes from './03infrastructure/http/routes/User.routes.js';
 
 // Import middleware (Hexagonal Architecture)
 import { errorMiddleware } from './03infrastructure/http/middlewares/errorMiddleware.js';
@@ -37,9 +37,9 @@ import { errorMiddleware } from './03infrastructure/http/middlewares/errorMiddle
 import { initializeFirebase } from './03infrastructure/persistence/firestore/FirebaseConfig.js';
 
 // Import Infrastructure Adapters (Repositories)
-import FirestoreUserRepository from './03infrastructure/persistence/firestore/FirestoreUserRepository.js';
 import FirestoreEnergyRepository from './03infrastructure/persistence/firestore/FirestoreEnergyRepository.js';
 import FirestoreHabitSeriesRepository from './03infrastructure/persistence/firestore/FirestoreHabitSeriesRepository.js';
+import FirestoreUserRepository from './03infrastructure/persistence/firestore/FirestoreUserRepository.js';
 
 // Importar AI Provider Router (routes to correct adapter based on model)
 import AIProviderRouter from './03infrastructure/ai/AIProviderRouter.js';
@@ -49,9 +49,9 @@ import PasswordHasher from './03infrastructure/security/PasswordHasher.js';
 
 // Import Controllers for dependency injection
 import { setDependencies as setAuthDeps } from './03infrastructure/http/controllers/AuthController.js';
-import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
 import { setDependencies as setEnergyDeps } from './03infrastructure/http/controllers/EnergyController.js';
 import { setDependencies as setHabitSeriesDeps } from './03infrastructure/http/controllers/HabitSeriesController.js';
+import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
 
 // Initialize Firebase Admin SDK
 initializeFirebase();
@@ -118,7 +118,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'Arvi Backend',
-    version: '2.0.1',
+    version: '1.0.0',
   });
 });
 
