@@ -1,20 +1,8 @@
 /**
- * Energy Controller (Infrastructure - HTTP Layer)
- *
- * MIGRADO DESDE: src/controllers/energyController.js
- * REFACTORIZADO: 2025-12-29
- * ARQUITECTURA: Hexagonal (Ports & Adapters)
- *
- * RESPONSABILIDAD ÚNICA:
- * - Adaptar HTTP (req/res) → Use Cases
- * - Validar input HTTP
- * - Traducir errores a status codes
- * - NO contiene lógica de negocio
- *
- * LÓGICA MOVIDA A:
- * - application/use-cases/ConsumeEnergy.js:getUserEnergy
- * - application/use-cases/ActivateTrial.js
- * - application/use-cases/GetTrialStatus.js
+ * Layer: Infrastructure
+ * File: EnergyController.js
+ * Responsibility:
+ * Adapts HTTP requests to energy use cases and translates application errors into HTTP responses.
  */
 
 import { getUserEnergy } from '../../../02application/use-cases/ConsumeEnergy.js';
@@ -35,7 +23,6 @@ export function setDependencies(deps) {
 
 /**
  * GET /api/user/energy
- * Obtener energía actual del usuario
  */
 export async function getEnergy(req, res) {
   try {
@@ -57,7 +44,6 @@ export async function getEnergy(req, res) {
 
 /**
  * POST /api/user/trial/activate
- * Activar trial de 48 horas
  */
 export async function activateTrialEndpoint(req, res) {
   try {
@@ -82,7 +68,6 @@ export async function activateTrialEndpoint(req, res) {
 
 /**
  * GET /api/user/trial/status
- * Obtener estado del trial
  */
 export async function getTrialStatusEndpoint(req, res) {
   try {

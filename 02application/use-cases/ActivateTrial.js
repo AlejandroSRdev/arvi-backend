@@ -1,32 +1,17 @@
 /**
- * Activate Trial Use Case (Domain)
- *
- * MIGRADO DESDE: src/models/Trial.js (líneas 28-83)
- * EXTRACCIÓN: Orquestación de activación de trial
- *
- * Responsabilidades:
- * - Validar que el usuario puede activar el trial
- * - Calcular fechas de inicio y expiración
- * - Asignar energía inicial del trial
- * - Coordinar con IUserRepository (port)
- *
- * NO contiene:
- * - Lógica de Firestore
- * - Transacciones
- * - Timestamps de servidor
+ * Layer: Application
+ * File: ActivateTrial.js
+ * Responsibility:
+ * Orchestrates trial activation by validating eligibility, computing dates, and persisting the trial state.
  */
 
 import { PLANS } from '../../01domain/policies/PlanPolicy.js';
 import { ValidationError, NotFoundError, AuthorizationError, TrialAlreadyUsedError } from "../../errors/Index.js";
 
 /**
- * Activar trial de 48 horas (solo si nunca lo ha usado)
- *
- * MIGRADO DESDE: src/models/Trial.js:activateTrial (líneas 28-83)
- *
- * @param {string} userId - ID del usuario
- * @param {Object} deps - Dependencias inyectadas {userRepository}
- * @returns {Promise<Object>} {activo, startTimestamp, expiresAt, energiaInicial}
+ * @param {string} userId - User ID
+ * @param {Object} deps - Injected dependencies { userRepository }
+ * @returns {Promise<Object>} { activo, startTimestamp, expiresAt, energiaInicial }
  */
 export async function activateTrial(userId, deps) {
   const { userRepository } = deps;

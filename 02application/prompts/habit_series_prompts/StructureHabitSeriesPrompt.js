@@ -1,13 +1,11 @@
-import { Difficulty } from '../../../01domain/value_objects/habits/Difficulty.js';
-
 /**
- * SECOND PASS — Structure Prompt
- *
- * Extracts semantic JSON structure from creative text.
- *
- * This is a pure prompt factory extracted from legacy frontend logic.
- * Difficulty values are sourced from the domain to ensure alignment.
+ * Layer: Application
+ * File: StructureHabitSeriesPrompt.js
+ * Responsibility:
+ * Builds the second-pass AI prompt that extracts structured JSON from the creative text output.
  */
+
+import { Difficulty } from '../../../01domain/value_objects/habits/Difficulty.js';
 
 /**
  * @param {Object} params

@@ -1,12 +1,8 @@
 /**
- * THIRD PASS — JSON Schema Enforcement Prompt
- *
- * Forces strict JSON compliance against an injected schema.
- *
- * This is a pure, domain-agnostic prompt factory extracted from legacy logic.
- * The prompt content has been preserved EXACTLY as it was.
- *
- * This prompt is schema-agnostic and can be reused for any JSON validation task.
+ * Layer: Application
+ * File: JsonSchemaHabitSeriesPrompt.js
+ * Responsibility:
+ * Builds the third-pass AI prompt that enforces strict JSON schema compliance on structured content.
  */
 
 /**

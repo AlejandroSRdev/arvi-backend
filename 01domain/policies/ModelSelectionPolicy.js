@@ -1,39 +1,19 @@
 /**
- * Model Selection Policy (Domain)
- *
- * MIGRADO DESDE: src/config/modelMapping.js (COMPLETO)
- *
- * Funciones migradas:
- * - MODEL_MAPPING (constante completa con todos los function_type)
- * - getModelConfig()
- * - isValidFunctionType()
- * - getAvailableFunctionTypes()
- *
- * Responsabilidades:
- * - Mapeo function_type → modelo IA
- * - Configuración de temperatura, maxTokens por función
- * - Validación de function_type
- *
- * NO contiene:
- * - SDKs de OpenAI/Gemini
- * - Llamadas HTTP
- * - Lógica de infraestructura
+ * Layer: Domain
+ * File: ModelSelectionPolicy.js
+ * Responsibility:
+ * Maps each domain function type to its corresponding AI model configuration, including temperature and token limits.
  */
 
 /**
- * Mapeo de tipos de función a configuración de modelo de IA
- *
- * CRITERIOS DE SELECCIÓN:
- * - gemini-2.0-flash: Respuestas rápidas, texto simple, máx. 100 tokens
- * - gemini-2.5-flash: Análisis estándar, creatividad media, máx. 1500 tokens
- * - gemini-2.5-pro: Análisis complejo, razonamiento profundo, máx. 3000 tokens
- * - gpt-4o-mini: Conversión JSON estricta, validación de estructuras
+ * Model selection criteria:
+ * - gemini-2.0-flash: fast responses, plain text, low token budget
+ * - gemini-2.5-flash: standard analysis, moderate creativity
+ * - gemini-2.5-pro: complex reasoning, deep analysis
+ * - gpt-4o-mini: strict JSON conversion, structure validation
  */
 export const MODEL_MAPPING = {
-  // ═══════════════════════════════════════════════════════════════
-  // FRASES Y COMENTARIOS CORTOS
-  // ═══════════════════════════════════════════════════════════════
-
+  // Short phrases and comments
   'home_phrase': {
     model: 'gemini-2.0-flash',
     temperature: 0.8,
@@ -55,10 +35,7 @@ export const MODEL_MAPPING = {
     description: 'Pregunta de verificación de hábito (texto plano, directo)'
   },
 
-  // ═══════════════════════════════════════════════════════════════
-  // ANÁLISIS Y GENERACIÓN CREATIVA (PASADA 1)
-  // ═══════════════════════════════════════════════════════════════
-
+  // Analysis and creative generation
   'reprogramming_final_report': {
     model: 'gemini-2.5-pro',
     temperature: 0.7,
@@ -150,10 +127,7 @@ export const MODEL_MAPPING = {
     description: 'Resumen de conversación - PASADA ESTRUCTURADORA'
   },
 
-  // ═══════════════════════════════════════════════════════════════
-  // CHAT Y CONVERSACIÓN GENERAL
-  // ═══════════════════════════════════════════════════════════════
-
+  // Chat and general conversation
   'chat': {
     model: 'gemini-2.5-flash',
     temperature: 0.7,
@@ -189,10 +163,7 @@ export const MODEL_MAPPING = {
     description: 'Análisis de estado emocional'
   },
 
-  // ═══════════════════════════════════════════════════════════════
-  // CONVERSIÓN JSON (SIEMPRE GPT-4O-MINI)
-  // ═══════════════════════════════════════════════════════════════
-
+  // JSON conversion — always uses gpt-4o-mini for strict structural fidelity
   'json_conversion': {
     model: 'gpt-4o-mini',
     temperature: 0.0,
@@ -202,13 +173,6 @@ export const MODEL_MAPPING = {
   },
 };
 
-/**
- * Obtener configuración de modelo según function_type
- *
- * @param {string} functionType - Tipo de función
- * @returns {object} - {model, temperature, maxTokens, forceJson?, description}
- * @throws {Error} - Si el function_type no existe
- */
 export function getModelConfig(functionType) {
   const config = MODEL_MAPPING[functionType];
 
@@ -219,21 +183,10 @@ export function getModelConfig(functionType) {
   return config;
 }
 
-/**
- * Validar que un function_type existe
- *
- * @param {string} functionType - Tipo de función
- * @returns {boolean}
- */
 export function isValidFunctionType(functionType) {
   return MODEL_MAPPING.hasOwnProperty(functionType);
 }
 
-/**
- * Obtener lista de todos los function_types disponibles
- *
- * @returns {array} - Array de strings con todos los tipos
- */
 export function getAvailableFunctionTypes() {
   return Object.keys(MODEL_MAPPING);
 }

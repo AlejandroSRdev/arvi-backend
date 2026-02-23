@@ -1,20 +1,8 @@
 /**
- * Consume Energy Use Case (Domain)
- *
- * MIGRADO DESDE: src/services/energyService.js (líneas 34-86)
- * EXTRACCIÓN: Orquestación de obtención y recarga de energía
- *
- * Responsabilidades:
- * - Obtener energía actual del usuario
- * - Decidir si necesita recarga diaria
- * - Aplicar recarga si corresponde
- * - Coordinar con IEnergyRepository e IUserRepository (ports)
- *
- * NO contiene:
- * - Lógica de Firestore
- * - Transacciones
- * - Logs de persistencia
- * - Cálculos internos de energía (eso está en entities/policies)
+ * Layer: Application
+ * File: ConsumeEnergy.js
+ * Responsibility:
+ * Coordinates energy retrieval and daily recharge logic, delegating energy state updates through repository ports.
  */
 
 import { determineEffectivePlan } from './ValidatePlanAccess.js';
@@ -23,14 +11,9 @@ import { getPlan } from '../../01domain/policies/PlanPolicy.js';
 import { ValidationError } from "../../errors/Index.js";
 
 /**
- * Obtener energía actual del usuario (con recarga automática si corresponde)
- *
- * MIGRADO DESDE: src/services/energyService.js:getUserEnergy (líneas 34-61)
- * AJUSTADO: 2025-12-30 - Usar nuevo puerto IEnergyRepository.updateEnergy()
- *
- * @param {string} userId - ID del usuario
- * @param {Object} deps - Dependencias inyectadas {energyRepository, userRepository}
- * @returns {Promise<Object>} {actual, maxima, consumoTotal, plan, planId}
+ * @param {string} userId - User ID
+ * @param {Object} deps - Injected dependencies { energyRepository, userRepository }
+ * @returns {Promise<Object>} { actual, maxima, consumoTotal, plan, planId }
  */
 export async function getUserEnergy(userId, deps) {
   const { energyRepository, userRepository } = deps;
@@ -41,19 +24,18 @@ export async function getUserEnergy(userId, deps) {
 
   const energy = await energyRepository.getEnergy(userId);
 
-  // Verificar si necesita recarga (función pura de entity)
+  // Recharge check must happen before reading planId to avoid a stale user read
   if (needsDailyRecharge(energy.ultimaRecarga)) {
     const user = await userRepository.getUser(userId);
     const plan = getPlan(user.plan, user.trial?.activo);
 
-    // Recargar energía (valores calculados aquí, NO en el repo)
+    // Values are computed here, not inside the repository
     await energyRepository.updateEnergy(userId, {
       actual: plan.maxEnergy,
       maxima: plan.maxEnergy,
       ultimaRecarga: new Date()
     }, 'daily_recharge');
 
-    // Actualizar objeto energy local
     energy.actual = plan.maxEnergy;
     energy.maxima = plan.maxEnergy;
   }
@@ -71,14 +53,9 @@ export async function getUserEnergy(userId, deps) {
 }
 
 /**
- * Forzar recarga de energía (admin/debug)
- *
- * MIGRADO DESDE: src/services/energyService.js:forceRecharge (líneas 77-86)
- * AJUSTADO: 2025-12-30 - Usar nuevo puerto IEnergyRepository.updateEnergy()
- *
- * @param {string} userId - ID del usuario
- * @param {Object} deps - Dependencias inyectadas {energyRepository, userRepository}
- * @returns {Promise<Object>} {actual, maxima}
+ * @param {string} userId - User ID
+ * @param {Object} deps - Injected dependencies { energyRepository, userRepository }
+ * @returns {Promise<Object>} { actual, maxima }
  */
 export async function forceRecharge(userId, deps) {
   const { energyRepository, userRepository } = deps;
@@ -90,7 +67,7 @@ export async function forceRecharge(userId, deps) {
   const user = await userRepository.getUser(userId);
   const plan = getPlan(user.plan, user.trial?.activo);
 
-  // Calcular energía aquí (NO en el repo)
+  // Values are computed here, not inside the repository
   await energyRepository.updateEnergy(userId, {
     actual: plan.maxEnergy,
     maxima: plan.maxEnergy,

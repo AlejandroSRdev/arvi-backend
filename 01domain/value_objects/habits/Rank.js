@@ -1,8 +1,8 @@
 /**
- * Rank Value Object (Domain Layer)
- *
- * Represents the rank levels for habit series based on total score.
- * Immutable value object with no external dependencies.
+ * Layer: Domain
+ * File: Rank.js
+ * Responsibility:
+ * Defines the rank tiers for habit series and derives the applicable rank from an accumulated score.
  */
 
 export const Rank = {
@@ -27,12 +27,6 @@ const RANK_THRESHOLDS = {
   SILVER: 300,
 };
 
-/**
- * Calculate rank from total score.
- *
- * @param totalScore - Total accumulated score
- * @returns The appropriate rank for the score
- */
 export function calculateRankFromScore(totalScore) {
   if (totalScore >= RANK_THRESHOLDS.DIAMOND) return Rank.DIAMOND;
   if (totalScore >= RANK_THRESHOLDS.GOLDEN) return Rank.GOLDEN;
@@ -40,9 +34,6 @@ export function calculateRankFromScore(totalScore) {
   return Rank.BRONZE;
 }
 
-/**
- * Runtime guard to check if a value is a valid Rank.
- */
 export function isRank(value) {
   return typeof value === "string" && VALID_RANKS.has(value);
 }

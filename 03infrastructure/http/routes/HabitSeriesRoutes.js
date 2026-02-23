@@ -1,11 +1,8 @@
 /**
- * Habit Series Routes (Infrastructure - HTTP)
- *
- * ARCHITECTURE: Hexagonal (Ports & Adapters)
- *
- * ENDPOINTS:
- * POST /api/habits/series - Create a new habit series via AI
- * DELETE /api/habits/series/:seriesId - Delete a habit series
+ * Layer: Infrastructure
+ * File: HabitSeriesRoutes.js
+ * Responsibility:
+ * Registers Express routes for habit series endpoints, binding authentication middleware and controllers.
  */
 
 import express from 'express';
@@ -18,13 +15,12 @@ router.use(authenticate);
 
 /**
  * POST /api/habits/series
- * Create a new habit series via AI.
+ * Creates a new habit series via AI.
  */
 router.post('/series', createHabitSeriesEndpoint);
 
 /**
  * DELETE /api/habits/series/:seriesId
- * Delete a habit series.
  *
  * Params:
  * - seriesId: string

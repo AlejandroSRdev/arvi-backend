@@ -1,4 +1,9 @@
-// Description: This module defines and exports HTTP status codes as constants for use throughout the application.
+/**
+ * Layer: Infrastructure
+ * File: HttpStatus.js
+ * Responsibility:
+ * Provides HTTP status code constants shared across HTTP controllers and middleware adapters.
+ */
 
 export const HTTP_STATUS = {
   OK: 200,

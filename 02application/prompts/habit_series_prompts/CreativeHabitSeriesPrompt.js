@@ -1,13 +1,11 @@
-import { Difficulty } from '../../../01domain/value_objects/habits/Difficulty.js';
-
 /**
- * FIRST PASS — Creative Prompt
- *
- * Generates free but constrained human-readable content (NOT JSON).
- *
- * This is a pure prompt factory extracted from legacy frontend logic.
- * Difficulty values are sourced from the domain to ensure alignment.
+ * Layer: Application
+ * File: CreativeHabitSeriesPrompt.js
+ * Responsibility:
+ * Builds the first-pass AI prompt that generates free-form, human-readable habit series content from user test data.
  */
+
+import { Difficulty } from '../../../01domain/value_objects/habits/Difficulty.js';
 
 /**
  * @param {Object} params

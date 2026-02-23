@@ -1,20 +1,8 @@
 /**
- * Habit Series Controller (Infrastructure - HTTP Layer)
- *
- * ARCHITECTURE: Hexagonal (Ports & Adapters)
- *
- * RESPONSIBILITIES:
- * - Extract data from HTTP request
- * - Perform minimal syntactic validation (required fields, basic types)
- * - Transform HTTP DTO to Application Contract
- * - Invoke use-cases
- * - Map application errors to HTTP responses
- *
- * STRICTLY FORBIDDEN:
- * - Business logic
- * - Domain entity instantiation
- * - AI orchestration
- * - Schema validation
+ * Layer: Infrastructure
+ * File: HabitSeriesController.js
+ * Responsibility:
+ * Adapts HTTP requests to habit series use cases and translates application errors into HTTP responses.
  */
 
 import { createHabitSeries } from '../../../02application/use-cases/CreateHabitSeriesUseCase.js';

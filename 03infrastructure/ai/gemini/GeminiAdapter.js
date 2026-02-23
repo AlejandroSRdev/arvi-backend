@@ -1,24 +1,8 @@
 /**
- * Gemini Adapter (Infrastructure Layer)
- *
- * This adapter integrates Google Gemini as an external AI dependency,
- * used exclusively for creative and semi-creative generation.
- *
- * It implements the IAIProvider port and acts as a pure translator between
- * the application layer and the Gemini API:
- * - Translates system messages into Gemini-compatible prompts
- * - Executes the AI call using the Google Generative AI SDK
- * - Translates the response back into a backend-friendly format
- * - Computes token usage and energy consumption deterministically
- *
- * IMPORTANT:
- * - Gemini is treated as a probabilistic generator.
- * - It does NOT enforce schemas or domain constraints.
- * - It does NOT make business decisions.
- *
- * Strict JSON and schema enforcement are intentionally handled
- * by a separate OpenAI adapter, dedicated to structure-only transformations.
- * This keeps creative generation and structural validation clearly separated.
+ * Layer: Infrastructure
+ * File: GeminiAdapter.js
+ * Responsibility:
+ * Implements IAIProvider by forwarding generation requests to the Google Gemini API and normalizing responses.
  */
 
 import { getModel } from './GeminiConfig.js';
@@ -45,8 +29,7 @@ function calculateGeminiTokens(text) {
 /**
  * Compute energy consumption for a Gemini call.
  *
- * Energy is derived from both prompt and response size,
- * following the original backend formula:
+ * Energy is derived from both prompt and response size:
  *
  * 1. promptTokens = calculateGeminiTokens(prompt)
  * 2. responseTokens = calculateGeminiTokens(response)
@@ -201,4 +184,3 @@ export class GeminiAdapter extends IAIProvider {
 }
 
 export default GeminiAdapter;
-

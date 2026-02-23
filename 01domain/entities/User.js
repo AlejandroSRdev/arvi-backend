@@ -1,11 +1,8 @@
 /**
- * User Entity (Domain)
- *
- * Represents a system user as a domain entity.
- * The constructor acts as the single gatekeeper of all invariants:
- * if a User instance exists, it is guaranteed to be valid.
- *
- * Completely agnostic of infrastructure concerns.
+ * Layer: Domain
+ * File: User.js
+ * Responsibility:
+ * Represents a system user and enforces all identity, credential, energy, trial, and limit invariants through construction.
  */
 
 import { Trial } from "../value_objects/user/Trial.js";
@@ -13,10 +10,6 @@ import { Energy } from "../value_objects/user/Energy.js";
 import { Limits } from "../value_objects/user/Limits.js";
 
 export class User {
-  /**
-   * Constructor.
-   * Intended to be used only through the static factory method.
-   */
   constructor(
     id,
     email,
@@ -145,10 +138,6 @@ export class User {
       );
     }
 
-    // ─────────────────────────────
-    // State assignment (atomic)
-    // ─────────────────────────────
-
     this.id = id;
     this.email = normalizedEmail;
     this.password = password;
@@ -159,9 +148,7 @@ export class User {
   }
 
   /**
-   * Factory method
-   *
-   * The ONLY valid entry point to create a User.
+   * The sole valid entry point to create a User.
    */
   static create(params) {
     return new User(

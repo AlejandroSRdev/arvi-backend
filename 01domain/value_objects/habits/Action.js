@@ -1,9 +1,8 @@
 /**
- * Action Value Object (Domain Layer)
- *
- * Represents a single action within a habit series.
- * Domain value object, NOT a DTO.
- * Use toDTO() / toFullDTO() for external communication.
+ * Layer: Domain
+ * File: Action.js
+ * Responsibility:
+ * Represents a single habit action as a domain value object, encapsulating identity, difficulty, score, and completion state.
  */
 
 import { parseDifficulty } from "./Difficulty.js";
@@ -31,10 +30,7 @@ export class Action {
     this.bonusPoints = bonusPoints;
   }
 
-  /**
-   * Create a new Action from AI output.
-   * Normalizes difficulty.
-   */
+  // Difficulty normalization is required because AI output may use non-canonical values.
   static fromAIOutput(input, id) {
     return new Action(
       id,
@@ -49,9 +45,6 @@ export class Action {
     );
   }
 
-  /**
-   * Create an Action with all fields (for hydration from persistence).
-   */
   static create(params) {
     return new Action(
       params.id,
@@ -66,9 +59,6 @@ export class Action {
     );
   }
 
-  /**
-   * Returns minimal DTO (new series creation).
-   */
   toDTO() {
     return {
       name: this.name,
@@ -77,9 +67,6 @@ export class Action {
     };
   }
 
-  /**
-   * Returns full DTO including completion state.
-   */
   toFullDTO() {
     return {
       id: this.id,

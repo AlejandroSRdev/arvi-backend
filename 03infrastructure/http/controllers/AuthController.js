@@ -1,13 +1,8 @@
 /**
- * Auth Controller (Infrastructure - HTTP Layer)
- *
- * Architecture: Hexagonal (Ports & Adapters)
- *
- * Single Responsibility:
- * - Adapt HTTP (req/res) to Use Cases
- * - Validate HTTP input
- * - Translate errors to HTTP status codes
- * - Contains NO business logic
+ * Layer: Infrastructure
+ * File: AuthController.js
+ * Responsibility:
+ * Adapts HTTP requests to authentication use cases and issues JWT tokens on successful login.
  */
 
 import { createUser } from '../../../02application/use-cases/CreateUser.js';
@@ -28,7 +23,6 @@ export function setDependencies(deps) {
 
 /**
  * POST /api/auth/register
- * Register a new user
  */
 export async function register(req, res, next) {
   try {
@@ -56,7 +50,7 @@ export async function register(req, res, next) {
         id: userId,
         email,
         password,
-        plan: "pro", // TEMPORARY: matches current use case behavior
+        plan: "pro",
       },
     });
   } catch (err) {
@@ -67,7 +61,6 @@ export async function register(req, res, next) {
 
 /**
  * POST /api/auth/login
- * Authenticate user with email and password
  */
 export async function login(req, res, next) {
   try {

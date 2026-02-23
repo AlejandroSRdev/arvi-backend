@@ -1,35 +1,9 @@
 /**
- * AIExecutionService (Application Service)
- *
- * Architectural role:
- * Application-level service responsible for executing AI calls in a
- * controlled, safe, and reusable manner, without knowledge of business
- * intent or product-specific semantics.
- *
- * This service encapsulates:
- * - Technical model selection (via ModelSelectionPolicy)
- * - Coordination with AI providers through ports (IAIProvider)
- * - Structured logging per AI step
- *
- * Responsibilities:
- * - Select model configuration based on functionType
- * - Execute AI requests via ports (no direct SDK usage)
- * - Return content and energy consumed per call
- * - Log each AI step for observability
- *
- * Out of scope (explicitly NOT responsible for):
- * - Energy validation or consumption (deferred to caller)
- * - Persistence of any kind
- * - Prompt construction
- * - JSON schema definition or validation
- * - Parsing AI output into domain entities
- * - Business flow orchestration
- *
- * Dependencies:
- * - ModelSelectionPolicy (domain)
- * - IAIProvider (port)
+ * Layer: Application
+ * File: AIExecutionService.js
+ * Responsibility:
+ * Coordinates AI provider calls with model selection, delegating execution through ports without accumulating state.
  */
-
 
 import { getModelConfig } from '../../01domain/policies/ModelSelectionPolicy.js';
 import { ValidationError } from '../../errors/Index.js';

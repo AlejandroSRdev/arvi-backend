@@ -1,13 +1,8 @@
 /**
- * Firestore User Repository (Infrastructure)
- *
- * Implements: IUserRepository
- *
- * Responsibilities:
- * - Persist User domain entities in Firestore
- *
- * This adapter contains NO business logic.
- * It only maps domain entities to persistence format.
+ * Layer: Infrastructure
+ * File: FirestoreUserRepository.js
+ * Responsibility:
+ * Implements IUserRepository by persisting and querying User entities in Firestore.
  */
 
 import { IUserRepository } from "../../../01domain/ports/IUserRepository.js";
@@ -18,7 +13,7 @@ const USERS_COLLECTION = "users";
 
 export class FirestoreUserRepository extends IUserRepository {
   /**
-   * Persist a User domain entity
+   * Persist a User domain entity.
    *
    * All domain decisions (plan, energy, limits, trial)
    * must be made BEFORE calling this method.

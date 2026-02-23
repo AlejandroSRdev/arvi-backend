@@ -1,15 +1,8 @@
 /**
- * PlanPolicy
- *
- * Fuente de verdad de:
- * - Definición de planes
- * - Límites de energía
- * - Acceso a features
- * - Reglas de trial
- * - Conversión tokens → energía
- *
- * NOTA:
- * Este archivo contiene SOLO reglas de negocio.
+ * Layer: Domain
+ * File: PlanPolicy.js
+ * Responsibility:
+ * Defines all plan configurations, energy limits, feature access rules, and the token-to-energy conversion rate.
  */
 
 const stripeMode = process.env.STRIPE_MODE || 'test';
@@ -107,9 +100,6 @@ export const PLANS = {
   },
 };
 
-/**
- * Obtener configuración efectiva de un plan
- */
 export function getPlan(planId, isTrialActive = false) {
   if (planId === 'freemium' && isTrialActive) {
     return PLANS.TRIAL;
@@ -125,16 +115,11 @@ export function getPlan(planId, isTrialActive = false) {
   return plan;
 }
 
-/**
- * Conversión tokens → energía
- */
+// 1 energy unit = 100 tokens; always rounded up.
 export function tokensToEnergy(tokens) {
   return Math.ceil(tokens / 100);
 }
 
-/**
- * Verificar si se puede consumir energía
- */
 export function canConsumeEnergy(planId, energiaActual, energiaNecesaria) {
   const plan = getPlan(planId);
 
@@ -145,9 +130,6 @@ export function canConsumeEnergy(planId, energiaActual, energiaNecesaria) {
   return energiaActual >= energiaNecesaria;
 }
 
-/**
- * Acceso a features por plan
- */
 export const FEATURE_ACCESS = {
   'ai.chat': ['trial', 'mini', 'base', 'pro'],
   'ai.json_convert': ['trial', 'mini', 'base', 'pro'],

@@ -1,16 +1,8 @@
 /**
- * Firestore Energy Repository (Infrastructure)
- *
- * Implements: IEnergyRepository
- *
- * Responsibilities:
- * - Read and write energy data from the users collection in Firestore
- * - Translate between application contract (actual, maxima, etc.)
- *   and Firestore field names (energy.currentAmount, energy.maxAmount, etc.)
- * - Atomic updates via transactions
- * - Technical energy logging
- *
- * Does NOT contain business logic, validation, or calculations.
+ * Layer: Infrastructure
+ * File: FirestoreEnergyRepository.js
+ * Responsibility:
+ * Implements IEnergyRepository by reading and writing user energy data in Firestore using atomic transactions.
  */
 
 import { IEnergyRepository } from '../../../01domain/ports/IEnergyRepository.js';
@@ -92,14 +84,12 @@ export class FirestoreEnergyRepository extends IEnergyRepository {
 
         transaction.update(userRef, updateData);
 
-        // Build final state for return value
         const finalState = {
           actual: energyPatch.actual !== undefined ? energyPatch.actual : currentEnergy.currentAmount,
           maxima: energyPatch.maxima !== undefined ? energyPatch.maxima : currentEnergy.maxAmount,
           consumoTotal: energyPatch.consumoTotal !== undefined ? energyPatch.consumoTotal : currentEnergy.totalConsumption,
         };
 
-        // Technical log if action provided
         if (action) {
           const logRef = userRef.collection(ENERGY_LOGS_COLLECTION).doc();
 

@@ -1,3 +1,9 @@
+/**
+ * Layer: Errors
+ * File: AITemporaryUnavailableError.js
+ * Responsibility:
+ * Classifies a transient AI provider failure at the infrastructure boundary, distinguishing temporary unavailability from permanent provider errors.
+ */
 import { InfrastructureError } from './InfrastructureError.js';
 
 export class AITemporaryUnavailableError extends InfrastructureError {

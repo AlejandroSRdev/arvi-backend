@@ -1,12 +1,8 @@
 /**
- * Authentication Middleware (Infrastructure - HTTP)
- *
- * Verifies JWTs issued by this backend (HS256, signed with JWT_SECRET).
- * Sets req.user on successful verification.
- *
- * Exports:
- * - authenticate: rejects request if token is missing or invalid
- * - optionalAuth: continues without user if token is absent or invalid
+ * Layer: Infrastructure
+ * File: authenticate.js
+ * Responsibility:
+ * Verifies JWT tokens issued by this backend and attaches the decoded user identity to the request.
  */
 
 import jwt from 'jsonwebtoken';

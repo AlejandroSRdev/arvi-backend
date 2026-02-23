@@ -1,38 +1,8 @@
 /**
- * ⚠️ ESTADO: PARCIALMENTE CONSOLIDADO
- *
- * Validate Plan Access Use Case (Domain)
- *
- * MIGRADO DESDE:
- * - src/middleware/authorizeFeature.js (líneas 26-93)
- * - src/middleware/validatePlanLimit.js (líneas 31-183)
- *
- * Responsabilidades:
- * - Determinar plan efectivo del usuario (incluyendo trial)
- * - Validar acceso a features según plan (vía PlanPolicy)
- * - Validar límites de uso (weekly summaries, active series)
- * - Aplicar reset lazy de contadores semanales
- *
- * NO contiene:
- * - Lógica HTTP (req/res)
- * - Middleware
- * - Acceso directo a Firestore
- *
- * NOTA DE REFACTORIZACIÓN (2026-01-13):
- * =====================================
- * Las funciones validateFeatureAccess + validateActiveSeriesLimit han sido
- * CONSOLIDADAS en application/services/HabitSeriesValidationService.js para
- * el caso de uso específico de validación de creación de series de hábitos.
- *
- * ESTE ARCHIVO AÚN SE MANTIENE porque:
- * 1. validateWeeklySummariesLimit() se usa en otros flujos (resúmenes semanales)
- * 2. Las funciones individuales pueden ser útiles para otros casos de validación
- *
- * TODO FUTURO:
- * ===========
- * - Evaluar crear servicios específicos para otros dominios (ej: WeeklySummaryValidationService)
- * - Si se consolidan todos los casos de uso, este archivo puede ser eliminado
- * - Por ahora, se mantiene como utilidad de validación genérica
+ * Layer: Application
+ * File: ValidatePlanAccess.js
+ * Responsibility:
+ * Coordinates plan-based feature access and usage limit validation for multiple application flows.
  */
 
 import { hasFeatureAccess, getPlan } from '../../01domain/policies/PlanPolicy.js';
@@ -62,11 +32,6 @@ export async function validateFeatureAccess(userId, featureKey, deps) {
   return { allowed: true, planId: effectivePlan, isTrialActive: effectivePlan === 'trial' };
 }
 
-/**
- * Validar límite de resúmenes semanales (con reset lazy)
- *
- * MIGRADO DESDE: src/middleware/validatePlanLimit.js (líneas 95-148)
- */
 export async function validateWeeklySummariesLimit(userId, deps) {
   const { userRepository } = deps;
   if (!userRepository) throw new Error('Dependency required: userRepository');
@@ -114,11 +79,6 @@ export async function validateWeeklySummariesLimit(userId, deps) {
   };
 }
 
-/**
- * Validar límite de series activas
- *
- * MIGRADO DESDE: src/middleware/validatePlanLimit.js (líneas 153-183)
- */
 export async function validateActiveSeriesLimit(userId, deps) {
   const { userRepository } = deps;
   if (!userRepository) throw new Error('Dependency required: userRepository');

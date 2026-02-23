@@ -1,78 +1,34 @@
 /**
- * Input Size Validation Middleware (Infrastructure HTTP)
- *
- * MIGRADO DESDE: src/middleware/validateInputSize.js (COMPLETO)
- *
- * Middleware de Express para validar tamaño de inputs y prevenir abusos/costes innecesarios.
- * PURA INFRAESTRUCTURA HTTP: depende de req/res/next.
- *
- * USO:
- * router.post('/chat',
- *   authenticate,
- *   authorizeFeature('ai.chat'),
- *   validateInputSize({
- *     maxBodySize: 50 * 1024,
- *     fields: {
- *       messages: { type: 'array', maxLength: 20 },
- *       'messages[].content': { type: 'string', maxLength: 2000 }
- *     }
- *   }),
- *   controller
- * );
- *
- * IMPORTANTE:
- * - NO valida semántica, solo tamaños
- * - NO confía en validaciones del frontend
- * - Responde con 413 Payload Too Large
- * - Se ejecuta ANTES del controller
- *
- * Responsabilidades:
- * - Validar tamaño total del body HTTP
- * - Validar tamaño de campos individuales
- * - Validar arrays y objetos anidados
- * - Responder con errores HTTP apropiados
+ * Layer: Infrastructure
+ * File: validateInputSize.js
+ * Responsibility:
+ * Express middleware that enforces byte and field size limits on incoming HTTP request bodies.
  */
 
 import { ValidationError } from '../../../errors/Index.js';
 
-/**
- * Calcula el tamaño aproximado en bytes de un objeto JSON
- * MIGRADO DESDE: src/middleware/validateInputSize.js:getBodySize (líneas 34-36)
- *
- * @param {any} obj - Objeto a medir
- * @returns {number} Tamaño en bytes
- */
 function getBodySize(obj) {
   return Buffer.byteLength(JSON.stringify(obj), 'utf8');
 }
 
-/**
- * Cuenta las keys de un objeto (recursivo hasta nivel 1)
- * MIGRADO DESDE: src/middleware/validateInputSize.js:countObjectKeys (líneas 43-46)
- *
- * @param {object} obj - Objeto a analizar
- * @returns {number} Cantidad de keys
- */
 function countObjectKeys(obj) {
   if (!obj || typeof obj !== 'object') return 0;
   return Object.keys(obj).length;
 }
 
 /**
- * Middleware factory para validar tamaño de inputs
- * MIGRADO DESDE: src/middleware/validateInputSize.js:validateInputSize (líneas 56-109)
+ * Middleware factory that validates the size of HTTP request body fields.
  *
- * @param {object} config - Configuración de validación
- * @param {number} config.maxBodySize - Tamaño máximo del body en bytes
- * @param {object} config.fields - Validaciones por campo
- * @returns {Function} Middleware de Express
+ * @param {object} config
+ * @param {number} config.maxBodySize - Maximum body size in bytes
+ * @param {object} config.fields - Per-field validation rules
+ * @returns {Function} Express middleware
  */
 export function validateInputSize(config) {
   const { maxBodySize, fields } = config;
 
   return (req, res, next) => {
     try {
-      // 1. Validar tamaño total del body
       if (maxBodySize) {
         const bodySize = getBodySize(req.body);
 
@@ -83,7 +39,6 @@ export function validateInputSize(config) {
         }
       }
 
-      // 2. Validar campos individuales
       if (fields) {
         for (const [fieldPath, rules] of Object.entries(fields)) {
           const validation = validateField(req.body, fieldPath, rules);
@@ -94,7 +49,6 @@ export function validateInputSize(config) {
         }
       }
 
-      // 3. Validación exitosa
       next();
     } catch (error) {
       next(error);
@@ -103,26 +57,20 @@ export function validateInputSize(config) {
 }
 
 /**
- * Valida un campo específico del body
- * MIGRADO DESDE: src/middleware/validateInputSize.js:validateField (líneas 119-212)
- *
- * @param {object} body - Body del request
- * @param {string} fieldPath - Path del campo (ej: 'messages', 'messages[].content')
- * @param {object} rules - Reglas de validación
- * @returns {object} { valid: boolean, limit?: any, actual?: any, message?: string }
+ * @param {object} body
+ * @param {string} fieldPath
+ * @param {object} rules
+ * @returns {{ valid: boolean, limit?: any, actual?: any, message?: string }}
  */
 function validateField(body, fieldPath, rules) {
   const { type, maxLength, maxKeys, required } = rules;
 
-  // Manejar paths con array notation (ej: 'messages[].content')
   if (fieldPath.includes('[]')) {
     return validateArrayField(body, fieldPath, rules);
   }
 
-  // Obtener valor del campo
   const value = getNestedValue(body, fieldPath);
 
-  // Validar campo requerido
   if (required && (value === undefined || value === null)) {
     return {
       valid: false,
@@ -132,12 +80,10 @@ function validateField(body, fieldPath, rules) {
     };
   }
 
-  // Si no es requerido y no existe, pasar
   if (value === undefined || value === null) {
     return { valid: true };
   }
 
-  // Validar según tipo
   switch (type) {
     case 'string':
       if (typeof value !== 'string') {
@@ -207,19 +153,15 @@ function validateField(body, fieldPath, rules) {
 }
 
 /**
- * Valida campos de arrays (ej: 'messages[].content')
- * MIGRADO DESDE: src/middleware/validateInputSize.js:validateArrayField (líneas 222-266)
- *
- * @param {object} body - Body del request
- * @param {string} fieldPath - Path con notación de array
- * @param {object} rules - Reglas de validación
- * @returns {object} Resultado de validación
+ * @param {object} body
+ * @param {string} fieldPath - Path with array notation (e.g., 'messages[].content')
+ * @param {object} rules
+ * @returns {{ valid: boolean, limit?: any, actual?: any, message?: string }}
  */
 function validateArrayField(body, fieldPath, rules) {
   const [arrayPath, itemPath] = fieldPath.split('[].');
   const array = getNestedValue(body, arrayPath);
 
-  // Verificar que sea un array
   if (!Array.isArray(array)) {
     return {
       valid: false,
@@ -229,12 +171,10 @@ function validateArrayField(body, fieldPath, rules) {
     };
   }
 
-  // Validar cada elemento del array
   for (let i = 0; i < array.length; i++) {
     const item = array[i];
     const itemValue = itemPath ? getNestedValue(item, itemPath) : item;
 
-    // Validar según tipo
     const { type, maxLength } = rules;
 
     if (type === 'string') {
@@ -262,12 +202,9 @@ function validateArrayField(body, fieldPath, rules) {
 }
 
 /**
- * Obtiene valor de un objeto usando path notation
- * MIGRADO DESDE: src/middleware/validateInputSize.js:getNestedValue (líneas 275-277)
- *
- * @param {object} obj - Objeto fuente
- * @param {string} path - Path del valor (ej: 'user.name', 'config.api.key')
- * @returns {any} Valor encontrado o undefined
+ * @param {object} obj
+ * @param {string} path - Dot-notation path (e.g., 'user.name')
+ * @returns {any}
  */
 function getNestedValue(obj, path) {
   return path.split('.').reduce((current, key) => current?.[key], obj);

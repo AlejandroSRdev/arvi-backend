@@ -1,16 +1,8 @@
 /**
- * Firebase Admin SDK Configuration - SINGLETON PATTERN
- *
- * ORIGEN: src/config/firebase.js (líneas 1-86)
- *
- * Inicializa Firebase Admin SDK para acceso server-side a:
- * - Firestore (base de datos)
- * - Firebase Auth (validación de tokens)
- *
- * PATRÓN SINGLETON:
- * - initializeFirebase() debe llamarse UNA SOLA VEZ desde server.js
- * - Las instancias (db, auth) se exportan y evalúan después de inicialización
- * - Protegido contra: múltiples imports, hot reload, ejecuciones duplicadas
+ * Layer: Infrastructure
+ * File: FirebaseConfig.js
+ * Responsibility:
+ * Initializes Firebase Admin SDK as a singleton and exports Firestore and Auth service clients.
  */
 
 import admin from 'firebase-admin';
@@ -52,7 +44,6 @@ export function initializeFirebase() {
       }),
     });
 
-    // Inicializar instancias
     dbInstance = admin.firestore();
     authInstance = admin.auth();
     firebaseInitialized = true;
@@ -66,8 +57,8 @@ export function initializeFirebase() {
 }
 
 /**
- * Getter para Firestore con verificación de inicialización
- * Lanza error si se intenta usar antes de inicializar
+ * Getter para Firestore con verificación de inicialización.
+ * Lanza error si se intenta usar antes de inicializar.
  */
 function getDb() {
   if (!dbInstance) {
@@ -77,7 +68,7 @@ function getDb() {
 }
 
 /**
- * Getter para Auth con verificación de inicialización
+ * Getter para Auth con verificación de inicialización.
  */
 function getAuth() {
   if (!authInstance) {

@@ -1,25 +1,14 @@
 /**
- * Authorization Middleware (Infrastructure - HTTP)
- *
- * MIGRADO DESDE: src/middleware/authorizeFeature.js (COMPLETO)
- * SIN CAMBIOS DE COMPORTAMIENTO
- *
- * Middleware para autorizar acceso a features según el plan del usuario
- *
- * USO:
- * router.post('/chat', authenticate, authorizeFeature('ai.chat'), controller);
- *
- * IMPORTANTE:
- * - SIEMPRE debe ir DESPUÉS de authenticate middleware
- * - Lee el plan real desde Firestore (no confía en datos del frontend)
- * - Respeta trial activo
- * - Bloquea con 403 si el plan no permite la feature
+ * Layer: Infrastructure
+ * File: authorizeFeature.js
+ * Responsibility:
+ * Reads the user's plan from Firestore and enforces feature access control before delegating to the next handler.
  */
 
 import { hasFeatureAccess } from '../../../01domain/policies/PlanPolicy.js';
 import { logger } from '../../logger/Logger.js';
 
-// Dependency injection - será inyectada en runtime
+// Dependency injection
 let userRepository;
 
 export function setDependencies(deps) {
@@ -27,11 +16,10 @@ export function setDependencies(deps) {
 }
 
 /**
- * Middleware factory para autorizar features por plan
- * MIGRADO DESDE: src/middleware/authorizeFeature.js:authorizeFeature (líneas 26-93)
+ * Middleware factory that authorizes feature access by plan.
  *
- * @param {string} featureKey - Clave de la feature (ej: 'ai.chat', 'ai.json_convert')
- * @returns {Function} Middleware de Express
+ * @param {string} featureKey - Feature key (e.g., 'ai.chat', 'ai.json_convert')
+ * @returns {Function} Express middleware
  */
 export function authorizeFeature(featureKey) {
   return async (req, res, next) => {
@@ -57,19 +45,15 @@ export function authorizeFeature(featureKey) {
         });
       }
 
-      // 3. Determinar plan efectivo
       let effectivePlan = user.plan || 'freemium';
 
-      // Si es freemium pero tiene trial activo, usar trial
       if (effectivePlan === 'freemium' && user.trial?.activo) {
         effectivePlan = 'trial';
       }
 
-      // 4. Verificar si el plan permite acceso a la feature
       const hasAccess = hasFeatureAccess(effectivePlan, featureKey);
 
       if (!hasAccess) {
-        // Logging estructurado de denegación
         console.log('🚫 [Authorization] Feature bloqueada');
         console.log(`   → User ID: ${userId}`);
         console.log(`   → Feature: ${featureKey}`);
@@ -84,7 +68,6 @@ export function authorizeFeature(featureKey) {
         });
       }
 
-      // 5. Acceso permitido - agregar info al request para uso posterior
       req.userPlan = {
         planId: effectivePlan,
         isTrialActive: effectivePlan === 'trial',

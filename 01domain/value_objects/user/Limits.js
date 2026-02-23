@@ -1,12 +1,8 @@
 /**
- * Limits Value Object (Domain)
- *
- * Represents usage limits associated with a user.
- * It defines maximum allowed values and current usage counters,
- * but does NOT contain logic to enforce or modify those limits.
- *
- * All mutations and rule enforcement are handled by the owning
- * entity (User), ensuring consistency and centralized control.
+ * Layer: Domain
+ * File: Limits.js
+ * Responsibility:
+ * Represents a user's usage boundaries as an immutable snapshot; enforcement of these limits is delegated to the User entity.
  */
 class Limits {
     constructor(maxActiveSeries, activeSeriesCount) {
@@ -14,9 +10,7 @@ class Limits {
         this.activeSeriesCount = activeSeriesCount;
     }
 
-    /**
-     * PRO plan limits: high ceiling, no practical restrictions.
-     */
+    // High ceiling used for plans with no practical series restriction.
     static pro() {
         return new Limits(100, 0);
     }

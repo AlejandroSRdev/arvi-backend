@@ -1,21 +1,8 @@
 /**
- * HabitSeriesMapper
- *
- * Infrastructure-level mapper.
- *
- * Translates a HabitSeries domain entity into a HabitSeriesOutputDTO
- * suitable for HTTP/API responses.
- *
- * Responsibilities:
- * - Convert domain entities into plain DTOs.
- * - Translate value objects / enums into public primitive representations.
- * - Serialize technical types (e.g. Date → ISO string).
- *
- * This mapper:
- * - Contains NO business logic.
- * - Does NOT validate invariants.
- * - Does NOT create or modify domain entities.
- * - Is a pure, deterministic translation layer.
+ * Layer: Infrastructure
+ * File: HabitSeriesMapper.js
+ * Responsibility:
+ * Translates HabitSeries domain entities into HabitSeriesOutputDTO for HTTP API responses.
  */
 
 export function toHabitSeriesOutputDTO(habitSeries) {
@@ -29,11 +16,11 @@ export function toHabitSeriesOutputDTO(habitSeries) {
     actions: habitSeries.actions.map(action => ({
       name: action.name,
       description: action.description,
-      difficulty: action.difficulty, 
+      difficulty: action.difficulty,
       // assumed to already be 'low' | 'medium' | 'high' at domain boundary
     })),
 
-    rank: habitSeries.getRank(), 
+    rank: habitSeries.getRank(),
     // derived from domain logic, not stored
 
     totalScore: habitSeries.totalScore,
@@ -42,4 +29,3 @@ export function toHabitSeriesOutputDTO(habitSeries) {
     lastActivityAt: habitSeries.lastActivityAt.toISOString(),
   };
 }
-

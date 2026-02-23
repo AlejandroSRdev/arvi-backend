@@ -1,10 +1,8 @@
 /**
- * HabitSeriesInputDTO
- *
- * Infrastructure-level Data Transfer Object.
- *
- * Represents the exact input contract for:
- * POST /api/habits/series
+ * Layer: Infrastructure
+ * File: HabitSeriesInputDTO.js
+ * Responsibility:
+ * Defines the raw HTTP input contract for the habit series creation endpoint, without dependency on domain types.
  *
  * Shape (runtime expectation):
  *
@@ -14,13 +12,7 @@
  *   assistantContext?: string
  * }
  *
- * Notes:
- * - This is raw external input (HTTP / client / AI).
- * - Contains no domain logic.
- * - Intentionally permissive.
- * - Must NOT depend on domain types.
- *
- * Validation must occur at the HTTP or application layer.
+ * Intentionally permissive. Validation occurs at the HTTP or application layer.
  */
 
 export {};

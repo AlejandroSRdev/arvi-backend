@@ -1,13 +1,8 @@
 /**
- * Trial Value Object (Domain)
- *
- * Represents a fixed trial time window for a user.
- * It defines when the trial starts and how long it lasts,
- * but does NOT store derived state such as "active" or "has access".
- *
- * Trial activity is always derived from time comparisons
- * (e.g. current time vs trial window), ensuring a single
- * source of truth and avoiding duplicated state.
+ * Layer: Domain
+ * File: Trial.js
+ * Responsibility:
+ * Represents a user's trial time window; activity is always derived from time comparisons, never stored as state.
  */
 class Trial {
     constructor(durationDays, startedAt) {
@@ -15,10 +10,7 @@ class Trial {
         this.startedAt = startedAt;
     }
 
-    /**
-     * Represents a trial that has already expired (no active trial).
-     * Uses epoch + 1 day to satisfy domain invariants.
-     */
+    // Epoch start + 1 day satisfies the durationDays > 0 invariant while guaranteeing expiry.
     static inactive() {
         return new Trial(1, new Date(0));
     }

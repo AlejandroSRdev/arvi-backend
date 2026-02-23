@@ -1,19 +1,8 @@
 /**
- * Firestore Habit Series Repository (Infrastructure)
- *
- * IMPLEMENTA: domain/ports/IHabitSeriesRepository.js
- * FECHA CREACIÓN: 2026-01-09
- *
- * Responsabilidades:
- * - Persistir series de hábitos generadas por IA en Firestore
- * - Generar IDs únicos si no existen
- * - Añadir timestamps de creación y actualización
- * - Escribir en el path: users/{userId}/habitSeries/{seriesId}
- *
- * NO contiene:
- * - Lógica de negocio
- * - Validaciones complejas de ownership
- * - Incremento de contadores (se hará en siguiente iteración)
+ * Layer: Infrastructure
+ * File: FirestoreHabitSeriesRepository.js
+ * Responsibility:
+ * Implements IHabitSeriesRepository by persisting and deleting habit series documents in Firestore.
  */
 
 import { IHabitSeriesRepository } from '../../../01domain/ports/HabitSeriesRepository.js';
@@ -27,12 +16,10 @@ import { db, FieldValue } from './FirebaseConfig.js';
 
 export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
   /**
-   * Crear una serie de hábitos generada por IA
-   *
-   * @param {string} userId - ID del usuario propietario
-   * @param {object} seriesData - Datos de la serie (puede ser string JSON o objeto)
-   * @returns {Promise<{id: string}>} - ID de la serie creada
-   * @throws {Error} - Si los datos son inválidos
+   * @param {string} userId - Owner user ID
+   * @param {object} seriesData - Series data (string JSON or object)
+   * @returns {Promise<{id: string}>}
+   * @throws {Error} If data is invalid
    */
   async createFromAI(userId, seriesData) {
     if (!userId) {
@@ -43,7 +30,6 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
       throw new Error('seriesData is required for habit series creation');
     }
 
-    // Parsear seriesData si es string
     let parsedData = seriesData;
     if (typeof seriesData === 'string') {
       try {
@@ -53,17 +39,14 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
       }
     }
 
-    // Generar ID si no existe
     const seriesId = parsedData.id || Date.now().toString();
 
-    // Referencia a la serie en Firestore
     const seriesRef = db
       .collection('users')
       .doc(userId)
       .collection('habitSeries')
       .doc(seriesId);
 
-    // Preparar datos para persistir
     const dataToStore = {
       ...parsedData,
       id: seriesId,
@@ -71,7 +54,6 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
       updatedAt: FieldValue.serverTimestamp(),
     };
 
-    // Escribir en Firestore
     console.log(`[REPOSITORY] [Habit Series] Saving series for user ${userId}`);
     try {
       await seriesRef.set(dataToStore);
@@ -93,7 +75,7 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
    * @param {string} userId - User ID
    * @param {object} seriesData - Parsed series data from AI
    * @param {number} totalEnergyConsumed - Total energy to deduct
-   * @returns {Promise<{id: string}>} - ID of the created series
+   * @returns {Promise<{id: string}>}
    */
   async atomicCommitCreation(userId, seriesData, totalEnergyConsumed) {
     if (!userId) {
@@ -108,7 +90,6 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
 
     try {
       const result = await db.runTransaction(async (transaction) => {
-        // Re-read user document inside transaction
         const userDoc = await transaction.get(userRef);
 
         if (!userDoc.exists) {
@@ -126,7 +107,6 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
           throw new InsufficientEnergyError(totalEnergyConsumed, currentEnergy);
         }
 
-        // Prepare series data
         let parsedData = seriesData;
         if (typeof seriesData === 'string') {
           parsedData = JSON.parse(seriesData);
@@ -142,7 +122,6 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
           updatedAt: FieldValue.serverTimestamp(),
         };
 
-        // Persist habit series
         transaction.set(seriesRef, dataToStore);
 
         // Deduct energy and increment counter
@@ -175,12 +154,10 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
   }
 
   /**
-   * Eliminar una serie de hábitos
-   *
-   * @param {string} userId - ID del usuario propietario
-   * @param {string} seriesId - ID de la serie a eliminar
-   * @returns {Promise<{deleted: boolean}>} - Confirmación de eliminación
-   * @throws {Error} - Si los parámetros son inválidos o la serie no existe
+   * @param {string} userId - Owner user ID
+   * @param {string} seriesId - Series ID to delete
+   * @returns {Promise<{deleted: boolean}>}
+   * @throws {Error} If parameters are invalid or series does not exist
    */
   async delete(userId, seriesId) {
     if (!userId || !seriesId) {

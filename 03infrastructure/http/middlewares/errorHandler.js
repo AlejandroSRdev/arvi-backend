@@ -1,24 +1,13 @@
 /**
- * Error Handler Middleware (Infrastructure - HTTP)
- *
- * MIGRADO DESDE: src/middleware/errorHandler.js (COMPLETO)
- * SIN CAMBIOS DE COMPORTAMIENTO
- *
- * Responsabilidades:
- * - Manejo global de errores
- * - Conversión de errores a respuestas HTTP
- * - Logging de errores
+ * Layer: Infrastructure
+ * File: errorHandler.js
+ * Responsibility:
+ * Express middleware that catches unhandled errors and translates them into HTTP error responses.
  */
 
-/**
- * Middleware global de manejo de errores
- * MIGRADO DESDE: src/middleware/errorHandler.js:errorHandler (líneas 9-22)
- */
 export function errorHandler(err, req, res, next) {
-  // Log del error
   console.error(`Error en ${req.method} ${req.path}:`, err);
 
-  // Respuesta según tipo de error
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Error interno del servidor';
 

@@ -1,20 +1,8 @@
 /**
- * Create User Use Case (Application Layer)
- *
- * Orchestrates user registration by defining all business-relevant
- * initial state and delegating persistence to the repository.
- *
- * Responsibilities:
- * - Hash the user password
- * - Create the User domain entity
- * - Define initial plan, energy, trial, and limits
- * - Persist the user via IUserRepository
- * - Returns the new user ID
- *
- * Does NOT contain:
- * - HTTP validation
- * - Transport concerns
- * - Direct access to Firestore
+ * Layer: Application
+ * File: CreateUser.js
+ * Responsibility:
+ * Orchestrates user registration by hashing credentials, constructing the User entity, and delegating persistence.
  */
 import { randomUUID } from "crypto";
 import { User } from "../../01domain/entities/User.js";
@@ -37,7 +25,6 @@ import { ValidationError } from "../../errors/Index.js";
 export async function createUser(email, password, deps) {
   const { userRepository, passwordHasher } = deps;
 
-  // Defensive checks
   if (!userRepository) {
     throw new ValidationError("Dependency required: userRepository");
   }
@@ -54,10 +41,9 @@ export async function createUser(email, password, deps) {
     throw new ValidationError("Password is required");
   }
 
-  // Hash password before entering the domain
+  // Hash password before constructing the domain entity
   const passwordHash = await passwordHasher.hash(password);
 
-  // Generate a unique user ID
   const userId = randomUUID();
 
   // TEMPORARY: Users are created with PRO plan by default

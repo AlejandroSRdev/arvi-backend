@@ -1,7 +1,8 @@
 /**
- * Habit Objects Domain Module
- *
- * Exports all habit-related domain entities and value objects.
+ * Layer: Domain
+ * File: Index.js
+ * Responsibility:
+ * Re-exports all habit-related domain value objects and entities as a single cohesive module.
  */
 
 export { Difficulty, parseDifficulty, isDifficulty } from './Difficulty.js';

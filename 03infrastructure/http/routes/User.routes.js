@@ -1,11 +1,8 @@
 /**
- * User Routes (Infrastructure - HTTP)
- *
- * MIGRADO DESDE: src/routes/user.routes.js (COMPLETO)
- * SIN CAMBIOS DE COMPORTAMIENTO
- *
- * Responsabilidades:
- * - Definición de rutas de gestión de usuario
+ * Layer: Infrastructure
+ * File: User.routes.js
+ * Responsibility:
+ * Registers Express routes for user management endpoints, binding authentication middleware and controllers.
  */
 
 import express from 'express';
@@ -19,19 +16,11 @@ import { authenticate } from '../middlewares/authenticate.js';
 
 const router = express.Router();
 
-// Todas las rutas requieren autenticación
 router.use(authenticate);
 
-// GET /api/user/profile - Obtener perfil
 router.get('/profile', getProfile);
-
-// PUT /api/user/profile - Actualizar perfil
 router.put('/profile', updateProfile);
-
-// GET /api/user/subscription - Estado de suscripción
 router.get('/subscription', getSubscription);
-
-// DELETE /api/user/account - Eliminar cuenta
 router.delete('/account', deleteAccount);
 
 export default router;

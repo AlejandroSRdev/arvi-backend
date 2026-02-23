@@ -1,3 +1,9 @@
+/**
+ * Layer: Errors
+ * File: DataAccessFailureError.js
+ * Responsibility:
+ * Classifies a persistence operation failure at the infrastructure boundary, carrying operation and collection context for upstream diagnostic mapping.
+ */
 import { InfrastructureError } from './InfrastructureError.js';
 
 export class DataAccessFailureError extends InfrastructureError {

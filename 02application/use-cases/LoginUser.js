@@ -1,16 +1,8 @@
 /**
- * Login User Use Case (Application Layer)
- *
- * Orchestrates credential-based authentication:
- * 1. Find user by email
- * 2. Verify password against stored hash
- * 3. Update lastLoginAt timestamp
- * 4. Return userId for token generation
- *
- * Does NOT contain:
- * - HTTP concerns
- * - JWT generation (infrastructure responsibility)
- * - Direct access to Firestore
+ * Layer: Application
+ * File: LoginUser.js
+ * Responsibility:
+ * Orchestrates credential-based authentication by verifying email, validating the password hash, and recording the login timestamp.
  */
 
 import { ValidationError, AuthenticationError } from "../../errors/Index.js";
@@ -54,7 +46,6 @@ export async function loginUser(email, password, deps) {
 
   // Step 2: Verify password against stored hash
   if (!user.password) {
-    // User exists but has no password hash stored (legacy data)
     throw new AuthenticationError("Invalid credentials");
   }
 
@@ -67,7 +58,7 @@ export async function loginUser(email, password, deps) {
   // Step 3: Update lastLoginAt
   await userRepository.updateLastLogin(user.id);
 
-  // Step 4: Return userId for JWT generation at the controller level
+  // Return userId only — JWT generation is the controller's responsibility
   return { userId: user.id };
 }
 

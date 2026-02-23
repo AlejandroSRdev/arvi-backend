@@ -1,21 +1,8 @@
 /**
- * User Controller (Infrastructure - HTTP Layer)
- *
- * MIGRADO DESDE: src/controllers/userController.js
- * REFACTORIZADO: 2025-12-29
- * ARQUITECTURA: Hexagonal (Ports & Adapters)
- *
- * RESPONSABILIDAD ÚNICA:
- * - Adaptar HTTP (req/res) → Use Cases
- * - Validar input HTTP
- * - Traducir errores a status codes
- * - NO contiene lógica de negocio
- *
- * LÓGICA MOVIDA A:
- * - application/use-cases/ManageUser.js:getUserProfile
- * - application/use-cases/ManageUser.js:updateUserProfile
- * - application/use-cases/ManageUser.js:deleteUserAccount
- * - application/use-cases/GetSubscriptionStatus.js
+ * Layer: Infrastructure
+ * File: UserController.js
+ * Responsibility:
+ * Adapts HTTP requests to user management use cases and translates application errors into HTTP responses.
  */
 
 import { HTTP_STATUS } from '../HttpStatus.js';
@@ -37,7 +24,6 @@ export function setDependencies(deps) {
 
 /**
  * GET /api/user/profile
- * Obtener perfil del usuario
  */
 export async function getProfile(req, res) {
   try {
@@ -59,7 +45,6 @@ export async function getProfile(req, res) {
 
 /**
  * PUT /api/user/profile
- * Actualizar perfil del usuario
  */
 export async function updateProfile(req, res) {
   try {
@@ -85,7 +70,6 @@ export async function updateProfile(req, res) {
 
 /**
  * GET /api/user/subscription
- * Obtener estado de suscripción
  */
 export async function getSubscription(req, res) {
   try {
@@ -107,7 +91,6 @@ export async function getSubscription(req, res) {
 
 /**
  * DELETE /api/user/account
- * Eliminar cuenta del usuario
  */
 export async function deleteAccount(req, res) {
   try {

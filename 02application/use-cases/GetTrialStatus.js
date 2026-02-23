@@ -1,31 +1,16 @@
 /**
- * Get Trial Status Use Case (Domain)
- *
- * MIGRADO DESDE: src/controllers/energyController.js (líneas 82)
- * EXTRACCIÓN: Obtención de estado del trial
- *
- * Responsabilidades:
- * - Obtener estado actual del trial del usuario
- * - Retornar información de activación y expiración
- * - Coordinar con IUserRepository (port)
- *
- * NO contiene:
- * - Lógica HTTP
- * - Acceso directo a Firestore
- * - Cálculos de tiempo restante (eso en el frontend)
+ * Layer: Application
+ * File: GetTrialStatus.js
+ * Responsibility:
+ * Retrieves the current trial state for a user and returns activation and expiration data.
  */
 
 import { ValidationError, NotFoundError } from "../../errors/Index.js";
 
 /**
- * Obtener estado del trial del usuario
- *
- * MIGRADO DESDE: src/models/Trial.js:getTrialStatus
- * (llamado desde src/controllers/energyController.js:82)
- *
- * @param {string} userId - ID del usuario
- * @param {Object} deps - Dependencias inyectadas {userRepository}
- * @returns {Promise<Object>} Estado del trial
+ * @param {string} userId - User ID
+ * @param {Object} deps - Injected dependencies { userRepository }
+ * @returns {Promise<Object>} Trial state
  */
 export async function getTrialStatus(userId, deps) {
   const { userRepository } = deps;
@@ -40,7 +25,6 @@ export async function getTrialStatus(userId, deps) {
     throw new NotFoundError('User');
   }
 
-  // Retornar estado del trial o valores por defecto
   const trial = user.trial || {};
 
   return {

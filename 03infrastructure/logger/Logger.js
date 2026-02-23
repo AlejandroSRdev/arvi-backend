@@ -1,4 +1,9 @@
-// Logger utility for consistent logging across the application
+/**
+ * Layer: Infrastructure
+ * File: Logger.js
+ * Responsibility:
+ * Provides a structured logging adapter wrapping Node.js console for consistent output across the infrastructure layer.
+ */
 
 export const logger = {
   error(message, error) {

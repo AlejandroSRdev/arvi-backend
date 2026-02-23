@@ -1,25 +1,13 @@
+/**
+ * Layer: Domain
+ * File: HabitSeries.js
+ * Responsibility:
+ * Defines a thematic collection of habit actions, enforcing all structural invariants and deriving rank exclusively from accumulated score.
+ */
+
 import { Action, calculateRankFromScore } from "../value_objects/habits/Index.js";
 
-/**
- * HabitSeries (Domain Entity)
- *
- * Represents a thematic collection of habit-related actions.
- *
- * A HabitSeries:
- * - Has an identity, title and description.
- * - Contains a growing list of Actions (minimum 3).
- * - Accumulates a totalScore over time.
- * - Derives its Rank exclusively from totalScore (rank is NOT stored).
- *
- * Pure domain logic.
- * Defensive by construction.
- */
 export class HabitSeries {
-  /**
-   * Constructor.
-   * Enforces all domain invariants.
-   * Intended to be used only through the static factory method.
-   */
   constructor(
     id,
     title,
@@ -89,7 +77,6 @@ export class HabitSeries {
       throw new Error("HabitSeries lastActivityAt must be a Date");
     }
 
-    // --- State assignment ---
     this.id = id;
     this.title = title;
     this.description = description;
@@ -99,16 +86,13 @@ export class HabitSeries {
     this.lastActivityAt = lastActivityAt;
   }
 
-  /**
-   * Derived rank of the series.
-   * Always calculated from totalScore.
-   */
+  // Rank is never stored; it is always derived from totalScore.
   getRank() {
     return calculateRankFromScore(this.totalScore);
   }
 
   /**
-   * Factory method for creating a new HabitSeries.
+   * Factory method — the sole valid entry point to construct a HabitSeries.
    */
   static create(params) {
     const now = new Date();

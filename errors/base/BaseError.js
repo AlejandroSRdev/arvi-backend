@@ -1,3 +1,9 @@
+/**
+ * Layer: Errors
+ * File: BaseError.js
+ * Responsibility:
+ * Defines the shared error contract inherited by all domain, application, and infrastructure errors, establishing uniform code, message, metadata, and cause propagation.
+ */
 export class BaseError extends Error {
   constructor(params) {
     super(params.message);

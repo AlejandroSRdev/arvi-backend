@@ -1,8 +1,8 @@
 /**
- * Plan (Domain Entity / Value Object)
- *
- * Representa la identidad de un plan.
- * Las reglas y límites viven en PlanPolicy.
+ * Layer: Domain
+ * File: Plan.js
+ * Responsibility:
+ * Identifies and classifies plan types, and resolves the effective plan when a trial is active.
  */
 
 export function normalizePlanId(planId) {
@@ -23,9 +23,7 @@ export function isPaidPlan(planId) {
   return id === 'mini' || id === 'base' || id === 'pro';
 }
 
-/**
- * Devuelve el plan efectivo considerando trial activo
- */
+// A freemium user with an active trial is treated as trial for all downstream decisions.
 export function getEffectivePlanId(planId, isTrialActive = false) {
   const normalized = normalizePlanId(planId);
 

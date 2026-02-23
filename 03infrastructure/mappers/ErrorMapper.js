@@ -1,3 +1,10 @@
+/**
+ * Layer: Infrastructure
+ * File: ErrorMapper.js
+ * Responsibility:
+ * Translates domain and application error codes into HTTP status and response body pairs.
+ */
+
 import { HTTP_STATUS } from '../http/HttpStatus.js';
 
 /**

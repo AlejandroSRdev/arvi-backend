@@ -1,23 +1,8 @@
 /**
- * Create Habit Series Use Case (Application Layer)
- *
- * ARCHITECTURE: Hexagonal (Ports & Adapters)
- *
- * Orchestrates the full flow of habit series creation via AI
- * with deferred energy consumption and a single atomic commit.
- *
- * Flow:
- * 1. Pre-AI validation (user, plan, feature access, limit, energy)
- * 2. AI execution (3 passes: creative -> structure -> schema)
- * 3. Energy accumulation
- * 4. Post-AI validation (schema compliance)
- * 5. Atomic commit (persist series + deduct energy + increment counter)
- * 6. Return success result
- *
- * Dependencies (injected):
- * - userRepository: IUserRepository
- * - habitSeriesRepository: IHabitSeriesRepository
- * - aiProvider: IAIProvider
+ * Layer: Application
+ * File: CreateHabitSeriesUseCase.js
+ * Responsibility:
+ * Orchestrates AI-driven habit series creation with pre-AI validation, three-pass AI execution, and atomic persistence of series and energy.
  */
 
 import { hasFeatureAccess, getPlan } from '../../01domain/policies/PlanPolicy.js';
@@ -36,9 +21,6 @@ import JsonSchemaHabitSeriesPrompt from '../prompts/habit_series_prompts/JsonSch
 import { mapAIOutputToHabitSeries } from '../mappers/HabitSeriesFromAIMapper.js';
 import { sanitizeUserInput } from '../input/SanitizeUserInput.js';
 
-/**
- * Expected schema for habit series (AI output structure)
- */
 const HABIT_SERIES_SCHEMA = {
   type: 'object',
   required: ['title', 'description', 'actions'],
@@ -62,9 +44,6 @@ const HABIT_SERIES_SCHEMA = {
   }
 };
 
-/**
- * Determine effective plan considering trial status
- */
 function determineEffectivePlan(user) {
   let effectivePlan = user.plan || 'freemium';
   if (effectivePlan === 'freemium' && user.trial?.activo) {
@@ -73,9 +52,6 @@ function determineEffectivePlan(user) {
   return effectivePlan;
 }
 
-/**
- * Validate that parsed data matches expected schema
- */
 function validateSchema(data) {
   if (!data || typeof data !== 'object') {
     return { valid: false, error: 'Data is not an object' };
@@ -136,7 +112,6 @@ export async function createHabitSeries(userId, payload, deps) {
 
   const { userRepository, habitSeriesRepository, aiProvider } = deps;
 
-  // Validate dependencies
   if (!userRepository) {
     throw new ValidationError('Dependency required: userRepository');
   }
@@ -147,26 +122,20 @@ export async function createHabitSeries(userId, payload, deps) {
     throw new ValidationError('Dependency required: aiProvider');
   }
 
-  // Validate payload
   if (!payload?.language || !payload?.testData) {
     throw new ValidationError('Missing required payload fields: language, testData');
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
   // STEP 1: PRE-AI VALIDATION
-  // ═══════════════════════════════════════════════════════════════════════
 
-  // 1.1 Load user
   const user = await userRepository.getUser(userId);
   if (!user) {
     throw new ValidationError('USER_NOT_FOUND');
   }
 
-  // 1.2 Determine effective plan
   const effectivePlan = determineEffectivePlan(user);
   const planConfig = getPlan(effectivePlan, user.trial?.activo);
 
-  // 1.3 Validate feature access
   const hasAccess = hasFeatureAccess(effectivePlan, 'habits.series.create');
   if (!hasAccess) {
     throw new AuthorizationError(
@@ -174,7 +143,6 @@ export async function createHabitSeries(userId, payload, deps) {
     );
   }
 
-  // 1.4 Validate active series limit
   const limits = user.limits || {};
   const activeSeriesCount = limits.activeSeriesCount || 0;
   const maxActiveSeries = planConfig.maxActiveSeries || 0;
@@ -183,26 +151,24 @@ export async function createHabitSeries(userId, payload, deps) {
     throw new MaxActiveSeriesReachedError(maxActiveSeries, activeSeriesCount);
   }
 
-  // 1.5 Validate user has sufficient energy (read-only pre-check)
+  // Read-only pre-check — energy is not deducted until the atomic commit
   const currentEnergy = user.energy?.currentAmount || 0;
   if (currentEnergy <= 0) {
     throw new InsufficientEnergyError(1, currentEnergy);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 2: AI EXECUTION (3 passes) — energy accumulated, not deducted
-  // ═══════════════════════════════════════════════════════════════════════
+  // STEP 2: AI EXECUTION (3 passes) — energy accumulated in memory, not deducted yet
 
   const { language, assistantContext, testData } = payload;
   let totalEnergyConsumed = 0;
 
-  // Sanitize raw user input once, before any AI processing
+  // Sanitize before any AI processing to prevent prompt injection
   const sanitizedTestData = Object.fromEntries(
     Object.entries(testData).map(([key, value]) => [key, sanitizeUserInput(value)])
   );
   const sanitizedContext = assistantContext ? sanitizeUserInput(assistantContext) : '';
 
-  // Pass 1: Creative generation (human-readable text)
+  // Pass 1 — creative: generate free-form human-readable content
   const creativeMessages = CreativeHabitSeriesPrompt({
     language,
     assistantContext: sanitizedContext,
@@ -226,7 +192,7 @@ export async function createHabitSeries(userId, payload, deps) {
   totalEnergyConsumed += creativeResponse.energyConsumed;
   const rawCreativeText = creativeResponse.content;
 
-  // Pass 2: Structure extraction (text -> JSON)
+  // Pass 2 — structure: extract JSON from creative text
   const structureMessages = StructureHabitSeriesPrompt({
     language,
     rawText: rawCreativeText
@@ -249,7 +215,7 @@ export async function createHabitSeries(userId, payload, deps) {
   totalEnergyConsumed += structureResponse.energyConsumed;
   const rawStructuredText = structureResponse.content;
 
-  // Pass 3: Schema enforcement (strict JSON validation)
+  // Pass 3 — schema: enforce strict JSON schema compliance
   const schemaMessages = JsonSchemaHabitSeriesPrompt({
     content: rawStructuredText,
     schema: HABIT_SERIES_SCHEMA
@@ -277,9 +243,7 @@ export async function createHabitSeries(userId, payload, deps) {
     timestamp: new Date().toISOString()
   });
 
-  // ═══════════════════════════════════════════════════════════════════════
   // STEP 3: POST-AI VALIDATION
-  // ═══════════════════════════════════════════════════════════════════════
 
   let parsedSeries;
   try {
@@ -301,9 +265,7 @@ export async function createHabitSeries(userId, payload, deps) {
 
   console.log('[SCHEMA] [Habit Series] Schema validation OK');
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 4: ATOMIC COMMIT (persist + energy deduction + counter)
-  // ═══════════════════════════════════════════════════════════════════════
+  // STEP 4: ATOMIC COMMIT — persist series, deduct energy, and increment counter in one transaction
 
   console.log('[ATOMIC_COMMIT_START]', {
     userId,
@@ -336,9 +298,7 @@ export async function createHabitSeries(userId, payload, deps) {
     throw error;
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 5: RETURN HABIT SERIES ENTITY
-  // ═══════════════════════════════════════════════════════════════════════
+  // STEP 5: MAP AND RETURN DOMAIN ENTITY
 
   const habitSeries = mapAIOutputToHabitSeries(seriesId, parsedSeries);
 

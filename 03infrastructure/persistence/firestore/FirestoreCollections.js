@@ -1,4 +1,9 @@
-// Description: This module defines and exports Firestore collection names as constants for use throughout the application.
+/**
+ * Layer: Infrastructure
+ * File: FirestoreCollections.js
+ * Responsibility:
+ * Defines Firestore collection name constants used by all Firestore repository adapters.
+ */
 
 export const FIRESTORE_COLLECTIONS = {
   USERS: 'users',

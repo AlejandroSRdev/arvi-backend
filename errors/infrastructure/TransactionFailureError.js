@@ -1,3 +1,9 @@
+/**
+ * Layer: Errors
+ * File: TransactionFailureError.js
+ * Responsibility:
+ * Classifies a database transaction failure at the infrastructure boundary, carrying the failed operation name for upstream diagnostic mapping.
+ */
 import { InfrastructureError } from './InfrastructureError.js';
 
 export class TransactionFailureError extends InfrastructureError {

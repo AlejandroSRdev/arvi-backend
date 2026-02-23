@@ -1,7 +1,8 @@
 /**
- * Auth Routes (Infrastructure - HTTP)
- * Responsabilidades:
- * - Definición de rutas de autenticación
+ * Layer: Infrastructure
+ * File: Auth.routes.js
+ * Responsibility:
+ * Registers Express routes for authentication endpoints, binding rate limiting middleware and controllers.
  */
 
 import express from 'express';
@@ -10,10 +11,7 @@ import { authRateLimiter } from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
-// POST /api/auth/register - Registrar nuevo usuario
 router.post('/register', authRateLimiter, register);
-
-// POST /api/auth/login - Login de usuario
 router.post('/login', authRateLimiter, login);
 
 export default router;

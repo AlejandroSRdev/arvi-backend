@@ -1,15 +1,8 @@
 /**
- * Global Error Middleware (Infrastructure - HTTP)
- *
- * Centralized error handling for all Express routes.
- *
- * Responsibilities:
- * - Detect BaseError subclasses and map them to HTTP responses via mapErrorToHttp
- * - Log all errors with structured context
- * - Return consistent HTTP error responses
- * - Handle unknown/unexpected errors safely
- *
- * This is the ONLY place where errors are logged and translated to HTTP.
+ * Layer: Infrastructure
+ * File: errorMiddleware.js
+ * Responsibility:
+ * Express error middleware that maps BaseError subclasses to HTTP responses and logs all errors before responding.
  */
 
 import { BaseError } from '../../../errors/base/BaseError.js';
@@ -17,7 +10,7 @@ import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/Logger.js';
 
 /**
- * Express error middleware (must have 4 parameters for Express to recognize it)
+ * Must have 4 parameters for Express to recognize it as an error-handling middleware.
  *
  * @param {unknown} err - The error thrown or passed via next(err)
  * @param {import('express').Request} req - Express request
@@ -37,7 +30,6 @@ export function errorMiddleware(err, req, res, next) {
     return res.status(httpError.status).json(httpError.body);
   }
 
-  // Unknown / unexpected error
   logger.error(`[${req.method}] ${req.path} — Unexpected error`, {
     name: err?.name,
     message: err?.message,

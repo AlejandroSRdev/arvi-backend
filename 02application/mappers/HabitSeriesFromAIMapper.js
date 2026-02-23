@@ -1,11 +1,8 @@
 /**
- * HabitSeriesFromAIMapper (Application Layer)
- *
- * Transforms parsed AI output into a valid HabitSeries domain entity.
- *
- * This is the ONLY place where AI output structure is coupled
- * to domain entity construction. The domain itself remains
- * fully agnostic of AI concerns.
+ * Layer: Application
+ * File: HabitSeriesFromAIMapper.js
+ * Responsibility:
+ * Maps validated AI output into a HabitSeries domain entity, coupling AI output structure to domain construction.
  */
 
 import { HabitSeries } from "../../01domain/entities/HabitSeries.js";

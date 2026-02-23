@@ -1,11 +1,8 @@
 /**
- * Password Hasher Port (Interface)
- *
- * PATTERN: Hexagonal Architecture - Port
- *
- * Defines the contract for password hashing operations.
- * The application layer depends on this interface,
- * not on any specific hashing library.
+ * Layer: Domain
+ * File: IPasswordHasher.js
+ * Responsibility:
+ * Defines the contract for password hashing and verification, keeping the domain independent of any specific hashing library.
  */
 
 export class IPasswordHasher {

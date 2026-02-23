@@ -1,10 +1,8 @@
 /**
- * Password Hasher (Infrastructure)
- *
- * Implements: IPasswordHasher
- *
- * Uses Node.js built-in crypto.scrypt for password hashing.
- * No external dependencies required.
+ * Layer: Infrastructure
+ * File: PasswordHasher.js
+ * Responsibility:
+ * Implements IPasswordHasher using Node.js crypto.scrypt to hash and verify passwords.
  */
 
 import { scrypt, randomBytes, timingSafeEqual } from "node:crypto";

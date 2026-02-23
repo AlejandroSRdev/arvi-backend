@@ -1,21 +1,13 @@
 /**
- * Rate Limiter Middleware (Infrastructure - HTTP)
- *
- * MIGRADO DESDE: src/middleware/rateLimiter.js (COMPLETO)
- * SIN CAMBIOS DE COMPORTAMIENTO
- *
- * Responsabilidades:
- * - Limitar tasa de requests
- * - Prevenir abuso
+ * Layer: Infrastructure
+ * File: rateLimiter.js
+ * Responsibility:
+ * Applies express-rate-limit to HTTP endpoints using configured thresholds to reject excess requests.
  */
 
 import rateLimit from 'express-rate-limit';
 import { RATE_LIMITS } from '../../config/rateLimits.js';
 
-/**
- * Rate limiter para endpoints de IA
- * MIGRADO DESDE: src/middleware/rateLimiter.js:aiRateLimiter (líneas 13-22)
- */
 export const aiRateLimiter = rateLimit({
   windowMs: RATE_LIMITS.AI_CHAT.windowMs,
   max: RATE_LIMITS.AI_CHAT.max,
@@ -27,10 +19,6 @@ export const aiRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-/**
- * Rate limiter para autenticación
- * MIGRADO DESDE: src/middleware/rateLimiter.js:authRateLimiter (líneas 27-36)
- */
 export const authRateLimiter = rateLimit({
   windowMs: RATE_LIMITS.AUTH.windowMs,
   max: RATE_LIMITS.AUTH.max,
@@ -42,14 +30,6 @@ export const authRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-/**
- * Rate limiter general
- * MIGRADO DESDE: src/middleware/rateLimiter.js:generalRateLimiter (líneas 41-50)
- *
- * Nota:
- * - Si quiere que esto también salga de config, añada RATE_LIMITS.GENERAL en rateLimits.js
- * - Por ahora se mantiene EXACTAMENTE igual (mismo comportamiento) sin depender de RATE_LIMITS
- */
 export const generalRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
   max: 100, // 100 requests por minuto
@@ -66,4 +46,3 @@ export default {
   authRateLimiter,
   generalRateLimiter,
 };
-

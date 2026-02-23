@@ -1,24 +1,10 @@
 /**
- * Domain Validator
- *
- * MIGRADO DESDE: src/utils/validator.js (COMPLETO)
- *
- * Validaciones de dominio puras (reglas de negocio e invariantes).
- * NO contiene lógica HTTP, BD o infraestructura.
- *
- * Responsabilidades:
- * - Validar invariantes de entidades
- * - Validar reglas de negocio básicas
- * - Validar formatos y estructuras del dominio
+ * Layer: Domain
+ * File: InputValidator.js
+ * Responsibility:
+ * Validates the structural integrity of domain inputs required for AI interactions.
  */
 
-/**
- * Validar estructura de mensajes para IA
- * MIGRADO DESDE: src/utils/validator.js:validateMessages (líneas 21-31)
- *
- * @param {Array} messages - Array de mensajes a validar
- * @returns {boolean} true si son válidos
- */
 export function validateMessages(messages) {
   if (!Array.isArray(messages)) {
     return false;

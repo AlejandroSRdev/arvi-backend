@@ -1,4 +1,9 @@
-// domain/entities/Energy.js
+/**
+ * Layer: Domain
+ * File: Energy.js
+ * Responsibility:
+ * Encapsulates the domain rules governing user energy consumption and daily recharge eligibility.
+ */
 
 export function needsDailyRecharge(lastRechargeDate) {
   if (!lastRechargeDate) return true;

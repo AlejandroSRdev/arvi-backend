@@ -1,20 +1,8 @@
 /**
- * AI Provider Router (Infrastructure Layer)
- *
- * ARCHITECTURE: Hexagonal (Ports & Adapters)
- * DATE: 2026-01-27
- *
- * RESPONSIBILITY:
- * Routes AI calls to the correct adapter based on model name.
- * This solves the problem of having a single adapter that cannot
- * handle multiple providers (Gemini + OpenAI).
- *
- * ROUTING LOGIC:
- * - Models starting with 'gpt-' or 'o1-' → OpenAIAdapter
- * - Models starting with 'gemini-' → GeminiAdapter
- * - Unknown models → Fail-fast with clear error
- *
- * IMPLEMENTS: domain/ports/IAIProvider.js
+ * Layer: Infrastructure
+ * File: AIProviderRouter.js
+ * Responsibility:
+ * Implements IAIProvider by routing AI calls to the correct external adapter based on model name prefix.
  */
 
 import { GeminiAdapter } from './gemini/GeminiAdapter.js';
@@ -85,8 +73,8 @@ export class AIProviderRouter extends IAIProvider {
   }
 
   /**
-   * Route AI call with function type
-   * Note: This delegates to callAI since the model is determined by the caller
+   * Route AI call with function type.
+   * Model selection is determined by the caller; defaults to Gemini.
    *
    * @param {string} userId - User ID
    * @param {Array<Object>} messages - Array of messages [{role, content}]
