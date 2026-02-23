@@ -11,8 +11,8 @@
  */
 
 import { IUserRepository } from "../../../01domain/ports/IUserRepository.js";
-import { db, FieldValue } from "./FirebaseConfig.js";
 import { DataAccessFailureError } from "../../../errors/Index.js";
+import { db, FieldValue } from "./FirebaseConfig.js";
 
 const USERS_COLLECTION = "users";
 
@@ -150,18 +150,6 @@ export class FirestoreUserRepository extends IUserRepository {
 
     await userRef.update({
       lastLoginAt: FieldValue.serverTimestamp(),
-    });
-  }
-
-  /**
-   * Increment weekly summaries counter
-   */
-  async incrementWeeklySummaries(userId) {
-    const userRef = db.collection(USERS_COLLECTION).doc(userId);
-
-    await userRef.update({
-      'limits.weeklySummariesUsed': FieldValue.increment(1),
-      updatedAt: FieldValue.serverTimestamp(),
     });
   }
 

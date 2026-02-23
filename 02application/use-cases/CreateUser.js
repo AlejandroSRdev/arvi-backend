@@ -17,11 +17,11 @@
  * - Direct access to Firestore
  */
 import { randomUUID } from "crypto";
-import { ValidationError } from "../../errors/Index.js";
 import { User } from "../../01domain/entities/User.js";
-import { Trial } from "../../01domain/value_objects/user/Trial.js";
 import { Energy } from "../../01domain/value_objects/user/Energy.js";
 import { Limits } from "../../01domain/value_objects/user/Limits.js";
+import { Trial } from "../../01domain/value_objects/user/Trial.js";
+import { ValidationError } from "../../errors/Index.js";
 
 /**
  * Create a new user in the system
@@ -37,6 +37,7 @@ import { Limits } from "../../01domain/value_objects/user/Limits.js";
 export async function createUser(email, password, deps) {
   const { userRepository, passwordHasher } = deps;
 
+  // Defensive checks
   if (!userRepository) {
     throw new ValidationError("Dependency required: userRepository");
   }

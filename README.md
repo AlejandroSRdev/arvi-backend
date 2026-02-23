@@ -1,17 +1,37 @@
 # Arvi Backend Service
 
-## Overview
+## Core Intent
 
-Arvi Backend Service is a Node.js backend designed to support AI-assisted workflows and core business operations.
+Arvi Backend Service is a backend system designed to provide **regulated access to structured, personalized AI-generated recommendations**.
 
-The system is built with a focus on:
+Its central purpose is to:
 
-- Clear architectural boundaries
-- Explicit business logic
-- Controlled integration with external services
-- Maintainability over time
+> Generate structured habit-based recommendations tailored to individual users, under explicit business rules governing identity, usage, and resource consumption.
 
-This repository represents an evolving backend system, progressively refined under real deployment constraints.
+The system does not merely generate AI output.  
+It enforces domain rules around access, limits, and controlled execution.
+
+---
+
+## System Capabilities
+
+The backend currently provides:
+
+- Structured generation of habit-based recommendations  
+  - Output validated as structured JSON  
+  - Explicit format (actions, difficulty levels, metadata)
+
+- Personalization  
+  - Based on user test responses  
+  - Context-aware prompts for the assistant  
+  - Deterministic formatting constraints
+
+- Regulated access  
+  - Authentication and identity management  
+  - Daily usage limits  
+  - Energy-based consumption model  
+
+The system acts as a **controlled orchestrator of AI capabilities**, ensuring domain invariants are respected before and after AI execution.
 
 ---
 
@@ -20,11 +40,13 @@ This repository represents an evolving backend system, progressively refined und
 The backend is responsible for:
 
 1. Enforcing domain rules and invariants through explicit use cases.
-2. Orchestrating AI-assisted operations via external providers.
+2. Regulating access to AI-powered recommendation generation.
 3. Managing authentication, user data, and core application flows.
-4. Exposing HTTP endpoints through a thin Express adapter.
+4. Orchestrating AI providers through isolated infrastructure adapters.
+5. Exposing HTTP endpoints via a thin Express interface.
 
-The service acts as an orchestrator of external capabilities rather than embedding AI or infrastructure logic directly into the core.
+The service does not embed AI logic in the domain.  
+It coordinates AI execution under business constraints.
 
 ---
 
@@ -32,19 +54,37 @@ The service acts as an orchestrator of external capabilities rather than embeddi
 
 The project follows a **Hexagonal Architecture (Ports & Adapters)** approach.
 
+
 domain/ → Business logic (framework-agnostic)
 application/ → Use cases and orchestration
 infrastructure/ → HTTP layer, database, and external adapters
 
 
-### Design Principles
+### Architectural Principles
 
 - Dependencies point inward.
-- The domain layer does not depend on frameworks or external services.
-- Controllers remain thin and contain no business logic.
-- Infrastructure concerns are isolated from core logic.
+- The domain layer remains independent of frameworks and providers.
+- Controllers are thin and contain no business logic.
+- Infrastructure concerns are isolated and replaceable.
+- AI providers are accessed through adapters, not directly from the core.
 
-This structure supports testability, replaceability of external services, and controlled system evolution.
+This structure enables:
+
+- Clear responsibility boundaries
+- Replaceability of external services
+- Controlled system evolution under operational constraints
+
+---
+
+## AI Integration
+
+AI providers are accessed exclusively through infrastructure adapters.
+
+- The domain layer is unaware of AI implementations.
+- The application layer coordinates AI execution as part of a use case.
+- Provider-specific details remain isolated.
+
+This design allows the system to evolve independently of specific AI vendors or models.
 
 ---
 
@@ -59,45 +99,22 @@ This structure supports testability, replaceability of external services, and co
 
 ---
 
-## AI Integration
+## Deployment & Operational State
 
-AI providers are accessed through infrastructure adapters.
+The service is deployed in a live environment and supports:
 
-- The domain layer has no knowledge of AI implementations.
-- The application layer coordinates AI calls when required.
-- Provider-specific details remain isolated.
-
-This allows the backend to remain stable even if AI vendors or models change.
-
----
-
-## Deployment & Operation
-
-The service is deployed in a production environment and supports:
-
-- User authentication flows
+- Authenticated user flows
 - AI-assisted feature execution
+- Structured JSON output validation
+- Explicit domain rule enforcement
 - Structured error handling
-- Controlled trace logging
+- Controlled logging for traceability
 
-Observability and operational practices are continuously refined as usage evolves.
+Operational practices are being refined under real usage constraints, with a focus on:
 
----
-
-## Evolution
-
-Advanced AI pipelines (e.g., RAG or embedding-based retrieval systems) are not implemented in this service.
-
-If required, they will be introduced as a separate service to preserve architectural boundaries and scalability.
-
----
-
-## Non-Goals
-
-- No business logic inside controllers
-- No direct AI logic inside the domain layer
-- No unnecessary microservice fragmentation
-- No technology-driven refactors without clear justification
+- Controlled exposure
+- Observability
+- Stability under minimal operational load
 
 ---
 

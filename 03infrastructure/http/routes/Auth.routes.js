@@ -1,16 +1,11 @@
 /**
  * Auth Routes (Infrastructure - HTTP)
- *
- * MIGRADO DESDE: src/routes/auth.routes.js (COMPLETO)
- * SIN CAMBIOS DE COMPORTAMIENTO
- *
  * Responsabilidades:
  * - Definición de rutas de autenticación
  */
 
 import express from 'express';
-import { register, login } from '../controllers/AuthController.js';
-import { authenticate } from '../middlewares/authenticate.js';
+import { login, register } from '../controllers/AuthController.js';
 import { authRateLimiter } from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
