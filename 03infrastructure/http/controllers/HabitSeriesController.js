@@ -109,7 +109,16 @@ export async function createHabitSeriesEndpoint(req, res, next) {
     const responseDTO = toHabitSeriesOutputDTO(habitSeries);
 
     return res.status(HTTP_STATUS.CREATED).json(responseDTO);
+
   } catch (err) {
+
+    console.error('🚨 [Controller Error] CreateHabitSeries failed');
+    console.error('📌 Name:', err?.name);
+    console.error('📌 Message:', err?.message);
+    console.error('📌 Status:', err?.response?.status || err?.status);
+    console.error('📌 Data:', err?.response?.data || null);
+    console.error('📌 Stack:', err?.stack);
+
     return next(err);
   }
 }
