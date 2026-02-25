@@ -78,6 +78,7 @@ function validateRequestBody(body) {
  * - lastActivityAt: string (ISO)
  */
 export async function createHabitSeriesEndpoint(req, res, next) {
+  console.log('🟢 Controller reached');
   try {
     const userId = req.user?.uid;
 
