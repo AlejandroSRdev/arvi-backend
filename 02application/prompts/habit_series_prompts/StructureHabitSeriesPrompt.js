@@ -17,9 +17,9 @@ function StructureHabitSeriesPrompt({
   language,
   rawText
 }) {  
-  const dificultadBaja = Difficulty.LOW;
-  const dificultadMedia = Difficulty.MEDIUM;
-  const dificultadAlta = Difficulty.HIGH;
+  const lowDifficulty = Difficulty.LOW;
+  const mediumDifficulty = Difficulty.MEDIUM;
+  const highDifficulty = Difficulty.HIGH;
 
   const systemPrompt = language === 'en'
     ? `RETURN ONLY ONE JSON OBJECT.
@@ -42,7 +42,7 @@ RULES:
 - "descripcion" must contain the 10-line (or fewer) explanation from the first pass.
 - "acciones" must be between 3 and 5 items.
 - Each action description must be <= 5 lines.
-- Difficulty must be one of: "${dificultadBaja}", "${dificultadMedia}", "${dificultadAlta}".
+- Difficulty must be one of: "${lowDifficulty}", "${mediumDifficulty}", "${highDifficulty}".
 - DO NOT add new text.
 - DO NOT alter meaning.
 - DO NOT expand or shorten excessively.`
@@ -66,7 +66,7 @@ REGLAS:
 - "descripcion" debe contener la explicación de 10 líneas o menos generada en la primera pasada.
 - "acciones" debe tener entre 3 y 5 elementos.
 - Cada descripción debe tener máximo 5 líneas.
-- La dificultad debe ser: "${dificultadBaja}", "${dificultadMedia}" o "${dificultadAlta}".
+- La dificultad debe ser: "${lowDifficulty}", "${mediumDifficulty}" o "${highDifficulty}".
 - NO añadir texto nuevo.
 - NO alterar el significado.
 - NO expandir ni resumir en exceso.`;

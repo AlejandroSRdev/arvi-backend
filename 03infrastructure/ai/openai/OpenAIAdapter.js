@@ -41,7 +41,8 @@ export class OpenAIAdapter extends IAIProvider {
       });
 
       const content = completion.choices[0].message.content;
-      const tokensUsed = completion.usage.total_tokens;
+      const { prompt_tokens, completion_tokens, total_tokens } = completion.usage;
+      const tokensUsed = total_tokens;
 
       // OpenAI calls always return energyConsumed: 0 (not a creative generation provider)
       const energyToConsume = 0;
@@ -53,7 +54,8 @@ export class OpenAIAdapter extends IAIProvider {
         energyConsumed: 0,
       };
 
-      logger.info(`[OpenAI] Response received - Tokens: ${tokensUsed}, Energy: 0 (GPT does not consume)`);
+      logger.info(`📊 [OpenAI Usage] Prompt: ${prompt_tokens}t, Response: ${completion_tokens}t, Total: ${total_tokens}t`);
+      logger.info(`[OpenAI] Response received - Tokens: ${completion_tokens}, Energy: 0 (GPT does not consume)`);
 
       return response;
 
