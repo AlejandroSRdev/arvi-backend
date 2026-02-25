@@ -1,0 +1,60 @@
+🟢 Controller reached
+Menu
+[USE-CASE] [Habit Series] CreateHabitSeries started for user 23a8d02f-dede-428b-8613-131bb01654dd
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[INFO] [AIRouter] Routing to GeminiAdapter for model: gemini-2.5-flash
+[INFO] 🧠 [Gemini] Calling model: gemini-2.5-flash
+[INFO] 📊 [Gemini Usage - REAL] Prompt: 877t, Response: 36t, Total: 1773t
+[INFO] ⚡ [Gemini Energy] Prompt(est): 1070t, Response(est): 62t, Total(est): 383t → Energy: 4
+[INFO] ✅ [Gemini] Response received - Tokens(real): 1773, Energy(domain): 4
+[AI_STEP] {
+  step: 'creative',
+  energyConsumed: 4,
+  timestamp: '2026-02-25T11:21:33.067Z'
+}
+[INFO] [AIRouter] Routing to OpenAIAdapter for model: gpt-4o-mini
+[INFO] [OpenAI] Calling model: gpt-4o-mini
+[INFO] 📊 [OpenAI Usage] Prompt: 427t, Response: 225t, Total: 652t
+[INFO] [OpenAI] Response received - Tokens: 225, Energy: 0 (GPT does not consume)
+[AI_STEP] {
+  step: 'structure',
+  energyConsumed: 0,
+  timestamp: '2026-02-25T11:21:37.819Z'
+}
+[INFO] [AIRouter] Routing to OpenAIAdapter for model: gpt-4o-mini
+[INFO] [OpenAI] Calling model: gpt-4o-mini
+[INFO] 📊 [OpenAI Usage] Prompt: 456t, Response: 225t, Total: 681t
+[INFO] [OpenAI] Response received - Tokens: 225, Energy: 0 (GPT does not consume)
+[AI_STEP] {
+  step: 'schema',
+  energyConsumed: 0,
+  timestamp: '2026-02-25T11:21:42.564Z'
+}
+[ENERGY_ACCUMULATED] {
+  totalEnergyConsumed: 4,
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  timestamp: '2026-02-25T11:21:42.564Z'
+}
+[SCHEMA] [Habit Series] Validating AI output against schema, actions=0
+[SCHEMA] [Habit Series] Schema validation OK
+[ATOMIC_COMMIT_START] {
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  totalEnergyConsumed: 4,
+  timestamp: '2026-02-25T11:21:42.564Z'
+}
+[ATOMIC_COMMIT_SUCCESS] {
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  totalEnergyConsumed: 4,
+  timestamp: '2026-02-25T11:21:42.686Z'
+}
+[MAPPER] [Application] mapAIOutputToHabitSeries called for id=1772018502617, actions=4
+[MAPPER] [Application] mapAIOutputToHabitSeries OK → title="Deep Work Revival: Strategic Focus and Consistency", actions=4
+[MAPPER] [Infrastructure] toHabitSeriesOutputDTO called for id=1772018502617, rank=bronze
+
