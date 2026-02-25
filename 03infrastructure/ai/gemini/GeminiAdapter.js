@@ -5,21 +5,17 @@
  * Implements IAIProvider by forwarding generation requests to the Google Gemini API and normalizing responses.
  */
 
-import { getModel } from './GeminiConfig.js';
 import { IAIProvider } from '../../../01domain/ports/IAIProvider.js';
 import { InfrastructureError } from '../../../errors/infrastructure/InfrastructureError.js';
 import { logger } from '../../logger/Logger.js';
+import { getModel } from './GeminiConfig.js';
 
 /**
- * Estimate token usage for Gemini responses.
- *
- * This is a deterministic approximation based on the original implementation.
+ * Heuristic fallback token estimation.
+ * Used only if usageMetadata is not available.
  *
  * Formula:
  *   tokens ≈ text.length / 3.7
- *
- * @param {string} text
- * @returns {number}
  */
 function calculateGeminiTokens(text) {
   if (!text || typeof text !== 'string') return 0;
@@ -27,18 +23,8 @@ function calculateGeminiTokens(text) {
 }
 
 /**
- * Compute energy consumption for a Gemini call.
- *
- * Energy is derived from both prompt and response size:
- *
- * 1. promptTokens = calculateGeminiTokens(prompt)
- * 2. responseTokens = calculateGeminiTokens(response)
- * 3. total = responseTokens + (promptTokens × 0.30)
- * 4. energy = ceil(total / 100)
- *
- * @param {string} prompt
- * @param {string} response
- * @returns {number}
+ * Domain-level energy calculation.
+ * (Intentionally independent from real economic token measurement)
  */
 function calculateGeminiEnergy(prompt, response) {
   const tokensPrompt = calculateGeminiTokens(prompt);
@@ -46,34 +32,15 @@ function calculateGeminiEnergy(prompt, response) {
   const totalTokens = Math.round(tokensResponse + (tokensPrompt * 0.30));
   const energy = Math.ceil(totalTokens / 100);
 
-  console.log(
-    `📊 [Gemini Energy] Prompt: ${tokensPrompt}t, Response: ${tokensResponse}t, Total: ${totalTokens}t → Energy: ${energy}`
+  logger.info(
+    `⚡ [Gemini Energy] Prompt(est): ${tokensPrompt}t, Response(est): ${tokensResponse}t, Total(est): ${totalTokens}t → Energy: ${energy}`
   );
 
   return energy;
 }
 
-/**
- * Gemini adapter implementing the IAIProvider port.
- *
- * This adapter performs no orchestration, validation, or flow control.
- * All decisions about when and why Gemini is called belong to the use case.
- */
 export class GeminiAdapter extends IAIProvider {
 
-  /**
-   * Universal Gemini call.
-   *
-   * @param {string} userId - User identifier (used only for logging)
-   * @param {Array<Object>} messages - [{ role, content }] prepared by the application layer
-   * @param {Object} options
-   * @param {string} options.model - Gemini model (default: gemini-2.5-flash)
-   * @param {number} options.temperature - Sampling temperature
-   * @param {number} options.maxTokens - Output token limit
-   * @param {boolean} options.forceJson - Included for interface parity (not used here)
-   *
-   * @returns {Promise<Object>} { content, model, tokensUsed, energyConsumed }
-   */
   async callAI(userId, messages, options = {}) {
     try {
       const {
@@ -83,11 +50,10 @@ export class GeminiAdapter extends IAIProvider {
         forceJson = false, // intentionally unused
       } = options;
 
-      console.log(`🧠 [Gemini] Calling model: ${model}`);
+      logger.info(`🧠 [Gemini] Calling model: ${model}`);
 
       const geminiModel = getModel(model);
 
-      // Convert messages to a single Gemini-compatible prompt
       const prompt = messages.map(m => {
         if (m.role === 'system') return `[SYSTEM INSTRUCTIONS]\n${m.content}`;
         if (m.role === 'assistant') return `[ASSISTANT]\n${m.content}`;
@@ -105,9 +71,40 @@ export class GeminiAdapter extends IAIProvider {
       });
 
       const content = result.response.text();
-      const tokensUsed = calculateGeminiTokens(content);
 
-      // Only Gemini consumes internal energy units (creative generation)
+      // ===== REAL TOKEN EXTRACTION =====
+      const usage = result.response?.usageMetadata;
+
+      let promptTokens;
+      let completionTokens;
+      let totalTokens;
+
+      if (usage) {
+        promptTokens = usage.promptTokenCount ?? 0;
+        completionTokens = usage.candidatesTokenCount ?? 0;
+        totalTokens = usage.totalTokenCount ?? (promptTokens + completionTokens);
+
+        logger.info(
+          `📊 [Gemini Usage - REAL] Prompt: ${promptTokens}t, Response: ${completionTokens}t, Total: ${totalTokens}t`
+        );
+      } else {
+        // Fallback defensive estimation
+        promptTokens = calculateGeminiTokens(prompt);
+        completionTokens = calculateGeminiTokens(content);
+        totalTokens = promptTokens + completionTokens;
+
+        logger.warn(
+          '[Gemini] usageMetadata not available — using heuristic token estimation'
+        );
+
+        logger.info(
+          `📊 [Gemini Usage - ESTIMATED] Prompt: ${promptTokens}t, Response: ${completionTokens}t, Total: ${totalTokens}t`
+        );
+      }
+
+      const tokensUsed = totalTokens;
+
+      // ===== DOMAIN ENERGY (unchanged logic) =====
       const energyConsumed = calculateGeminiEnergy(prompt, content);
 
       const response = {
@@ -117,8 +114,8 @@ export class GeminiAdapter extends IAIProvider {
         energyConsumed,
       };
 
-      console.log(
-        `✅ [Gemini] Response received - Tokens: ${tokensUsed}, Energy: ${energyConsumed}`
+      logger.info(
+        `✅ [Gemini] Response received - Tokens(real): ${tokensUsed}, Energy(domain): ${energyConsumed}`
       );
 
       return response;
@@ -132,7 +129,6 @@ export class GeminiAdapter extends IAIProvider {
 
       logger.error('[GeminiAdapter] callAI failed', { ...metadata, stack: error.stack });
 
-      // Timeout, network, and DNS errors → transient unavailability
       if (
         error.code === 'ETIMEDOUT' ||
         error.code === 'ECONNABORTED' ||
@@ -145,7 +141,6 @@ export class GeminiAdapter extends IAIProvider {
         throw new InfrastructureError('AI_TEMPORARY_UNAVAILABLE', metadata);
       }
 
-      // Provider rejections, auth errors, 4xx/5xx responses
       if (
         error.status ||
         error.response?.status ||
@@ -157,22 +152,10 @@ export class GeminiAdapter extends IAIProvider {
         throw new InfrastructureError('AI_PROVIDER_FAILURE', metadata);
       }
 
-      // Fallback: unknown infrastructure error
       throw new InfrastructureError('UNKNOWN_INFRASTRUCTURE_ERROR', metadata);
     }
   }
 
-  /**
-   * Convenience wrapper when a function type is provided.
-   *
-   * Model selection is intentionally handled by the use case
-   * (via ModelSelectionPolicy), not by this adapter.
-   *
-   * @param {string} userId
-   * @param {Array<Object>} messages
-   * @param {string} functionType
-   * @returns {Promise<Object>}
-   */
   async callAIWithFunctionType(userId, messages, functionType) {
     return this.callAI(userId, messages, {
       model: 'gemini-2.5-flash',
