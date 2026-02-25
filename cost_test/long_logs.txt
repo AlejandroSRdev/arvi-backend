@@ -1,0 +1,182 @@
+🟢 Controller reached
+Menu
+[USE-CASE] [Habit Series] CreateHabitSeries started for user 23a8d02f-dede-428b-8613-131bb01654dd
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[INFO] [AIRouter] Routing to GeminiAdapter for model: gemini-2.5-flash
+[INFO] 🧠 [Gemini] Calling model: gemini-2.5-flash
+[INFO] 📦 Full usageMetadata: {"promptTokenCount":1507,"candidatesTokenCount":34,"totalTokenCount":2403,"promptTokensDetails":[{"modality":"TEXT","tokenCount":1507}],"thoughtsTokenCount":862}
+[INFO] 📊 [Gemini Usage - REAL] Prompt: 1507t, Response: 34t, Total: 2403t
+[INFO] ⚡ [Gemini Energy] Prompt(est): 1949t, Response(est): 50t, Total(est): 635t → Energy: 7
+[INFO] ✅ [Gemini] Response received - Tokens(real): 2403, Energy(domain): 7
+[AI_STEP] {
+  step: 'creative',
+  energyConsumed: 7,
+  timestamp: '2026-02-25T14:15:51.281Z'
+}
+[INFO] [AIRouter] Routing to OpenAIAdapter for model: gpt-4o-mini
+[INFO] [OpenAI] Calling model: gpt-4o-mini
+[INFO] 📊 [OpenAI Usage] Prompt: 425t, Response: 238t, Total: 663t
+[INFO] [OpenAI] Response received - Tokens: 238, Energy: 0 (GPT does not consume)
+[AI_STEP] {
+  step: 'structure',
+  energyConsumed: 0,
+  timestamp: '2026-02-25T14:15:56.402Z'
+}
+[INFO] [AIRouter] Routing to OpenAIAdapter for model: gpt-4o-mini
+[INFO] [OpenAI] Calling model: gpt-4o-mini
+[INFO] 📊 [OpenAI Usage] Prompt: 469t, Response: 238t, Total: 707t
+[INFO] [OpenAI] Response received - Tokens: 238, Energy: 0 (GPT does not consume)
+[AI_STEP] {
+  step: 'schema',
+  energyConsumed: 0,
+  timestamp: '2026-02-25T14:16:01.659Z'
+}
+[ENERGY_ACCUMULATED] {
+  totalEnergyConsumed: 7,
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  timestamp: '2026-02-25T14:16:01.659Z'
+}
+[SCHEMA] [Habit Series] Validating AI output against schema, actions=0
+[SCHEMA] [Habit Series] Schema validation OK
+[ATOMIC_COMMIT_START] {
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  totalEnergyConsumed: 7,
+  timestamp: '2026-02-25T14:16:01.659Z'
+}
+[ATOMIC_COMMIT_SUCCESS] {
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  totalEnergyConsumed: 7,
+  timestamp: '2026-02-25T14:16:01.783Z'
+}
+[MAPPER] [Application] mapAIOutputToHabitSeries called for id=1772028961699, actions=4
+[MAPPER] [Application] mapAIOutputToHabitSeries OK → title="Precision Focus: Reclaiming Your Deep Work", actions=4
+[MAPPER] [Infrastructure] toHabitSeriesOutputDTO called for id=1772028961699, rank=bronze
+
+🟢 Controller reached
+[USE-CASE] [Habit Series] CreateHabitSeries started for user 23a8d02f-dede-428b-8613-131bb01654dd
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+Menu
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[INFO] [AIRouter] Routing to GeminiAdapter for model: gemini-2.5-flash
+[INFO] 🧠 [Gemini] Calling model: gemini-2.5-flash
+[INFO] 📦 Full usageMetadata: {"promptTokenCount":1499,"candidatesTokenCount":36,"totalTokenCount":2395,"promptTokensDetails":[{"modality":"TEXT","tokenCount":1499}],"thoughtsTokenCount":860}
+[INFO] 📊 [Gemini Usage - REAL] Prompt: 1499t, Response: 36t, Total: 2395t
+[INFO] ⚡ [Gemini Energy] Prompt(est): 1983t, Response(est): 58t, Total(est): 653t → Energy: 7
+[INFO] ✅ [Gemini] Response received - Tokens(real): 2395, Energy(domain): 7
+[AI_STEP] {
+  step: 'creative',
+  energyConsumed: 7,
+  timestamp: '2026-02-25T14:17:09.666Z'
+}
+[INFO] [AIRouter] Routing to OpenAIAdapter for model: gpt-4o-mini
+[INFO] [OpenAI] Calling model: gpt-4o-mini
+[INFO] 📊 [OpenAI Usage] Prompt: 426t, Response: 260t, Total: 686t
+[INFO] [OpenAI] Response received - Tokens: 260, Energy: 0 (GPT does not consume)
+[AI_STEP] {
+  step: 'structure',
+  energyConsumed: 0,
+  timestamp: '2026-02-25T14:17:14.727Z'
+}
+[INFO] [AIRouter] Routing to OpenAIAdapter for model: gpt-4o-mini
+[INFO] [OpenAI] Calling model: gpt-4o-mini
+[INFO] 📊 [OpenAI Usage] Prompt: 491t, Response: 260t, Total: 751t
+[INFO] [OpenAI] Response received - Tokens: 260, Energy: 0 (GPT does not consume)
+[AI_STEP] {
+  step: 'schema',
+  energyConsumed: 0,
+  timestamp: '2026-02-25T14:17:19.874Z'
+}
+[ENERGY_ACCUMULATED] {
+  totalEnergyConsumed: 7,
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  timestamp: '2026-02-25T14:17:19.874Z'
+}
+[SCHEMA] [Habit Series] Validating AI output against schema, actions=0
+[SCHEMA] [Habit Series] Schema validation OK
+[ATOMIC_COMMIT_START] {
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  totalEnergyConsumed: 7,
+  timestamp: '2026-02-25T14:17:19.874Z'
+}
+[ATOMIC_COMMIT_SUCCESS] {
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  totalEnergyConsumed: 7,
+  timestamp: '2026-02-25T14:17:20.107Z'
+}
+[MAPPER] [Application] mapAIOutputToHabitSeries called for id=1772029040022, actions=4
+[MAPPER] [Application] mapAIOutputToHabitSeries OK → title="Immutable Morning: Engineering Your Daily Drive", actions=4
+[MAPPER] [Infrastructure] toHabitSeriesOutputDTO called for id=1772029040022, rank=bronze
+
+🟢 Controller reached
+[USE-CASE] [Habit Series] CreateHabitSeries started for user 23a8d02f-dede-428b-8613-131bb01654dd
+Menu
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[SanitizeUserInput] Input normalized
+[INFO] [AIRouter] Routing to GeminiAdapter for model: gemini-2.5-flash
+[INFO] 🧠 [Gemini] Calling model: gemini-2.5-flash
+[INFO] 📦 Full usageMetadata: {"promptTokenCount":1484,"candidatesTokenCount":33,"totalTokenCount":2380,"promptTokensDetails":[{"modality":"TEXT","tokenCount":1484}],"thoughtsTokenCount":863}
+[INFO] 📊 [Gemini Usage - REAL] Prompt: 1484t, Response: 33t, Total: 2380t
+[INFO] ⚡ [Gemini Energy] Prompt(est): 1988t, Response(est): 50t, Total(est): 646t → Energy: 7
+[INFO] ✅ [Gemini] Response received - Tokens(real): 2380, Energy(domain): 7
+[AI_STEP] {
+  step: 'creative',
+  energyConsumed: 7,
+  timestamp: '2026-02-25T14:19:48.935Z'
+}
+[INFO] [AIRouter] Routing to OpenAIAdapter for model: gpt-4o-mini
+[INFO] [OpenAI] Calling model: gpt-4o-mini
+[INFO] 📊 [OpenAI Usage] Prompt: 422t, Response: 203t, Total: 625t
+[INFO] [OpenAI] Response received - Tokens: 203, Energy: 0 (GPT does not consume)
+[AI_STEP] {
+  step: 'structure',
+  energyConsumed: 0,
+  timestamp: '2026-02-25T14:19:53.978Z'
+}
+[INFO] [AIRouter] Routing to OpenAIAdapter for model: gpt-4o-mini
+[INFO] [OpenAI] Calling model: gpt-4o-mini
+[INFO] 📊 [OpenAI Usage] Prompt: 434t, Response: 203t, Total: 637t
+[INFO] [OpenAI] Response received - Tokens: 203, Energy: 0 (GPT does not consume)
+[AI_STEP] {
+  step: 'schema',
+  energyConsumed: 0,
+  timestamp: '2026-02-25T14:19:58.403Z'
+}
+[ENERGY_ACCUMULATED] {
+  totalEnergyConsumed: 7,
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  timestamp: '2026-02-25T14:19:58.403Z'
+}
+[SCHEMA] [Habit Series] Validating AI output against schema, actions=0
+[SCHEMA] [Habit Series] Schema validation OK
+[ATOMIC_COMMIT_START] {
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  totalEnergyConsumed: 7,
+  timestamp: '2026-02-25T14:19:58.403Z'
+}
+[ATOMIC_COMMIT_SUCCESS] {
+  userId: '23a8d02f-dede-428b-8613-131bb01654dd',
+  totalEnergyConsumed: 7,
+  timestamp: '2026-02-25T14:19:58.537Z'
+}
+[MAPPER] [Application] mapAIOutputToHabitSeries called for id=1772029198471, actions=4
+[MAPPER] [Application] mapAIOutputToHabitSeries OK → title="Architectural Depth: Sustained Reading for Foundational Thinking", actions=4
+[MAPPER] [Infrastructure] toHabitSeriesOutputDTO called for id=1772029198471, rank=bronze
