@@ -17,7 +17,7 @@ export const MODEL_MAPPING = {
   // First pass creative generation - allows for more creativity and less strict structure
   'habit_series_creative': {
     model: 'gemini-2.5-flash',
-    temperature: 1.0,
+    temperature: 0.8,
     maxTokens: 900,
     description: 'Create thematic habit series - CREATIVE PASS'
   },
