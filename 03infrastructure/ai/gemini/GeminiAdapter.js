@@ -84,6 +84,7 @@ export class GeminiAdapter extends IAIProvider {
         completionTokens = usage.candidatesTokenCount ?? 0;
         totalTokens = usage.totalTokenCount ?? (promptTokens + completionTokens);
 
+        logger.info(`📦 Full usageMetadata: ${JSON.stringify(usage)}`);
         logger.info(
           `📊 [Gemini Usage - REAL] Prompt: ${promptTokens}t, Response: ${completionTokens}t, Total: ${totalTokens}t`
         );
