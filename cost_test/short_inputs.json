@@ -1,0 +1,67 @@
+[
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to build a consistent deep work routine.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "I want to produce better code and feel less drained.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I tried time blocking but kept skipping it.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "Start small and add one block per week.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "Progressive and smooth works better for me.",
+      "Do you have any environment, person or place that helps you stay consistent?": "My home office in the morning helps a lot.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "Feeling overwhelmed makes me quit quickly."
+    }
+  },
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to exercise every morning before work.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "Exercise helps me think more clearly at work.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I started but stopped when deadlines hit.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "Do just 15 minutes to start, then increase.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "Progressive, I break under too much pressure.",
+      "Do you have any environment, person or place that helps you stay consistent?": "A gym nearby makes it easier to go.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "Tiredness after long meetings kills my motivation."
+    }
+  },
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to read technical books more regularly.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "I want to grow professionally and stay updated.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I read regularly for a month, then stopped.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "Read 20 minutes each evening before bed.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "Smooth and progressive fits my lifestyle better.",
+      "Do you have any environment, person or place that helps you stay consistent?": "Reading on the couch with no phone nearby.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "Boredom with the topic makes me stop reading."
+    }
+  },
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to reduce distractions during work hours.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "Less distraction means faster and better output.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I tried app blockers but disabled them often.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "Block one two-hour window each morning first.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "I prefer starting firm and then adjusting.",
+      "Do you have any environment, person or place that helps you stay consistent?": "Working from a quiet café helps me focus.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "FOMO from Slack messages breaks my concentration."
+    }
+  },
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to maintain a consistent sleep schedule.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "Better sleep means better focus and less irritability.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I slept well for two weeks, then regressed.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "Set a hard cutoff at 11pm every night.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "Demanding from the start works for sleep routines.",
+      "Do you have any environment, person or place that helps you stay consistent?": "A dark, cool room makes falling asleep easier.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "One bad night makes me abandon the schedule."
+    }
+  }
+]

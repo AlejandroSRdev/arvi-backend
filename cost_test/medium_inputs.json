@@ -1,0 +1,67 @@
+[
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to establish a structured deep work routine during my mornings. Right now my attention is constantly fragmented by meetings and Slack notifications.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "I believe focused work time will significantly improve the quality of the systems I build. In the long term, I want to feel proud of my output and experience less end-of-day frustration.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I attempted time blocking last quarter and it worked briefly when I protected my calendar. It broke down when I allowed meetings to override my focus blocks without rescheduling them.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "I want to start with one protected hour in the morning and gradually extend it. Keeping it visible on my calendar and communicating it to my team should help.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "Progressive works better for me because sudden strict rules tend to create friction. I prefer building momentum slowly so the habit feels natural over time.",
+      "Do you have any environment, person or place that helps you stay consistent?": "My home office in the early morning, before the rest of the household wakes up, is where I feel most focused. Noise-canceling headphones are also a significant help.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "When I feel like I am already behind on other tasks, I tend to sacrifice focus time to catch up. That reactive mindset is my biggest obstacle."
+    }
+  },
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to build a daily exercise habit, ideally running or cycling before starting my workday. Physical movement has a direct impact on my mental clarity.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "Exercise reduces my anxiety and helps me approach complex technical problems with more patience. Long term, I want sustainable energy levels and better physical health.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "Yes, I ran consistently for six weeks last year. It collapsed when a project deadline arrived and I told myself I would resume after, which never happened.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "I plan to lay out my running clothes the night before and commit to just 20 minutes to lower the activation barrier. Consistency matters more than duration at first.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "Progressive is better for me with physical habits because injury or burnout can kill momentum entirely. I want a sustainable pace from the beginning.",
+      "Do you have any environment, person or place that helps you stay consistent?": "Running in my neighborhood park in the morning is pleasant and low-friction. Having a mapped route already decided removes any decision fatigue.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "Fatigue after a difficult workday makes me rationalize skipping the next morning. One skip often becomes a week-long gap before I realize it."
+    }
+  },
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to dedicate consistent time each week to reading books on software architecture and distributed systems. My professional growth has slowed and I want to fix that.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "Staying current in my field makes me a better engineer and opens doors to more interesting projects. I want to feel intellectually stimulated and professionally competitive.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I read consistently for about two months last winter. It broke when I stopped carrying my book around and lost the environmental trigger that reminded me to read.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "I want to attach reading to an existing habit, like having tea after dinner. Keeping the book visible on the table will serve as a consistent cue.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "Smooth and gradual, starting with just 15 minutes per session. I find that imposing a large reading quota makes it feel like homework and kills my enjoyment.",
+      "Do you have any environment, person or place that helps you stay consistent?": "Reading in the living room after dinner, away from my work desk, creates a clear mental separation between work and learning time.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "When the book becomes technically dense and slow to read, I feel impatient and switch to something easier. I need to push through those sections more deliberately."
+    }
+  },
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to establish a proper shutdown routine at the end of each workday. Right now I rarely fully disconnect, which leaves me mentally exhausted by the weekend.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "Clear boundaries between work and personal time are essential for long-term sustainability as a developer. I want to protect my creativity and avoid burnout over the coming years.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I tried writing a daily end-of-day summary note, which worked for a few weeks. It failed when I started skipping it under pressure and never rebuilt the habit afterward.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "I want to create a two-minute shutdown checklist and trigger it by closing my IDE at the same time each day. Simple and repeatable rituals work best for me.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "I prefer a firm rule from day one on this habit since ambiguity is what caused previous failures. A clear stopping time removes the need for willpower.",
+      "Do you have any environment, person or place that helps you stay consistent?": "My partner often signals that dinner is ready around 7pm, which serves as a natural external trigger to close my laptop and step away.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "A sense of unfinished work makes me feel guilty about stopping. I need to reframe incomplete tasks as normal rather than as failures to avoid staying late."
+    }
+  },
+  {
+    "language": "en",
+    "assistantContext": "My name is Alex. I work as a software developer focused on backend systems and distributed services. I enjoy building reliable systems, reading about software architecture, and maintaining a disciplined but sustainable routine. Lately I feel mentally scattered due to context switching and want to regain consistency and focus in my daily work.",
+    "testData": {
+      "What habit, routine or area of your life would you like to improve or strengthen right now?": "I want to practice journaling for 10 minutes each morning to clarify my priorities before starting work. Mental clarity first thing in the day changes everything.",
+      "Why is it important for you to work on this habit? What do you hope to achieve in the long term?": "Journaling helps me separate urgent from important tasks and reduces the anxiety of an undefined day. Over time, I want a clearer sense of progress in both work and life.",
+      "Have you already tried to build or maintain this habit before? What helped you or what failed?": "I journaled briefly after reading a productivity book two years ago. It faded because I had no structured format and ended up staring at a blank page most mornings.",
+      "How would you like to approach the process of integrating this habit into your daily life?": "Using a simple prompt-based template will remove the blank page problem that stopped me before. I plan to keep it short and non-pressured, three questions maximum.",
+      "Which approach suits you best: progressive and smooth, or demanding and disciplined from the start?": "Progressive is better here because forcing deep reflection too early in the morning creates resistance. I want it to feel light and easy before making it more substantive.",
+      "Do you have any environment, person or place that helps you stay consistent?": "Doing it while drinking my first coffee, before opening any screen, connects the habit to an already-established routine anchor.",
+      "What thought or emotion usually makes you give up when trying to maintain a habit?": "If I miss one morning I feel like the streak is broken and lose motivation to continue. I need to normalize occasional misses without letting them end the habit entirely."
+    }
+  }
+]
