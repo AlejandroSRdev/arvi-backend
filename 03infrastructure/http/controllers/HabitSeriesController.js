@@ -127,50 +127,107 @@ export async function createHabitSeriesEndpoint(req, res, next) {
 /**
  * DELETE /api/habits/series/:seriesId
  *
- * Deletes a habit series from Firestore and decrements counter.
+ * Atomically deletes a habit series, all its actions, and decrements the counter.
+ * Always returns 204 (idempotent — safe to retry and call concurrently).
+ *
+ * Responses:
+ * - 204 No Content  → success OR series does not exist
+ * - 401 Unauthorized → missing or invalid token
+ * - 400 Bad Request  → invalid seriesId
+ * - 500 Internal Server Error → unexpected errors only
  */
-export async function deleteHabitSeriesEndpoint(req, res) {
+export async function deleteHabitSeriesEndpoint(req, res, next) {
   try {
     const userId = req.user?.uid;
     const seriesId = req.params?.seriesId;
 
     if (!userId) {
-      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
-        error: 'AUTHENTICATION_ERROR',
-        message: 'User not authenticated',
-      });
+      throw new AuthenticationError('User not authenticated');
     }
 
-    if (!seriesId) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'VALIDATION_ERROR',
-        message: 'seriesId is required',
-      });
+    if (!seriesId || typeof seriesId !== 'string' || seriesId.trim() === '') {
+      throw new ValidationError('seriesId is required');
     }
 
-    await habitSeriesRepository.delete(userId, seriesId);
+    const result = await habitSeriesRepository.delete(userId, seriesId);
 
-    logger.success(`[Habit Series] Deleted for user ${userId}, seriesId: ${seriesId}`);
+    const outcome = result.deleted ? 'deleted' : 'noop_not_found';
 
-    res.status(HTTP_STATUS.OK).json({
-      success: true,
-      message: 'Series deleted successfully',
-      deletedSeriesId: seriesId,
+    logger.info('[Habit Series] Delete', {
+      uid: userId,
+      seriesId,
+      deletedAt: new Date().toISOString(),
+      outcome,
+      activeSeriesCount_before: result.activeSeriesCount_before ?? null,
+      activeSeriesCount_after: result.activeSeriesCount_after ?? null,
     });
+
+    return res.status(204).send();
   } catch (err) {
     logger.error('[Habit Series] Error in delete:', err);
+    return next(err);
+  }
+}
 
-    const httpError = mapErrorToHttp(err);
-    res.status(httpError.status).json({
-      success: false,
-      error: httpError.body.error,
-      message: httpError.body.message,
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 50;
+
+/**
+ * GET /api/habits/series
+ *
+ * Returns the authenticated user's habit series ordered by createdAt DESC.
+ *
+ * Query parameters:
+ * - limit (optional): number of results to return (default 20, max 50)
+ *
+ * Response (200 OK):
+ * {
+ *   data: [{ id, createdAt, updatedAt }],
+ *   count: number
+ * }
+ */
+export async function getHabitSeriesEndpoint(req, res, next) {
+  try {
+    const userId = req.user?.uid;
+
+    if (!userId) {
+      throw new AuthenticationError('User not authenticated');
+    }
+
+    let limitValue = DEFAULT_LIMIT;
+
+    if (req.query.limit !== undefined) {
+      const parsed = Number(req.query.limit);
+
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        throw new ValidationError('limit must be a positive number');
+      }
+
+      // Clamp to maximum allowed
+      limitValue = Math.min(parsed, MAX_LIMIT);
+    }
+
+    const series = await habitSeriesRepository.listByUser(userId, limitValue);
+
+    logger.info('[Habit Series] List', {
+      uid: userId,
+      limit: limitValue,
+      count: series.length,
+      requestedAt: new Date().toISOString(),
     });
+
+    return res.status(HTTP_STATUS.OK).json({
+      data: series,
+      count: series.length,
+    });
+  } catch (err) {
+    return next(err);
   }
 }
 
 export default {
   createHabitSeriesEndpoint,
   deleteHabitSeriesEndpoint,
+  getHabitSeriesEndpoint,
   setDependencies,
 };

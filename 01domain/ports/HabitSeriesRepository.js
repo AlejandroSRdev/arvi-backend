@@ -21,6 +21,15 @@ export class IHabitSeriesRepository {
   async atomicCommitCreation(userId, seriesData, totalEnergyConsumed) {
     throw new Error('Not implemented');
   }
+
+  /**
+   * @param {string} userId
+   * @param {number} limit - Maximum number of results to return
+   * @returns {Promise<Array<{id: string, createdAt: string, updatedAt: string}>>}
+   */
+  async listByUser(userId, limit) {
+    throw new Error('Not implemented');
+  }
 }
 
 export default IHabitSeriesRepository;
