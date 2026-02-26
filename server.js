@@ -131,7 +131,7 @@ app.get('/', (req, res) => {
       auth: 'POST /api/auth/login, POST /api/auth/register',
       energy: 'GET /api/energy, POST /api/energy/consume',
       user: 'GET /api/user/profile, PATCH /api/user/profile',
-      habits: 'POST /api/habits/series',
+      habits: 'POST /api/habits/series, GET /api/habits/series, DELETE /api/habits/series/:seriesId',
     },
   });
 });
@@ -161,6 +161,8 @@ app.use((req, res) => {
       'POST /api/auth/register',
       'GET /api/energy',
       'POST /api/habits/series',
+      'GET /api/habits/series',
+      'DELETE /api/habits/series/:seriesId',
     ],
   });
 });
@@ -188,7 +190,9 @@ app.listen(PORT, () => {
   console.log('     • POST /api/auth/login              - User login');
   console.log('     • POST /api/auth/register           - User registration');
   console.log('     • GET  /api/energy                   - Query energy');
-  console.log('     • POST /api/habits/series            - Create habit series via AI');
+  console.log('     • POST   /api/habits/series            - Create habit series via AI');
+  console.log('     • GET    /api/habits/series            - List user habit series');
+  console.log('     • DELETE /api/habits/series/:id        - Delete habit series');
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');
