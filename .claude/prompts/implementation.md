@@ -1,157 +1,159 @@
-Maintain strict fidelity to:
-- The project manifest (architecture, stack, conventions, layering).
-- Your assigned agent role (clean implementation, no refactors, no scope expansion).
+You are Claude, acting as a senior backend engineer in a layered Node.js + Express + Firestore architecture.
 
-Do NOT modify unrelated code.
-Do NOT introduce pagination by cursor.
-Do NOT add features outside this endpoint.
+Your task is to implement a new endpoint:
+
+GET /api/habits/series/:seriesId
+
+This endpoint MUST return the full HabitSeries object exactly as defined in:
+
+01domain/entities/HabitSeries.js
+
+The domain entity is the single source of truth.
+You must base the response strictly on that entity.
+Do NOT invent structure.
+Do NOT reshape fields.
+Do NOT omit properties.
+Do NOT add properties that are not part of the entity.
+
+The API must serialize and return the HabitSeries domain entity faithfully.
 
 ------------------------------------------------------------
-OBJECTIVE
+ARCHITECTURE CONTEXT
 ------------------------------------------------------------
 
-Implement a robust GET endpoint:
+Stack:
+- Express
+- Firestore (firebase-admin)
+- Layered structure:
+    routes → controller → repository → Firestore
+- Auth middleware already applied at router level:
+    router.use(authenticate)
+- Auth injects:
+    req.user = { id, uid }
 
-GET /habit-series
+Controllers access:
+    req.user?.uid
 
-This endpoint must return the authenticated user's habit series.
+Firestore structure:
 
-------------------------------------------------------------
-FIRESTORE DATA MODEL
-------------------------------------------------------------
-
-Habit series path:
 users/{uid}/habitSeries/{seriesId}
+users/{uid}/habitSeries/{seriesId}/actions/{actionId}
 
-Fields currently present:
-- createdAt
-- updatedAt
-
-Hard delete is used in the system.
-If a document exists, it is considered active.
-
-The counter limits.activeSeriesCount exists in users/{uid},
-but this endpoint MUST NOT modify it.
+The full object already exists in Firestore.
 
 ------------------------------------------------------------
-BUSINESS RULES
+ROUTING CONTEXT
 ------------------------------------------------------------
 
-1. Only return series belonging to the authenticated user.
-2. Only return existing documents (hard delete already removes inactive ones).
-3. Order results by createdAt DESC.
-4. Support optional limit parameter.
-5. Default limit = 20.
-6. Maximum limit allowed = 50.
-7. If limit is invalid (non-numeric or <= 0), return 400.
+In server.js there is:
+
+app.use('/api/habits', habitSeriesRoutes)
+
+You must:
+- Add the new route in HabitSeriesRoutes.js
+- Ensure it is correctly mounted under '/api/habits'
+- Verify that server.js does not require additional changes
+- If import or mount adjustments are required, include them explicitly
+
+Do NOT assume.
+Check and ensure the route is effectively reachable as:
+
+GET /api/habits/series/:seriesId
 
 ------------------------------------------------------------
-AUTHORIZATION RULES
+VALIDATION RULES
 ------------------------------------------------------------
 
-- uid must come strictly from authentication middleware.
-- Never accept uid via request parameters.
-- Multi-tenant isolation must rely on path users/{uid}/habitSeries.
-
-------------------------------------------------------------
-HTTP CONTRACT
-------------------------------------------------------------
-
-Route:
-GET /habit-series
-
-Query parameters:
-- limit (optional)
-
-Responses:
-
-200 OK:
-{
-  "data": [
+- seriesId must exist
+- seriesId.trim() !== ''
+- If invalid:
+    400
     {
-      "id": "seriesId",
-      "createdAt": "...",
-      "updatedAt": "..."
+      error: "VALIDATION_ERROR",
+      message: "seriesId is required"
     }
-  ],
-  "count": number
-}
 
-401 Unauthorized:
-If token is missing or invalid.
-
-400 Bad Request:
-If limit parameter is invalid.
+Auth:
+Handled by middleware.
+Do not modify.
 
 ------------------------------------------------------------
-IMPLEMENTATION REQUIREMENTS
+REPOSITORY REQUIREMENTS
 ------------------------------------------------------------
 
-1. Validate limit parameter.
-   - If not provided → use default 20.
-   - If > 50 → clamp to 50.
-   - If invalid → 400.
+Implement:
 
-2. Get uid from auth middleware.
+getHabitSeriesById(uid, seriesId)
 
-3. Build reference:
-   users/{uid}/habitSeries
+Repository responsibilities:
+1) Read series document
+2) If not exists → return null
+3) Read actions subcollection
+4) Map Firestore data into the HabitSeries domain entity
+5) Return an instance of HabitSeries
 
-4. Query:
-   - orderBy('createdAt', 'desc')
-   - limit(limitValue)
-
-5. Execute query.
-
-6. Map results to DTO:
-   - id (document id)
-   - createdAt
-   - updatedAt
-
-7. Return:
-   {
-     data: [...],
-     count: snapshot.size
-   }
+IMPORTANT:
+- Import HabitSeries from 01domain/entities/HabitSeries.js
+- Construct the object using that entity
+- Follow existing timestamp serialization logic used in GET list
+- Convert Firestore Timestamp → ISO string
+- Preserve null-safety
 
 ------------------------------------------------------------
-PERFORMANCE REQUIREMENTS
+CONTROLLER BEHAVIOR
 ------------------------------------------------------------
 
-- Do NOT use offset.
-- Do NOT fetch subcollections.
-- Do NOT fetch unnecessary fields.
-- Keep query minimal and efficient.
+If repository returns null:
+    404
+    {
+      error: "NOT_FOUND",
+      message: "Habit series not found"
+    }
+
+If success:
+    200
+    Return serialized HabitSeries entity directly
+    (Do NOT wrap inside { data: ... })
+
+Error handling:
+Follow existing controller pattern.
+On unexpected failure:
+    500
+    {
+      error: "INTERNAL_ERROR",
+      message: "Failed to retrieve habit series"
+    }
 
 ------------------------------------------------------------
-LOGGING (MINIMAL)
+FILES TO MODIFY
 ------------------------------------------------------------
 
-Log:
-- uid
-- limit used
-- number of results returned
-- request timestamp
+1) 03infrastructure/http/routes/HabitSeriesRoutes.js
+    - Add GET '/series/:seriesId'
 
-Do NOT log tokens.
+2) 03infrastructure/http/controllers/HabitSeriesController.js
+    - Add getHabitSeriesByIdEndpoint
 
-------------------------------------------------------------
-TEST REQUIREMENTS
-------------------------------------------------------------
+3) 03infrastructure/repositories/FirestoreHabitSeriesRepository.js
+    - Add getHabitSeriesById method
 
-Add or update tests to validate:
-
-1. Normal request returns correct number of series.
-2. limit works correctly.
-3. limit > 50 is clamped.
-4. invalid limit returns 400.
-5. user only sees their own series.
+4) server.js
+    - Verify the router mount
+    - If required, include the necessary import/mount adjustment
+    - Ensure endpoint is reachable
 
 ------------------------------------------------------------
-EXPECTED OUTPUT
+OUTPUT FORMAT
 ------------------------------------------------------------
 
-1. Modified/created files following project structure.
-2. Implementation code.
-3. Short explanation of correctness.
-4. Commands to run tests/lint if applicable.
+Return ONLY:
+
+1) Route addition snippet
+2) Full controller method
+3) Full repository method
+4) Any required server.js adjustment
+5) Necessary imports
+
+No explanations.
+No commentary.
+Production-ready code only.

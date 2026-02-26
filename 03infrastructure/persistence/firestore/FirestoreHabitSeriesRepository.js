@@ -5,6 +5,8 @@
  * Implements IHabitSeriesRepository by persisting and deleting habit series documents in Firestore.
  */
 
+import { Action } from '../../../01domain/value_objects/habits/Action.js';
+import { HabitSeries } from '../../../01domain/entities/HabitSeries.js';
 import { IHabitSeriesRepository } from '../../../01domain/ports/HabitSeriesRepository.js';
 import {
   DataAccessFailureError,
@@ -180,6 +182,55 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
         cause: error,
       });
     }
+  }
+
+  /**
+   * Returns a full HabitSeries entity by ID, including its actions subcollection.
+   *
+   * @param {string} userId
+   * @param {string} seriesId
+   * @returns {Promise<HabitSeries | null>} null if the series does not exist
+   */
+  async getHabitSeriesById(userId, seriesId) {
+    const seriesRef = db
+      .collection('users')
+      .doc(userId)
+      .collection('habitSeries')
+      .doc(seriesId);
+
+    const seriesDoc = await seriesRef.get();
+
+    if (!seriesDoc.exists) {
+      return null;
+    }
+
+    const data = seriesDoc.data();
+    const actionsSnapshot = await seriesRef.collection('actions').get();
+
+    const actions = actionsSnapshot.docs.map((actionDoc) => {
+      const actionData = actionDoc.data();
+      return Action.create({
+        id: actionDoc.id,
+        name: actionData.name,
+        description: actionData.description,
+        difficulty: actionData.difficulty,
+        score: actionData.score ?? 0,
+        completed: actionData.completed ?? false,
+        completedAt: actionData.completedAt?.toDate?.() ?? null,
+        verificationResponse: actionData.verificationResponse ?? null,
+        bonusPoints: actionData.bonusPoints ?? 0,
+      });
+    });
+
+    return HabitSeries.create({
+      id: seriesDoc.id,
+      title: data.title,
+      description: data.description,
+      actions,
+      totalScore: data.totalScore ?? 0,
+      createdAt: data.createdAt?.toDate?.() ?? new Date(),
+      lastActivityAt: data.lastActivityAt?.toDate?.() ?? new Date(),
+    });
   }
 
   /**
