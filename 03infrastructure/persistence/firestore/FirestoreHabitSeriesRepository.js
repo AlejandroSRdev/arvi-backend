@@ -7,10 +7,10 @@
 
 import { IHabitSeriesRepository } from '../../../01domain/ports/HabitSeriesRepository.js';
 import {
-  InsufficientEnergyError,
-  ValidationError,
   DataAccessFailureError,
+  InsufficientEnergyError,
   TransactionFailureError,
+  ValidationError,
 } from '../../../errors/Index.js';
 import { db, FieldValue } from './FirebaseConfig.js';
 
@@ -204,6 +204,7 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
 
     try {
       const result = await db.runTransaction(async (transaction) => {
+        // READS FIRST (Firestore requires all reads before any writes)
         const seriesDoc = await transaction.get(seriesRef);
 
         if (!seriesDoc.exists) {
@@ -211,16 +212,7 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
           return { deleted: false };
         }
 
-        // The Firestore Admin SDK supports transaction.get(Query),
-        // which includes CollectionReference. This keeps all reads inside
-        // the transaction for full atomicity.
         const actionsSnapshot = await transaction.get(actionsRef);
-
-        for (const actionDoc of actionsSnapshot.docs) {
-          transaction.delete(actionDoc.ref);
-        }
-
-        transaction.delete(seriesRef);
 
         // Read activeSeriesCount from user document (source of truth for limits).
         const userDoc = await transaction.get(userRef);
@@ -230,12 +222,23 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
 
         const newCount = Math.max(0, activeSeriesCount - 1);
 
+        // WRITES AFTER ALL READS
+        for (const actionDoc of actionsSnapshot.docs) {
+          transaction.delete(actionDoc.ref);
+        }
+
+        transaction.delete(seriesRef);
+
         transaction.update(userRef, {
           'limits.activeSeriesCount': newCount,
           updatedAt: FieldValue.serverTimestamp(),
         });
 
-        return { deleted: true, activeSeriesCount_before: activeSeriesCount, activeSeriesCount_after: newCount };
+        return {
+          deleted: true,
+          activeSeriesCount_before: activeSeriesCount,
+          activeSeriesCount_after: newCount,
+        };
       });
 
       return result;
