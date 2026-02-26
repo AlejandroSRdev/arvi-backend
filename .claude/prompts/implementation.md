@@ -1,40 +1,157 @@
-I need you to modify my OpenAIAdapter (Node.js backend) to add detailed token usage logging for the GPT-4o-mini step, in the exact same style as the existing Gemini logging.
+Maintain strict fidelity to:
+- The project manifest (architecture, stack, conventions, layering).
+- Your assigned agent role (clean implementation, no refactors, no scope expansion).
 
-IMPORTANT:
-- Do NOT refactor the architecture.
-- Do NOT change business logic.
-- Do NOT alter energy calculation logic.
-- Only add usage logging.
-- Follow the exact logging style already used in GeminiAdapter.
+Do NOT modify unrelated code.
+Do NOT introduce pagination by cursor.
+Do NOT add features outside this endpoint.
 
-Current Gemini logging example:
+------------------------------------------------------------
+OBJECTIVE
+------------------------------------------------------------
 
-📊 [Gemini Energy] Prompt: 740t, Response: 78t, Total: 300t → Energy: 3
-✅ [Gemini] Response received - Tokens: 78, Energy: 3
+Implement a robust GET endpoint:
 
-I want the OpenAIAdapter to log usage like this:
+GET /habit-series
 
-📊 [OpenAI Usage] Prompt: X t, Response: Y t, Total: Z t
-✅ [OpenAI] Response received - Tokens: Y, Energy: 0 (GPT does not consume)
+This endpoint must return the authenticated user's habit series.
 
-Implementation requirements:
+------------------------------------------------------------
+FIRESTORE DATA MODEL
+------------------------------------------------------------
 
-1. Extract token usage from:
-   response.usage.prompt_tokens
-   response.usage.completion_tokens
-   response.usage.total_tokens
+Habit series path:
+users/{uid}/habitSeries/{seriesId}
 
-2. Add a log block immediately after receiving the response:
+Fields currently present:
+- createdAt
+- updatedAt
 
-   📊 [OpenAI Usage] Prompt: ${prompt_tokens}t, Response: ${completion_tokens}t, Total: ${total_tokens}t
+Hard delete is used in the system.
+If a document exists, it is considered active.
 
-3. Preserve the existing success log line format:
-   [INFO] [OpenAI] Response received - Tokens: ${completion_tokens}, Energy: 0 (GPT does not consume)
+The counter limits.activeSeriesCount exists in users/{uid},
+but this endpoint MUST NOT modify it.
 
-4. Do NOT introduce new dependencies.
-5. Do NOT change function signatures.
-6. Do NOT change return values.
-7. Keep code style consistent with existing logging format.
+------------------------------------------------------------
+BUSINESS RULES
+------------------------------------------------------------
 
-Return ONLY the modified OpenAIAdapter code with the new logging added.
-Do not explain.
+1. Only return series belonging to the authenticated user.
+2. Only return existing documents (hard delete already removes inactive ones).
+3. Order results by createdAt DESC.
+4. Support optional limit parameter.
+5. Default limit = 20.
+6. Maximum limit allowed = 50.
+7. If limit is invalid (non-numeric or <= 0), return 400.
+
+------------------------------------------------------------
+AUTHORIZATION RULES
+------------------------------------------------------------
+
+- uid must come strictly from authentication middleware.
+- Never accept uid via request parameters.
+- Multi-tenant isolation must rely on path users/{uid}/habitSeries.
+
+------------------------------------------------------------
+HTTP CONTRACT
+------------------------------------------------------------
+
+Route:
+GET /habit-series
+
+Query parameters:
+- limit (optional)
+
+Responses:
+
+200 OK:
+{
+  "data": [
+    {
+      "id": "seriesId",
+      "createdAt": "...",
+      "updatedAt": "..."
+    }
+  ],
+  "count": number
+}
+
+401 Unauthorized:
+If token is missing or invalid.
+
+400 Bad Request:
+If limit parameter is invalid.
+
+------------------------------------------------------------
+IMPLEMENTATION REQUIREMENTS
+------------------------------------------------------------
+
+1. Validate limit parameter.
+   - If not provided → use default 20.
+   - If > 50 → clamp to 50.
+   - If invalid → 400.
+
+2. Get uid from auth middleware.
+
+3. Build reference:
+   users/{uid}/habitSeries
+
+4. Query:
+   - orderBy('createdAt', 'desc')
+   - limit(limitValue)
+
+5. Execute query.
+
+6. Map results to DTO:
+   - id (document id)
+   - createdAt
+   - updatedAt
+
+7. Return:
+   {
+     data: [...],
+     count: snapshot.size
+   }
+
+------------------------------------------------------------
+PERFORMANCE REQUIREMENTS
+------------------------------------------------------------
+
+- Do NOT use offset.
+- Do NOT fetch subcollections.
+- Do NOT fetch unnecessary fields.
+- Keep query minimal and efficient.
+
+------------------------------------------------------------
+LOGGING (MINIMAL)
+------------------------------------------------------------
+
+Log:
+- uid
+- limit used
+- number of results returned
+- request timestamp
+
+Do NOT log tokens.
+
+------------------------------------------------------------
+TEST REQUIREMENTS
+------------------------------------------------------------
+
+Add or update tests to validate:
+
+1. Normal request returns correct number of series.
+2. limit works correctly.
+3. limit > 50 is clamped.
+4. invalid limit returns 400.
+5. user only sees their own series.
+
+------------------------------------------------------------
+EXPECTED OUTPUT
+------------------------------------------------------------
+
+1. Modified/created files following project structure.
+2. Implementation code.
+3. Short explanation of correctness.
+4. Commands to run tests/lint if applicable.

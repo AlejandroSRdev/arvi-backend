@@ -1,0 +1,299 @@
+POST /api/auth/register
+  flowchart TD
+
+  subgraph INFRA ["Infrastructure"]
+      REQ["POST /api/auth/register"]
+      RL["authRateLimiter"]
+      RC{"Rate limit exceeded?"}
+      Ctrl["AuthController.register"]
+      Repo["FirestoreUserRepository.save"]
+      CtrlCatch["controller catch → next(err)"]
+      ErrMW["errorMiddleware"]
+      ErrMapper["mapErrorToHttp"]
+  end
+
+  subgraph APP ["Application"]
+      UC["createUser use case"]
+      PH["passwordHasher.hash"]
+      GID["randomUUID"]
+  end
+
+  subgraph DOMAIN ["Domain"]
+      UserCreate["User.create"]
+      IV{"Invariants valid?"}
+  end
+
+  REQ --> RL
+  RL --> RC
+  RC -->|Yes| R429["429 TOO_MANY_REQUESTS"]
+  RC -->|No| Ctrl
+
+  Ctrl -->|"missing input"| CtrlCatch
+  Ctrl -->|"valid input"| UC
+
+  UC --> PH
+  PH -->|"error"| CtrlCatch
+  PH --> GID
+
+  GID --> UserCreate
+  UserCreate --> IV
+  IV -->|"invalid"| CtrlCatch
+  IV -->|"valid"| Repo
+
+  Repo -->|"error"| CtrlCatch
+  Repo -->|"success"| R201["201 CREATED"]
+
+  CtrlCatch --> ErrMW
+  ErrMW --> ErrMapper
+  ErrMapper --> R400["VALIDATION_ERROR"]
+  ErrMapper --> R500["INTERNAL_SERVER_ERROR"]
+
+POST /api/auth/login
+ flowchart TD
+
+  subgraph INFRA ["Infrastructure"]
+      RateLimiter["authRateLimiter"]
+      Controller["AuthController.login"]
+      Firestore_Lookup["FirestoreUserRepository.getUserByEmail"]
+      PH_Verify["PasswordHasher.verify"]
+      Firestore_Update["FirestoreUserRepository.updateLastLogin"]
+      JWTSign["jwt.sign · expiresIn: 1h"]
+      CtrlCatch["controller catch → next(err)"]
+      ErrMW["errorMiddleware"]
+      ErrMapper["mapErrorToHttp"]
+  end
+
+  subgraph APP ["Application"]
+      LoginUser["loginUser"]
+      AuthCheck{"User exists\nand password valid?"}
+  end
+
+  REQ(["POST /api/auth/login"])
+
+  REQ --> RateLimiter
+  RateLimiter -->|"rate exceeded"| E429["429 TOO_MANY_REQUESTS"]
+  RateLimiter --> Controller
+
+  Controller -->|"missing input"| CtrlCatch
+  Controller -->|"valid input"| LoginUser
+
+  LoginUser --> Firestore_Lookup
+  Firestore_Lookup -->|"error"| CtrlCatch
+  Firestore_Lookup --> AuthCheck
+
+  AuthCheck -->|"invalid credentials"| CtrlCatch
+  AuthCheck -->|"valid"| PH_Verify
+
+  PH_Verify -->|"error"| CtrlCatch
+  PH_Verify --> Firestore_Update
+
+  Firestore_Update -->|"error"| CtrlCatch
+  Firestore_Update --> JWTSign
+
+  JWTSign --> R200["200 OK · { token, userId }"]
+
+  CtrlCatch --> ErrMW
+  ErrMW --> ErrMapper
+  ErrMapper --> R400["400 VALIDATION_ERROR"]
+  ErrMapper --> R401["401 AUTHENTICATION_ERROR"]
+  ErrMapper --> R500["500 INTERNAL_SERVER_ERROR"]
+
+POST /api/habits/series
+flowchart TD
+
+  subgraph INFRA ["Infrastructure"]
+      REQ["POST /api/habits/series"]
+      AUTH_TOKEN{"Bearer token present?"}
+      JWT_VALID{"jwt.verify valid?"}
+      BODY_VALID{"Request body valid?"}
+      USER_REPO["FirestoreUserRepository.getUser"]
+      AI_P1["GeminiAdapter · Pass 1"]
+      AI_P2["GeminiAdapter · Pass 2"]
+      AI_P3["OpenAIAdapter · Pass 3"]
+      FIRESTORE_TX["FirestoreHabitSeriesRepository.atomicCommitCreation"]
+      OUTPUT_DTO["toHabitSeriesOutputDTO"]
+      CtrlCatch["controller catch → next(err)"]
+      ErrMW["errorMiddleware"]
+      ErrMapper["mapErrorToHttp"]
+  end
+
+  subgraph APP ["Application"]
+      UC["createHabitSeries use case"]
+      SANITIZE["sanitizeUserInput"]
+      P1["Pass 1 · Creative"]
+      ACC1["Accumulate energy · Pass 1"]
+      P2["Pass 2 · Structure"]
+      ACC2["Accumulate energy · Pass 2"]
+      P3["Pass 3 · Schema"]
+      ACC3["Accumulate energy · Pass 3"]
+      JSON_VALID{"AI output parseable JSON?"}
+      SCHEMA_VALID{"Schema validation passed?"}
+      AI_MAP["mapAIOutputToHabitSeries"]
+  end
+
+  subgraph DOMAIN ["Domain"]
+      USER_CHECK{"User found?"}
+      PLAN["determineEffectivePlan"]
+      FEATURE{"hasFeatureAccess?"}
+      LIMIT{"activeSeriesCount < max?"}
+      ENERGY{"currentEnergy > 0?"}
+      TX_USER_FOUND{"User found in TX?"}
+      TX_ENERGY{"currentEnergy >= totalConsumed?"}
+  end
+
+  REQ --> AUTH_TOKEN
+  AUTH_TOKEN -->|"No"| CtrlCatch
+  AUTH_TOKEN -->|"Yes"| JWT_VALID
+
+  JWT_VALID -->|"Invalid"| CtrlCatch
+  JWT_VALID -->|"Valid"| BODY_VALID
+
+  BODY_VALID -->|"Invalid"| CtrlCatch
+  BODY_VALID -->|"Valid"| UC
+
+  UC --> USER_REPO
+  USER_REPO -->|"error"| CtrlCatch
+  USER_REPO --> USER_CHECK
+
+  USER_CHECK -->|"No"| CtrlCatch
+  USER_CHECK -->|"Yes"| PLAN
+
+  PLAN --> FEATURE
+  FEATURE -->|"No"| CtrlCatch
+  FEATURE -->|"Yes"| LIMIT
+
+  LIMIT -->|"Reached"| CtrlCatch
+  LIMIT -->|"OK"| ENERGY
+
+  ENERGY -->|"Insufficient"| CtrlCatch
+  ENERGY -->|"Valid"| SANITIZE
+
+  SANITIZE --> P1
+  P1 --> AI_P1
+  AI_P1 -->|"error"| CtrlCatch
+  AI_P1 --> ACC1
+
+  ACC1 --> P2
+  P2 --> AI_P2
+  AI_P2 -->|"error"| CtrlCatch
+  AI_P2 --> ACC2
+
+  ACC2 --> P3
+  P3 --> AI_P3
+  AI_P3 -->|"error"| CtrlCatch
+  AI_P3 --> ACC3
+
+  ACC3 --> JSON_VALID
+  JSON_VALID -->|"Invalid"| CtrlCatch
+  JSON_VALID -->|"Valid"| SCHEMA_VALID
+
+  SCHEMA_VALID -->|"Invalid"| CtrlCatch
+  SCHEMA_VALID -->|"Valid"| FIRESTORE_TX
+
+  FIRESTORE_TX -->|"error"| CtrlCatch
+  FIRESTORE_TX --> TX_USER_FOUND
+
+  TX_USER_FOUND -->|"Not found"| CtrlCatch
+  TX_USER_FOUND -->|"Found"| TX_ENERGY
+
+  TX_ENERGY -->|"Insufficient"| CtrlCatch
+  TX_ENERGY -->|"Sufficient"| AI_MAP
+
+  AI_MAP --> OUTPUT_DTO
+  OUTPUT_DTO --> RES201["201 CREATED"]
+
+  CtrlCatch --> ErrMW
+  ErrMW --> ErrMapper
+
+ DELETE /api/habits/series/:seriesId
+ flowchart TD
+
+    subgraph INFRA ["Infrastructure"]
+        REQ["DELETE /api/habits/series/:seriesId"]
+        UID_CHECK{"userId present?"}
+        SID_CHECK{"seriesId valid?"}
+        REPO["FirestoreHabitSeriesRepository.delete"]
+        TX_SERIES{"series document exists?"}
+        TX_ACTIONS["transaction.get(actionsRef)"]
+        TX_DEL_ACTIONS["transaction.delete · each action"]
+        TX_DEL_SERIES["transaction.delete · seriesRef"]
+        TX_USER["transaction.get(userRef)"]
+        TX_COMPUTE["newCount = max(0, activeSeriesCount - 1)"]
+        TX_UPDATE["transaction.update · limits.activeSeriesCount"]
+        TX_COMMIT["Transaction commit · optimistic concurrency"]
+        LOG["logger.info · outcome"]
+        CtrlCatch["controller catch → next(err)"]
+        ErrMW["errorMiddleware"]
+        ErrMapper["mapErrorToHttp"]
+    end
+
+    REQ --> UID_CHECK
+    UID_CHECK -->|"missing"| CtrlCatch
+    UID_CHECK -->|"present"| SID_CHECK
+
+    SID_CHECK -->|"invalid"| CtrlCatch
+    SID_CHECK -->|"valid"| REPO
+
+    REPO --> TX_SERIES
+    REPO -->|"TransactionFailureError"| CtrlCatch
+
+    TX_SERIES -->|"not found · NO-OP"| LOG
+    TX_SERIES -->|"exists"| TX_ACTIONS
+
+    TX_ACTIONS --> TX_DEL_ACTIONS
+    TX_DEL_ACTIONS --> TX_DEL_SERIES
+    TX_DEL_SERIES --> TX_USER
+    TX_USER --> TX_COMPUTE
+    TX_COMPUTE --> TX_UPDATE
+    TX_UPDATE --> TX_COMMIT
+
+    TX_COMMIT -->|"committed"| LOG
+    LOG --> R204["204 No Content"]
+
+    CtrlCatch --> ErrMW
+    ErrMW --> ErrMapper
+    ErrMapper --> R401["401 AUTHENTICATION_ERROR"]
+    ErrMapper --> R400["400 VALIDATION_ERROR"]
+    ErrMapper --> R500["500 INTERNAL_ERROR"]
+
+GET /api/habits/series
+flowchart TD
+
+  subgraph INFRA ["Infrastructure"]
+      REQ["GET /api/habits/series"]
+      AUTH_TOKEN{"Bearer token present?"}
+      JWT_VALID{"jwt.verify valid?"}
+      LIMIT_PRESENT{"limit param present?"}
+      LIMIT_VALID{"limit is valid number > 0?"}
+      REPO["FirestoreHabitSeriesRepository.listByUser"]
+      MAP["map snapshot to DTO · id · createdAt · updatedAt"]
+      LOG["logger.info · uid · limit · count"]
+      CtrlCatch["controller catch → next(err)"]
+      ErrMW["errorMiddleware"]
+      ErrMapper["mapErrorToHttp"]
+  end
+
+  REQ --> AUTH_TOKEN
+  AUTH_TOKEN -->|"No"| CtrlCatch
+  AUTH_TOKEN -->|"Yes"| JWT_VALID
+
+  JWT_VALID -->|"Invalid"| CtrlCatch
+  JWT_VALID -->|"Valid"| LIMIT_PRESENT
+
+  LIMIT_PRESENT -->|"Missing · default = 20"| REPO
+  LIMIT_PRESENT -->|"Present"| LIMIT_VALID
+
+  LIMIT_VALID -->|"Invalid · non-numeric or ≤ 0"| CtrlCatch
+  LIMIT_VALID -->|"Valid · clamp to 50 if needed"| REPO
+
+  REPO -->|"error"| CtrlCatch
+  REPO --> MAP
+
+  MAP --> LOG
+  LOG --> R200["200 OK · { data, count }"]
+
+  CtrlCatch --> ErrMW
+  ErrMW --> ErrMapper
+  ErrMapper --> R401["401 AUTHENTICATION_ERROR"]
+  ErrMapper --> R400["400 VALIDATION_ERROR"]
+  ErrMapper --> R500["500 INTERNAL_ERROR"]

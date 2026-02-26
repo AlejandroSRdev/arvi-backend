@@ -14,7 +14,36 @@ import {
 } from '../../../errors/Index.js';
 import { db, FieldValue } from './FirebaseConfig.js';
 
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 50;
+
 export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
+  /**
+   * Returns habit series for a user ordered by createdAt DESC.
+   *
+   * @param {string} userId
+   * @param {number} limit - Must already be validated and clamped by the caller
+   * @returns {Promise<Array<{id: string, createdAt: string, updatedAt: string}>>}
+   */
+  async listByUser(userId, limit) {
+    const snapshot = await db
+      .collection('users')
+      .doc(userId)
+      .collection('habitSeries')
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        createdAt: data.createdAt?.toDate?.().toISOString() ?? null,
+        updatedAt: data.updatedAt?.toDate?.().toISOString() ?? null,
+      };
+    });
+  }
+
   /**
    * @param {string} userId - Owner user ID
    * @param {object} seriesData - Series data (string JSON or object)
@@ -154,30 +183,68 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
   }
 
   /**
+   * Atomically delete a habit series, all its actions, and decrement the counter.
+   *
+   * Idempotent: if the series does not exist, this is a NO-OP.
+   * Concurrency-safe: Firestore optimistic concurrency retries and exits as NO-OP
+   * once the series is gone, so the counter is decremented at most once per series.
+   *
    * @param {string} userId - Owner user ID
    * @param {string} seriesId - Series ID to delete
-   * @returns {Promise<{deleted: boolean}>}
-   * @throws {Error} If parameters are invalid or series does not exist
+   * @returns {Promise<{ deleted: boolean, activeSeriesCount_before?: number, activeSeriesCount_after?: number }>}
    */
   async delete(userId, seriesId) {
     if (!userId || !seriesId) {
-      throw new Error('Invalid delete parameters');
+      throw new ValidationError('userId and seriesId are required for delete');
     }
 
-    const ref = db
-      .collection('users')
-      .doc(userId)
-      .collection('habitSeries')
-      .doc(seriesId);
+    const userRef = db.collection('users').doc(userId);
+    const seriesRef = userRef.collection('habitSeries').doc(seriesId);
+    const actionsRef = seriesRef.collection('actions');
 
-    const snapshot = await ref.get();
+    try {
+      const result = await db.runTransaction(async (transaction) => {
+        const seriesDoc = await transaction.get(seriesRef);
 
-    if (!snapshot.exists) {
-      throw new Error('SERIES_NOT_FOUND');
+        if (!seriesDoc.exists) {
+          // Idempotent NO-OP: series already gone, counter already decremented.
+          return { deleted: false };
+        }
+
+        // The Firestore Admin SDK supports transaction.get(Query),
+        // which includes CollectionReference. This keeps all reads inside
+        // the transaction for full atomicity.
+        const actionsSnapshot = await transaction.get(actionsRef);
+
+        for (const actionDoc of actionsSnapshot.docs) {
+          transaction.delete(actionDoc.ref);
+        }
+
+        transaction.delete(seriesRef);
+
+        // Read activeSeriesCount from user document (source of truth for limits).
+        const userDoc = await transaction.get(userRef);
+        const activeSeriesCount = userDoc.exists
+          ? (userDoc.data().limits?.activeSeriesCount ?? 0)
+          : 0;
+
+        const newCount = Math.max(0, activeSeriesCount - 1);
+
+        transaction.update(userRef, {
+          'limits.activeSeriesCount': newCount,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        return { deleted: true, activeSeriesCount_before: activeSeriesCount, activeSeriesCount_after: newCount };
+      });
+
+      return result;
+    } catch (error) {
+      throw new TransactionFailureError({
+        operation: 'atomicDelete',
+        cause: error,
+      });
     }
-
-    await ref.delete();
-    return { deleted: true };
   }
 }
 
