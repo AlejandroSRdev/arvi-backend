@@ -5,9 +5,9 @@
  * Implements IHabitSeriesRepository by persisting and deleting habit series documents in Firestore.
  */
 
-import { Action } from '../../../01domain/value_objects/habits/Action.js';
 import { HabitSeries } from '../../../01domain/entities/HabitSeries.js';
 import { IHabitSeriesRepository } from '../../../01domain/ports/HabitSeriesRepository.js';
+import { Action } from '../../../01domain/value_objects/habits/Action.js';
 import {
   DataAccessFailureError,
   InsufficientEnergyError,
@@ -210,14 +210,14 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
     console.log(`[REPOSITORY] [Habit Series] Series document found - seriesId=${seriesId}`);
 
     const data = seriesDoc.data();
-    const actionsSnapshot = await seriesRef.collection('actions').get();
 
     console.log(`[REPOSITORY] [Habit Series] Actions subcollection fetched - count=${actionsSnapshot.size}, seriesId=${seriesId}`);
 
-    const actions = actionsSnapshot.docs.map((actionDoc) => {
-      const actionData = actionDoc.data();
-      return Action.create({
-        id: actionDoc.id,
+    const rawActions = data.actions ?? [];
+
+    const actions = rawActions.map((actionData) =>
+      Action.create({
+        id: actionData.id,
         name: actionData.name,
         description: actionData.description,
         difficulty: actionData.difficulty,
@@ -226,8 +226,8 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
         completedAt: actionData.completedAt?.toDate?.() ?? null,
         verificationResponse: actionData.verificationResponse ?? null,
         bonusPoints: actionData.bonusPoints ?? 0,
-      });
-    });
+      })
+    );
 
     console.log(`[REPOSITORY] [Habit Series] HabitSeries entity built - seriesId=${seriesId}, actionsCount=${actions.length}`);
 
