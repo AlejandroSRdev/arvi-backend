@@ -192,6 +192,8 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
    * @returns {Promise<HabitSeries | null>} null if the series does not exist
    */
   async getHabitSeriesById(userId, seriesId) {
+    console.log(`[REPOSITORY] [Habit Series] getHabitSeriesById called - userId=${userId}, seriesId=${seriesId}`);
+
     const seriesRef = db
       .collection('users')
       .doc(userId)
@@ -201,11 +203,16 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
     const seriesDoc = await seriesRef.get();
 
     if (!seriesDoc.exists) {
+      console.log(`[REPOSITORY] [Habit Series] Series document not found - seriesId=${seriesId}`);
       return null;
     }
 
+    console.log(`[REPOSITORY] [Habit Series] Series document found - seriesId=${seriesId}`);
+
     const data = seriesDoc.data();
     const actionsSnapshot = await seriesRef.collection('actions').get();
+
+    console.log(`[REPOSITORY] [Habit Series] Actions subcollection fetched - count=${actionsSnapshot.size}, seriesId=${seriesId}`);
 
     const actions = actionsSnapshot.docs.map((actionDoc) => {
       const actionData = actionDoc.data();
@@ -221,6 +228,8 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
         bonusPoints: actionData.bonusPoints ?? 0,
       });
     });
+
+    console.log(`[REPOSITORY] [Habit Series] HabitSeries entity built - seriesId=${seriesId}, actionsCount=${actions.length}`);
 
     return HabitSeries.create({
       id: seriesDoc.id,

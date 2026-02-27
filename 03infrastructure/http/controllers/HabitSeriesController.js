@@ -238,6 +238,8 @@ export async function getHabitSeriesByIdEndpoint(req, res, next) {
     const userId = req.user?.uid;
     const seriesId = req.params?.seriesId;
 
+    logger.info('[Habit Series] GetById - request received', { uid: userId, seriesId });
+
     if (!userId) {
       throw new AuthenticationError('User not authenticated');
     }
@@ -249,13 +251,23 @@ export async function getHabitSeriesByIdEndpoint(req, res, next) {
     const series = await habitSeriesRepository.getHabitSeriesById(userId, seriesId);
 
     if (!series) {
+      logger.info('[Habit Series] GetById - not found', { uid: userId, seriesId });
       throw new NotFoundError('Habit series not found');
     }
 
+    logger.info('[Habit Series] GetById - series found', {
+      uid: userId,
+      seriesId,
+      actionsCount: series.actions?.length ?? 0,
+    });
+
     const responseDTO = toHabitSeriesOutputDTO(series);
+
+    logger.info('[Habit Series] GetById - response sent', { uid: userId, seriesId, status: 200 });
 
     return res.status(HTTP_STATUS.OK).json(responseDTO);
   } catch (err) {
+    logger.error('[Habit Series] GetById - error', err);
     return next(err);
   }
 }
