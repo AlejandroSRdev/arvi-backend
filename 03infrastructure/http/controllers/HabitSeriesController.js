@@ -6,7 +6,7 @@
  */
 
 import { createHabitSeries } from '../../../02application/use-cases/CreateHabitSeriesUseCase.js';
-import { AuthenticationError, ValidationError } from '../../../errors/Index.js';
+import { AuthenticationError, NotFoundError, ValidationError } from '../../../errors/Index.js';
 import { logger } from '../../logger/Logger.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { toHabitSeriesOutputDTO } from '../../mappers/HabitSeriesMapper.js';
@@ -225,9 +225,45 @@ export async function getHabitSeriesEndpoint(req, res, next) {
   }
 }
 
+/**
+ * GET /api/habits/series/:seriesId
+ *
+ * Returns the full HabitSeries entity for a given seriesId.
+ *
+ * Response (200 OK): Full Habit Series DTO (see HabitSeriesMapper)
+ * Response (404 Not Found): { error: "NOT_FOUND", message: "Habit series not found" }
+ */
+export async function getHabitSeriesByIdEndpoint(req, res, next) {
+  try {
+    const userId = req.user?.uid;
+    const seriesId = req.params?.seriesId;
+
+    if (!userId) {
+      throw new AuthenticationError('User not authenticated');
+    }
+
+    if (!seriesId || seriesId.trim() === '') {
+      throw new ValidationError('seriesId is required');
+    }
+
+    const series = await habitSeriesRepository.getHabitSeriesById(userId, seriesId);
+
+    if (!series) {
+      throw new NotFoundError('Habit series not found');
+    }
+
+    const responseDTO = toHabitSeriesOutputDTO(series);
+
+    return res.status(HTTP_STATUS.OK).json(responseDTO);
+  } catch (err) {
+    return next(err);
+  }
+}
+
 export default {
   createHabitSeriesEndpoint,
   deleteHabitSeriesEndpoint,
   getHabitSeriesEndpoint,
+  getHabitSeriesByIdEndpoint,
   setDependencies,
 };

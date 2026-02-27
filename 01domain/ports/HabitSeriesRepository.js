@@ -30,6 +30,15 @@ export class IHabitSeriesRepository {
   async listByUser(userId, limit) {
     throw new Error('Not implemented');
   }
+
+  /**
+   * @param {string} userId
+   * @param {string} seriesId
+   * @returns {Promise<HabitSeries | null>}
+   */
+  async getHabitSeriesById(userId, seriesId) {
+    throw new Error('Not implemented');
+  }
 }
 
 export default IHabitSeriesRepository;

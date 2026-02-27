@@ -1,106 +1,85 @@
-Maintain strict fidelity to:
-- The project manifest (architecture, stack, layering, conventions).
-- Your assigned agent role (clean documentation, no refactors, no scope expansion).
+You are Claude, acting as a senior backend engineer responsible for maintaining architectural documentation.
 
-Do NOT modify code.
-Do NOT alter existing diagrams.
-Only extend documentation consistently.
+A new endpoint has been implemented:
 
-------------------------------------------------------------
-OBJECTIVE
-------------------------------------------------------------
+GET /api/habits/series/:seriesId
 
-Register the GET /habit-series endpoint in the documentation by adding a new Mermaid diagram using:
-
-flowchart TD
-
-The diagram must follow the same structure, naming style, indentation, and visual conventions used in:
+Your task is to document this endpoint in Mermaid format,
+following EXACTLY the style and conventions used in:
 
 .docs/diagrams/diagrams-code.txt
 
-Do NOT change the format used in that file.
-Replicate its structural style precisely.
-
 ------------------------------------------------------------
-ENDPOINT BEHAVIOR (AS IMPLEMENTED)
+CRITICAL INSTRUCTIONS
 ------------------------------------------------------------
 
-Route:
-GET /habit-series
+1) First:
+   Open and analyze .docs/diagrams/diagrams-code.txt
+   Understand:
+   - Diagram type used (flowchart, sequenceDiagram, etc.)
+   - Node naming conventions
+   - File path annotations
+   - Layer grouping (routes, controllers, repositories, Firestore, domain)
+   - Direction (LR or TB)
+   - Styling rules (if any)
+   - Formatting consistency
 
-Behavior:
+2) You MUST replicate the exact style.
+   Do not invent a new diagram format.
+   Do not change direction.
+   Do not introduce new naming conventions.
 
-1. Validate limit query parameter.
-   - If missing → default = 20
-   - If > 50 → clamp to 50
-   - If invalid → return 400
-
-2. Extract uid from authentication middleware.
-   - If missing/invalid → 401
-
-3. Build Firestore reference:
-   users/{uid}/habitSeries
-
-4. Query:
-   - orderBy createdAt DESC
-   - limit(limitValue)
-
-5. Execute query.
-
-6. Map snapshot to DTO:
-   - id
-   - createdAt
-   - updatedAt
-
-7. Return:
-   200 with:
-   {
-     data: [...],
-     count: snapshot.size
-   }
+3) Only add the diagram for the new endpoint.
+   Do not modify other diagrams.
+   Do not remove anything.
+   Append it in the appropriate section.
 
 ------------------------------------------------------------
-DIAGRAM REQUIREMENTS
+ARCHITECTURAL FLOW TO REPRESENT
 ------------------------------------------------------------
 
-- Use Mermaid syntax:
-  ```mermaid
-  flowchart TD
+Client
+  ↓
+HabitSeriesRoutes.js
+  ↓
+HabitSeriesController.getHabitSeriesByIdEndpoint
+  ↓
+FirestoreHabitSeriesRepository.getHabitSeriesById
+  ↓
+Firestore:
+    users/{uid}/habitSeries/{seriesId}
+    users/{uid}/habitSeries/{seriesId}/actions
+  ↓
+01domain/entities/HabitSeries
+  ↓
+HTTP 200 (or 404 / 400 / 500)
 
-Must include:
+Include:
 
-Start node
+- Validation step
+- Auth middleware (authenticate)
+- NOT_FOUND path
+- INTERNAL_ERROR path
+- Successful serialization path
 
-Auth validation branch
+------------------------------------------------------------
+REQUIREMENTS
+------------------------------------------------------------
 
-Limit validation branch
+- Use Mermaid syntax only.
+- Match existing indentation style.
+- Match naming precision (file paths if previously shown).
+- If previous diagrams include file path comments, include them.
+- Keep it clean and consistent.
 
-Firestore query step
-
-Mapping step
-
-Response 200
-
-Error paths (400, 401)
-
-Keep diagram clean and readable.
-
-Follow naming conventions and structure already present in diagrams-code.txt.
-
-Do not overcomplicate.
-
-No speculative future features.
-
-No cursor pagination (not implemented).
-
+------------------------------------------------------------
 OUTPUT FORMAT
+------------------------------------------------------------
 
-Return:
+Return ONLY the Mermaid diagram block.
+Do not explain.
+Do not describe.
+Do not add commentary.
+Do not summarize.
 
-The exact Mermaid diagram block only.
-
-No explanation text.
-
-No additional commentary.
-
-Fully consistent with existing documentation style.
+Just the diagram code ready to paste into .docs/diagrams/diagrams-code.txt.

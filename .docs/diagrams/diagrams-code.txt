@@ -240,11 +240,11 @@ flowchart TD
     TX_SERIES -->|"not found · NO-OP"| LOG
     TX_SERIES -->|"exists"| TX_ACTIONS
 
-    TX_ACTIONS --> TX_DEL_ACTIONS
-    TX_DEL_ACTIONS --> TX_DEL_SERIES
-    TX_DEL_SERIES --> TX_USER
+    TX_ACTIONS --> TX_USER
     TX_USER --> TX_COMPUTE
-    TX_COMPUTE --> TX_UPDATE
+    TX_COMPUTE --> TX_DEL_ACTIONS
+    TX_DEL_ACTIONS --> TX_DEL_SERIES
+    TX_DEL_SERIES --> TX_UPDATE
     TX_UPDATE --> TX_COMMIT
 
     TX_COMMIT -->|"committed"| LOG
@@ -296,4 +296,55 @@ flowchart TD
   ErrMW --> ErrMapper
   ErrMapper --> R401["401 AUTHENTICATION_ERROR"]
   ErrMapper --> R400["400 VALIDATION_ERROR"]
+  ErrMapper --> R500["500 INTERNAL_ERROR"]
+
+GET /api/habits/series/:seriesId
+flowchart TD
+
+  subgraph INFRA ["Infrastructure"]
+      REQ["GET /api/habits/series/:seriesId"]
+      AUTH_TOKEN{"Bearer token present?"}
+      JWT_VALID{"jwt.verify valid?"}
+      SID_CHECK{"seriesId valid?"}
+      REPO["FirestoreHabitSeriesRepository.getHabitSeriesById"]
+      FS_SERIES["Firestore · users/{uid}/habitSeries/{seriesId}"]
+      SERIES_FOUND{"series document exists?"}
+      FS_ACTIONS["Firestore · habitSeries/{seriesId}/actions"]
+      OUTPUT_DTO["toHabitSeriesOutputDTO"]
+      CtrlCatch["controller catch → next(err)"]
+      ErrMW["errorMiddleware"]
+      ErrMapper["mapErrorToHttp"]
+  end
+
+  subgraph DOMAIN ["Domain"]
+      ENTITY_MAP["HabitSeries.create · Action.create"]
+  end
+
+  REQ --> AUTH_TOKEN
+  AUTH_TOKEN -->|"No"| CtrlCatch
+  AUTH_TOKEN -->|"Yes"| JWT_VALID
+
+  JWT_VALID -->|"Invalid"| CtrlCatch
+  JWT_VALID -->|"Valid"| SID_CHECK
+
+  SID_CHECK -->|"invalid"| CtrlCatch
+  SID_CHECK -->|"valid"| REPO
+
+  REPO -->|"error"| CtrlCatch
+  REPO --> FS_SERIES
+
+  FS_SERIES --> SERIES_FOUND
+  SERIES_FOUND -->|"not found"| CtrlCatch
+  SERIES_FOUND -->|"exists"| FS_ACTIONS
+
+  FS_ACTIONS --> ENTITY_MAP
+
+  ENTITY_MAP --> OUTPUT_DTO
+  OUTPUT_DTO --> R200["200 OK · HabitSeries DTO"]
+
+  CtrlCatch --> ErrMW
+  ErrMW --> ErrMapper
+  ErrMapper --> R401["401 AUTHENTICATION_ERROR"]
+  ErrMapper --> R400["400 VALIDATION_ERROR"]
+  ErrMapper --> R404["404 NOT_FOUND"]
   ErrMapper --> R500["500 INTERNAL_ERROR"]

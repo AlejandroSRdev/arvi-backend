@@ -6,7 +6,7 @@
  */
 
 import express from 'express';
-import { createHabitSeriesEndpoint, deleteHabitSeriesEndpoint, getHabitSeriesEndpoint } from '../controllers/HabitSeriesController.js';
+import { createHabitSeriesEndpoint, deleteHabitSeriesEndpoint, getHabitSeriesEndpoint, getHabitSeriesByIdEndpoint } from '../controllers/HabitSeriesController.js';
 import { authenticate } from '../middlewares/authenticate.js';
 
 const router = express.Router();
@@ -18,6 +18,12 @@ router.use(authenticate);
  * Returns authenticated user's habit series (ordered by createdAt DESC).
  */
 router.get('/series', getHabitSeriesEndpoint);
+
+/**
+ * GET /api/habits/series/:seriesId
+ * Returns the full HabitSeries entity for the given seriesId.
+ */
+router.get('/series/:seriesId', getHabitSeriesByIdEndpoint);
 
 /**
  * POST /api/habits/series
