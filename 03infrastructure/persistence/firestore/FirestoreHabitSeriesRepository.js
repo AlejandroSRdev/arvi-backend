@@ -210,9 +210,6 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
     console.log(`[REPOSITORY] [Habit Series] Series document found - seriesId=${seriesId}`);
 
     const data = seriesDoc.data();
-
-    console.log(`[REPOSITORY] [Habit Series] HabitSeries entity built - seriesId=${seriesId}, actionsCount=${actions.length}`);
-
     const rawActions = data.actions ?? [];
 
     const actions = rawActions.map((actionData) =>
