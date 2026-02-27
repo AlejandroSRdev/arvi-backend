@@ -5,11 +5,11 @@
  * Adapts HTTP requests to authentication use cases and issues JWT tokens on successful login.
  */
 
+import jwt from 'jsonwebtoken';
 import { createUser } from '../../../02application/use-cases/CreateUser.js';
 import { loginUser } from '../../../02application/use-cases/LoginUser.js';
-import { HTTP_STATUS } from '../HttpStatus.js';
 import { ValidationError } from '../../../errors/Index.js';
-import jwt from 'jsonwebtoken';
+import { HTTP_STATUS } from '../HttpStatus.js';
 
 
 // Dependency injection
@@ -49,7 +49,6 @@ export async function register(req, res, next) {
       user: {
         id: userId,
         email,
-        password,
         plan: "pro",
       },
     });
