@@ -7,15 +7,17 @@
 
 import express from 'express';
 import {
-  getProfile,
-  updateProfile,
-  getSubscription,
   deleteAccount,
+  getProfile,
+  getSubscription,
+  updateProfile,
 } from '../controllers/UserController.js';
 import { authenticate } from '../middlewares/authenticate.js';
+import rateLimiter from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
+router.use(rateLimiter); // Apply rate limiting to all user routes
 router.use(authenticate);
 
 router.get('/profile', getProfile);
