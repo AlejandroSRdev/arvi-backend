@@ -8,11 +8,11 @@
 import express from 'express';
 import { createHabitSeriesEndpoint, deleteHabitSeriesEndpoint, getHabitSeriesByIdEndpoint, getHabitSeriesEndpoint } from '../controllers/HabitSeriesController.js';
 import { authenticate } from '../middlewares/authenticate.js';
-import rateLimiter from '../middlewares/rateLimiter.js';
+import { generalRateLimiter } from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
-router.use(rateLimiter); // Apply rate limiting to all habit series routes
+router.use(generalRateLimiter); // Apply rate limiting to all habit series routes
 router.use(authenticate);
 
 /**
