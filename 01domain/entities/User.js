@@ -2,12 +2,9 @@
  * Layer: Domain
  * File: User.js
  * Responsibility:
- * Represents a system user and enforces all identity, credential, energy, trial, and limit invariants through construction.
+ * Represents a system user and enforces all identity, credential, trial, and limit invariants through construction.
  */
 
-import { Trial } from "../value_objects/user/Trial.js";
-import { Energy } from "../value_objects/user/Energy.js";
-import { Limits } from "../value_objects/user/Limits.js";
 
 export class User {
   constructor(
@@ -16,7 +13,6 @@ export class User {
     password,
     plan,
     trial,
-    energy,
     limits
   ) {
     // ─────────────────────────────
@@ -82,37 +78,6 @@ export class User {
     }
 
     // ─────────────────────────────
-    // Energy invariants
-    // ─────────────────────────────
-
-    if (typeof energy.currentAmount !== "number") {
-      throw new Error("Invalid energy current amount type");
-    }
-
-    if (energy.currentAmount < 0) {
-      throw new Error("Energy current amount cannot be negative");
-    }
-
-    if (typeof energy.maxAmount !== "number") {
-      throw new Error("Invalid energy max amount type");
-    }
-
-    if (energy.maxAmount < 0) {
-      throw new Error("Energy max amount cannot be negative");
-    }
-
-    if (energy.currentAmount > energy.maxAmount) {
-      throw new Error("Energy current amount cannot exceed max amount");
-    }
-
-    if (
-      energy.lastRechargedAt !== null &&
-      !(energy.lastRechargedAt instanceof Date)
-    ) {
-      throw new Error("Invalid energy last recharged date");
-    }
-
-    // ─────────────────────────────
     // Limits invariants
     // ─────────────────────────────
 
@@ -138,12 +103,19 @@ export class User {
       );
     }
 
+    if (typeof limits.monthlyActionsLimit !== "number") {
+      throw new Error("Invalid monthly actions limit type");
+    }
+
+    if (limits.monthlyActionsLimit < 0) {
+      throw new Error("Monthly actions limit cannot be negative");
+    }
+
     this.id = id;
     this.email = normalizedEmail;
     this.password = password;
     this.plan = plan;
     this.trial = trial;
-    this.energy = energy;
     this.limits = limits;
   }
 
@@ -157,7 +129,6 @@ export class User {
       params.password,
       params.plan,
       params.trial,
-      params.energy,
       params.limits
     );
   }

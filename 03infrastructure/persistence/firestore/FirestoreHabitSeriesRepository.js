@@ -9,8 +9,8 @@ import { HabitSeries } from '../../../01domain/entities/HabitSeries.js';
 import { IHabitSeriesRepository } from '../../../01domain/ports/HabitSeriesRepository.js';
 import { Action } from '../../../01domain/value_objects/habits/Action.js';
 import {
+  AuthorizationError,
   DataAccessFailureError,
-  InsufficientEnergyError,
   TransactionFailureError,
   ValidationError,
 } from '../../../errors/Index.js';
@@ -98,17 +98,16 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
   }
 
   /**
-   * Atomic creation: persist series, deduct energy, increment counter.
+   * Atomic creation: persist series and increment counter.
    *
    * Runs inside a single Firestore transaction so all operations
    * succeed or fail together. No partial state is possible.
    *
    * @param {string} userId - User ID
    * @param {object} seriesData - Parsed series data from AI
-   * @param {number} totalEnergyConsumed - Total energy to deduct
    * @returns {Promise<{id: string}>}
    */
-  async atomicCommitCreation(userId, seriesData, totalEnergyConsumed) {
+  async atomicCommitCreation(userId, seriesData) {
     if (!userId) {
       throw new ValidationError('userId is required for atomic commit');
     }
@@ -130,14 +129,6 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
           });
         }
 
-        const userData = userDoc.data();
-        const currentEnergy = userData.energy?.currentAmount || 0;
-
-        // Validate energy inside transaction (authoritative check)
-        if (currentEnergy < totalEnergyConsumed) {
-          throw new InsufficientEnergyError(totalEnergyConsumed, currentEnergy);
-        }
-
         let parsedData = seriesData;
         if (typeof seriesData === 'string') {
           parsedData = JSON.parse(seriesData);
@@ -155,13 +146,7 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
 
         transaction.set(seriesRef, dataToStore);
 
-        // Deduct energy and increment counter
-        const newEnergy = currentEnergy - totalEnergyConsumed;
-        const currentTotalConsumption = userData.energy?.totalConsumption || 0;
-
         transaction.update(userRef, {
-          'energy.currentAmount': newEnergy,
-          'energy.totalConsumption': currentTotalConsumption + totalEnergyConsumed,
           'limits.activeSeriesCount': FieldValue.increment(1),
           updatedAt: FieldValue.serverTimestamp(),
         });
@@ -172,7 +157,7 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
       return result;
     } catch (error) {
       // Re-throw typed errors as-is
-      if (error instanceof InsufficientEnergyError || error instanceof DataAccessFailureError) {
+      if (error instanceof DataAccessFailureError) {
         throw error;
       }
 
@@ -302,6 +287,112 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
     } catch (error) {
       throw new TransactionFailureError({
         operation: 'atomicDelete',
+        cause: error,
+      });
+    }
+  }
+  /**
+   * Returns monthly usage for a user in a given month.
+   * Returns null if no usage document exists for the given monthKey.
+   *
+   * @param {string} userId
+   * @param {string} monthKey - e.g. "2026-03"
+   * @returns {Promise<{ actionsUsed: number, monthKey: string } | null>}
+   */
+  async getMonthlyUsage(userId, monthKey) {
+    const docRef = db
+      .collection('users')
+      .doc(userId)
+      .collection('monthlyUsage')
+      .doc(monthKey);
+
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return null;
+    }
+
+    return doc.data();
+  }
+
+  /**
+   * Atomically appends an action to a series and increments monthly usage.
+   *
+   * Runs inside a single Firestore transaction so all operations
+   * succeed or fail together. No partial state is possible.
+   *
+   * @param {string} userId
+   * @param {string} seriesId
+   * @param {object} actionData - Plain action data to persist
+   * @param {string} monthKey - e.g. "2026-03"
+   * @param {number} monthlyLimit - Limit re-verified inside transaction for concurrency safety
+   * @returns {Promise<{ actionId: string }>}
+   */
+  async atomicCommitActionCreation(userId, seriesId, actionData, monthKey, monthlyLimit) {
+    if (!userId || !seriesId || !actionData || !monthKey) {
+      throw new ValidationError('userId, seriesId, actionData, and monthKey are required for atomic commit');
+    }
+
+    const seriesRef = db.collection('users').doc(userId).collection('habitSeries').doc(seriesId);
+    const monthlyUsageRef = db.collection('users').doc(userId).collection('monthlyUsage').doc(monthKey);
+
+    try {
+      const result = await db.runTransaction(async (transaction) => {
+        // READS FIRST (Firestore requires all reads before any writes)
+        const seriesDoc = await transaction.get(seriesRef);
+        const monthlyUsageDoc = await transaction.get(monthlyUsageRef);
+
+        if (!seriesDoc.exists) {
+          throw new DataAccessFailureError({
+            operation: 'atomicCommitActionCreation',
+            collection: 'habitSeries',
+          });
+        }
+
+        // Re-verify monthly limit to guard against concurrent requests
+        const currentActionsUsed = monthlyUsageDoc.exists
+          ? (monthlyUsageDoc.data().actionsUsed ?? 0)
+          : 0;
+
+        if (currentActionsUsed >= monthlyLimit) {
+          throw new AuthorizationError(`Monthly action limit of ${monthlyLimit} reached`);
+        }
+
+        // WRITES AFTER ALL READS
+        const currentActions = seriesDoc.data().actions ?? [];
+        const updatedActions = [...currentActions, actionData];
+
+        transaction.update(seriesRef, {
+          actions: updatedActions,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        if (monthlyUsageDoc.exists) {
+          transaction.update(monthlyUsageRef, {
+            actionsUsed: FieldValue.increment(1),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        } else {
+          transaction.set(monthlyUsageRef, {
+            monthKey,
+            actionsUsed: 1,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+
+        return { actionId: actionData.id };
+      });
+
+      return result;
+    } catch (error) {
+      // Re-throw typed errors as-is
+      if (error instanceof DataAccessFailureError || error instanceof AuthorizationError) {
+        throw error;
+      }
+
+      throw new TransactionFailureError({
+        operation: 'atomicCommitActionCreation',
         cause: error,
       });
     }

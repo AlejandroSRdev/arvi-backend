@@ -6,7 +6,6 @@
  */
 import { randomUUID } from "crypto";
 import { User } from "../../01domain/entities/User.js";
-import { Energy } from "../../01domain/value_objects/user/Energy.js";
 import { Limits } from "../../01domain/value_objects/user/Limits.js";
 import { Trial } from "../../01domain/value_objects/user/Trial.js";
 import { ValidationError } from "../../errors/Index.js";
@@ -54,7 +53,6 @@ export async function createUser(email, password, deps) {
     password: passwordHash,
     plan: "pro",
     trial: Trial.inactive(),
-    energy: Energy.initial(10000),
     limits: Limits.pro(),
   });
 

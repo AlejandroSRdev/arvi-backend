@@ -6,7 +6,7 @@
  */
 
 import express from 'express';
-import { createHabitSeriesEndpoint, deleteHabitSeriesEndpoint, getHabitSeriesByIdEndpoint, getHabitSeriesEndpoint } from '../controllers/HabitSeriesController.js';
+import { createHabitSeriesEndpoint, deleteHabitSeriesEndpoint, getHabitSeriesByIdEndpoint, getHabitSeriesEndpoint, createActionEndpoint } from '../controllers/HabitSeriesController.js';
 import { authenticate } from '../middlewares/authenticate.js';
 import { generalRateLimiter } from '../middlewares/rateLimiter.js';
 
@@ -32,6 +32,12 @@ router.get('/series/:seriesId', getHabitSeriesByIdEndpoint);
  * Creates a new habit series via AI.
  */
 router.post('/series', createHabitSeriesEndpoint);
+
+/**
+ * POST /api/habits/series/:seriesId/actions
+ * Creates a new AI-generated action and appends it to the given series.
+ */
+router.post('/series/:seriesId/actions', createActionEndpoint);
 
 /**
  * DELETE /api/habits/series/:seriesId

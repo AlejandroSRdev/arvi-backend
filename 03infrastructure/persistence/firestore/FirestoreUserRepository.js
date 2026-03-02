@@ -15,7 +15,7 @@ export class FirestoreUserRepository extends IUserRepository {
   /**
    * Persist a User domain entity.
    *
-   * All domain decisions (plan, energy, limits, trial)
+   * All domain decisions (plan, limits, trial)
    * must be made BEFORE calling this method.
    */
   async save(user) {
@@ -26,12 +26,6 @@ export class FirestoreUserRepository extends IUserRepository {
         email: user.email,
         password: user.password,
         plan: user.plan,
-
-        energy: {
-          currentAmount: user.energy.currentAmount,
-          maxAmount: user.energy.maxAmount,
-          lastRechargedAt: user.energy.lastRechargedAt,
-        },
 
         trial: {
           durationDays: user.trial.durationDays,

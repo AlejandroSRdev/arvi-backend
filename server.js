@@ -10,7 +10,6 @@ import express from 'express';
 
 // Import routes (Hexagonal Architecture)
 import authRoutes from './03infrastructure/http/routes/Auth.routes.js';
-import energyRoutes from './03infrastructure/http/routes/Energy.routes.js';
 import habitSeriesRoutes from './03infrastructure/http/routes/HabitSeriesRoutes.js';
 import userRoutes from './03infrastructure/http/routes/User.routes.js';
 
@@ -37,7 +36,6 @@ import { errorMiddleware } from './03infrastructure/http/middlewares/errorMiddle
 import { initializeFirebase } from './03infrastructure/persistence/firestore/FirebaseConfig.js';
 
 // Import Infrastructure Adapters (Repositories)
-import FirestoreEnergyRepository from './03infrastructure/persistence/firestore/FirestoreEnergyRepository.js';
 import FirestoreHabitSeriesRepository from './03infrastructure/persistence/firestore/FirestoreHabitSeriesRepository.js';
 import FirestoreUserRepository from './03infrastructure/persistence/firestore/FirestoreUserRepository.js';
 
@@ -49,7 +47,6 @@ import PasswordHasher from './03infrastructure/security/PasswordHasher.js';
 
 // Import Controllers for dependency injection
 import { setDependencies as setAuthDeps } from './03infrastructure/http/controllers/AuthController.js';
-import { setDependencies as setEnergyDeps } from './03infrastructure/http/controllers/EnergyController.js';
 import { setDependencies as setHabitSeriesDeps } from './03infrastructure/http/controllers/HabitSeriesController.js';
 import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
 
@@ -61,7 +58,6 @@ initializeFirebase();
 // ───────────────────────────────────────────────────────────────
 
 const userRepository = new FirestoreUserRepository();
-const energyRepository = new FirestoreEnergyRepository();
 const habitSeriesRepository = new FirestoreHabitSeriesRepository();
 const aiProvider = new AIProviderRouter(); // Routes to Gemini/OpenAI based on model
 const passwordHasher = new PasswordHasher();
@@ -82,18 +78,10 @@ setUserDeps({
   userRepository
 });
 
-// EnergyController requires: energyRepository, userRepository
-setEnergyDeps({
-  energyRepository,
-  userRepository
-});
-
-
-// HabitSeriesController requires: userRepository, habitSeriesRepository, energyRepository, aiProvider
+// HabitSeriesController requires: userRepository, habitSeriesRepository, aiProvider
 setHabitSeriesDeps({
   userRepository,
   habitSeriesRepository,
-  energyRepository,
   aiProvider
 });
 
@@ -129,9 +117,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: 'GET /health',
       auth: 'POST /api/auth/login, POST /api/auth/register',
-      energy: 'GET /api/energy, POST /api/energy/consume',
       user: 'GET /api/user/profile, PATCH /api/user/profile',
-      habits: 'POST /api/habits/series, GET /api/habits/series, GET /api/habits/series/:seriesId, DELETE /api/habits/series/:seriesId',
+      habits: 'POST /api/habits/series, GET /api/habits/series, GET /api/habits/series/:seriesId, DELETE /api/habits/series/:seriesId, POST /api/habits/series/:seriesId/actions',
     },
   });
 });
@@ -141,7 +128,6 @@ app.get('/', (req, res) => {
 // ═══════════════════════════════════════════════════════════════
 
 app.use('/api/auth', authRoutes);       // ✅ Authentication
-app.use('/api/energy', energyRoutes);   // ✅ Energy management
 app.use('/api/user', userRoutes);       // ✅ User management
 app.use('/api/habits', habitSeriesRoutes); // ✅ Habit series
 
@@ -159,11 +145,11 @@ app.use((req, res) => {
       'GET /',
       'POST /api/auth/login',
       'POST /api/auth/register',
-      'GET /api/energy',
       'POST /api/habits/series',
       'GET /api/habits/series',
       'GET /api/habits/series/:seriesId',
       'DELETE /api/habits/series/:seriesId',
+      'POST /api/habits/series/:seriesId/actions',
     ],
   });
 });
@@ -190,11 +176,11 @@ app.listen(PORT, () => {
   console.log('     • GET  /                             - API info');
   console.log('     • POST /api/auth/login              - User login');
   console.log('     • POST /api/auth/register           - User registration');
-  console.log('     • GET  /api/energy                   - Query energy');
   console.log('     • POST   /api/habits/series            - Create habit series via AI');
   console.log('     • GET    /api/habits/series            - List user habit series');
   console.log('     • GET    /api/habits/series/:seriesId  - Get habit series by ID');
   console.log('     • DELETE /api/habits/series/:id        - Delete habit series');
+  console.log('     • POST   /api/habits/series/:id/actions - Add AI-generated action to series');
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');
