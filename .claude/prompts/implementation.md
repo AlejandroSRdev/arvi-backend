@@ -1,64 +1,52 @@
-You are acting as a senior backend engineer working on a Node.js + Express backend using clean architecture (domain, application, infrastructure).
+You are acting as a senior backend engineer working on a Node.js + Express backend using clean architecture (domain, application, infrastructure layers).
 
-Context:
+We are stabilizing the contract of:
 
-There are two endpoints:
+GET /api/habits/series
 
-1) GET /api/habits/series/:seriesId
-   → Returns full habit series object (already correct, DO NOT TOUCH).
-
-2) GET /api/habits/series
-   → Returns lightweight list for UI listing.
-
-Current implementation (IMPORTANT):
-
-/**
- * GET /api/habits/series
- *
- * Returns the authenticated user's habit series ordered by createdAt DESC.
- *
- * Query parameters:
- * - limit (optional): number of results to return (default 20, max 50)
- *
- * Response (200 OK):
- * {
- *   data: [{ id, createdAt, updatedAt }],
- *   count: number
- * }
- */
-
-Required change:
-
-We must modify the list response so that it returns:
+FINAL REQUIRED RESPONSE SHAPE:
 
 {
-  data: [{ title, createdAt }],
-  count: number
+  "data": [
+    {
+      "id": "string",
+      "title": "string",
+      "createdAt": "ISO string"
+    }
+  ],
+  "count": number
 }
 
 Important constraints:
 
-- DO NOT modify GET /api/habits/series/:seriesId.
-- DO NOT break clean architecture boundaries.
-- DO NOT expose raw database documents.
-- DO NOT move business logic to controllers.
-- If the title already exists in the domain entity, reuse it.
-- If the repository currently projects only id, update the projection minimally.
-- Preserve ordering (createdAt DESC).
-- Preserve limit behavior.
-- Preserve count logic.
-- updatedAt must no longer be returned.
-- id must no longer be returned in this endpoint.
-- Ensure title is guaranteed non-null (validate or enforce if necessary).
+1) id MUST be included.
+2) title MUST be included.
+3) createdAt MUST be included.
+4) updatedAt MUST NOT be included.
+5) No internal DB fields must leak.
+6) Ordering must remain createdAt DESC.
+7) limit query parameter must remain functional (default 20, max 50).
+8) count must still represent total number of returned items.
+
+Architecture rules:
+
+- Do NOT modify the full object endpoint:
+  GET /api/habits/series/:seriesId
+
+- Do NOT move business logic into controllers.
+- Keep mapping deterministic and explicit.
+- If repository currently returns partial projection, adjust projection minimally.
+- If domain entity already contains id, title, createdAt, reuse it.
+- If mapping is happening in application layer, modify DTO there.
+- Do NOT refactor unrelated code.
+- Do NOT introduce new abstractions.
 
 Tasks:
 
-1) Identify where the list projection/mapping occurs (repository or mapper layer).
-2) Modify only the necessary layer to include title in the projection.
-3) Return an explicit DTO for the list endpoint.
-4) Show exact code modifications only (not full file rewrites).
-5) Briefly explain why the change respects clean architecture and separation of concerns.
+1) Identify where the list projection is built (repository or mapper).
+2) Modify only that projection to include id + title + createdAt.
+3) Explicitly construct the response DTO.
+4) Show only necessary code changes.
+5) Briefly explain why the solution respects clean architecture boundaries.
 
-Do not refactor unrelated logic.
-Do not change business rules.
-Focus strictly on adjusting the response shape for UI listing.
+Focus strictly on contract correctness and stability.
