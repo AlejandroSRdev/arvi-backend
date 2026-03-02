@@ -222,11 +222,6 @@ export async function createAction(userId, seriesId, payload, deps) {
     name: parsedAction.name,
     description: parsedAction.description,
     difficulty: parseDifficulty(parsedAction.difficulty),
-    score: 0,
-    completed: false,
-    completedAt: null,
-    verificationResponse: null,
-    bonusPoints: 0,
   };
 
   console.log('[ATOMIC_COMMIT_START]', {
