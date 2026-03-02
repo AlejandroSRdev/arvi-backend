@@ -7,23 +7,17 @@
 export { BaseError } from './base/BaseError.js';
 
 export {
-  InsufficientEnergyError,
-  TrialAlreadyUsedError,
-  MaxActiveSeriesReachedError,
+  MaxActiveSeriesReachedError, TrialAlreadyUsedError
 } from './domain/Index.js';
 
 export {
-  ValidationError,
   AuthenticationError,
   AuthorizationError,
-  NotFoundError,
+  NotFoundError, ValidationError
 } from './application/Index.js';
 
 export {
-  InfrastructureError,
-  AITemporaryUnavailableError,
-  AIProviderFailureError,
-  DataAccessFailureError,
-  TransactionFailureError,
-  UnknownInfrastructureError,
+  AIProviderFailureError, AITemporaryUnavailableError, DataAccessFailureError, InfrastructureError, TransactionFailureError,
+  UnknownInfrastructureError
 } from './infrastructure/Index.js';
+
