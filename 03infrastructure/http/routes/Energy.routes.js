@@ -7,14 +7,16 @@
 
 import express from 'express';
 import {
-  getEnergy,
   activateTrialEndpoint,
+  getEnergy,
   getTrialStatusEndpoint,
 } from '../controllers/EnergyController.js';
 import { authenticate } from '../middlewares/authenticate.js';
+import rateLimiter from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
+router.use(rateLimiter); // Apply rate limiting to all energy routes
 router.use(authenticate);
 
 router.get('/', getEnergy);
