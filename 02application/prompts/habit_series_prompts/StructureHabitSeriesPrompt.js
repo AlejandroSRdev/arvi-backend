@@ -71,6 +71,7 @@ Extract EXACTLY this structure:
   "description": "",
   "actions": [
     {
+      "id": "",
       "name": "",
       "description": "",
       "difficulty": ""
