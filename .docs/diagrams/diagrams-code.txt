@@ -348,3 +348,118 @@ flowchart TD
   ErrMapper --> R400["400 VALIDATION_ERROR"]
   ErrMapper --> R404["404 NOT_FOUND"]
   ErrMapper --> R500["500 INTERNAL_ERROR"]
+
+# CreateAction — POST /api/habits/series/:seriesId/actions
+flowchart TD
+
+  subgraph INFRA ["Infrastructure"]
+      REQ["POST /api/habits/series/:seriesId/actions"]
+      AUTH_TOKEN{"Bearer token present?"}
+      JWT_VALID{"jwt.verify valid?"}
+      SID_VALID{"seriesId valid?"}
+      LANG_VALID{"language 'es'|'en'?"}
+      USER_REPO["FirestoreUserRepository.getUser"]
+      SERIES_REPO["FirestoreHabitSeriesRepository.getHabitSeriesById"]
+      MONTHLY_REPO["FirestoreHabitSeriesRepository.getMonthlyUsage"]
+      AI_P1["GeminiAdapter · Pass 1"]
+      AI_P2["OpenAIAdapter · Pass 2"]
+      AI_P3["OpenAIAdapter · Pass 3"]
+      FIRESTORE_TX["FirestoreHabitSeriesRepository.atomicCommitActionCreation"]
+      OUTPUT_DTO["toActionOutputDTO"]
+      CtrlCatch["controller catch → next(err)"]
+      ErrMW["errorMiddleware"]
+      ErrMapper["mapErrorToHttp"]
+  end
+
+  subgraph APP ["Application"]
+      UC["createAction use case"]
+      P1["Pass 1 · Creative · series as context"]
+      P2["Pass 2 · Structure"]
+      P3["Pass 3 · Schema"]
+      JSON_VALID{"AI output parseable JSON?"}
+      SCHEMA_VALID{"Schema validation passed?"}
+  end
+
+  subgraph DOMAIN ["Domain"]
+      USER_CHECK{"User found?"}
+      PLAN["determineEffectivePlan"]
+      FEATURE{"hasFeatureAccess?"}
+      SERIES_FOUND{"Series found?"}
+      MONTHLY_PRE{"actionsUsed < monthlyLimit?"}
+      TX_SERIES_EXISTS{"Series exists in TX?"}
+      TX_MONTHLY_LIMIT{"actionsUsed < limit in TX?"}
+  end
+
+  REQ --> AUTH_TOKEN
+  AUTH_TOKEN -->|"No"| CtrlCatch
+  AUTH_TOKEN -->|"Yes"| JWT_VALID
+
+  JWT_VALID -->|"Invalid"| CtrlCatch
+  JWT_VALID -->|"Valid"| SID_VALID
+
+  SID_VALID -->|"Invalid"| CtrlCatch
+  SID_VALID -->|"Valid"| LANG_VALID
+
+  LANG_VALID -->|"Invalid"| CtrlCatch
+  LANG_VALID -->|"Valid"| UC
+
+  UC --> USER_REPO
+  USER_REPO -->|"error"| CtrlCatch
+  USER_REPO --> USER_CHECK
+
+  USER_CHECK -->|"No"| CtrlCatch
+  USER_CHECK -->|"Yes"| PLAN
+
+  PLAN --> FEATURE
+  FEATURE -->|"No"| CtrlCatch
+  FEATURE -->|"Yes"| SERIES_REPO
+
+  SERIES_REPO -->|"error"| CtrlCatch
+  SERIES_REPO --> SERIES_FOUND
+
+  SERIES_FOUND -->|"Not found"| CtrlCatch
+  SERIES_FOUND -->|"Found"| MONTHLY_REPO
+
+  MONTHLY_REPO -->|"error"| CtrlCatch
+  MONTHLY_REPO --> MONTHLY_PRE
+
+  MONTHLY_PRE -->|"Limit reached"| CtrlCatch
+  MONTHLY_PRE -->|"OK"| P1
+
+  P1 --> AI_P1
+  AI_P1 -->|"error"| CtrlCatch
+  AI_P1 --> P2
+
+  P2 --> AI_P2
+  AI_P2 -->|"error"| CtrlCatch
+  AI_P2 --> P3
+
+  P3 --> AI_P3
+  AI_P3 -->|"error"| CtrlCatch
+  AI_P3 --> JSON_VALID
+
+  JSON_VALID -->|"Invalid"| CtrlCatch
+  JSON_VALID -->|"Valid"| SCHEMA_VALID
+
+  SCHEMA_VALID -->|"Invalid"| CtrlCatch
+  SCHEMA_VALID -->|"Valid"| FIRESTORE_TX
+
+  FIRESTORE_TX -->|"error"| CtrlCatch
+  FIRESTORE_TX --> TX_SERIES_EXISTS
+
+  TX_SERIES_EXISTS -->|"Not found"| CtrlCatch
+  TX_SERIES_EXISTS -->|"Exists"| TX_MONTHLY_LIMIT
+
+  TX_MONTHLY_LIMIT -->|"Limit reached"| CtrlCatch
+  TX_MONTHLY_LIMIT -->|"OK"| OUTPUT_DTO
+
+  OUTPUT_DTO --> RES201["201 CREATED · Action DTO"]
+
+  CtrlCatch --> ErrMW
+  ErrMW --> ErrMapper
+  ErrMapper --> R400["400 VALIDATION_ERROR"]
+  ErrMapper --> R401["401 AUTHENTICATION_ERROR"]
+  ErrMapper --> R403["403 AUTHORIZATION_ERROR"]
+  ErrMapper --> R404["404 NOT_FOUND"]
+  ErrMapper --> R502["502 AI_PROVIDER_FAILURE"]
+  ErrMapper --> R500["500 INTERNAL_ERROR"]

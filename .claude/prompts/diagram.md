@@ -1,85 +1,53 @@
-You are Claude, acting as a senior backend engineer responsible for maintaining architectural documentation.
+You are Agent 1.
 
-A new endpoint has been implemented:
+Your task is documentation only.
 
-GET /api/habits/series/:seriesId
+Do NOT modify any production code.
+Do NOT refactor.
+Do NOT change endpoint behavior.
 
-Your task is to document this endpoint in Mermaid format,
-following EXACTLY the style and conventions used in:
+Objective
 
-.docs/diagrams/diagrams-code.txt
+Add a new Mermaid diagram for the endpoint:
 
-------------------------------------------------------------
-CRITICAL INSTRUCTIONS
-------------------------------------------------------------
+POST /api/habits/series/:seriesId/actions
 
-1) First:
-   Open and analyze .docs/diagrams/diagrams-code.txt
-   Understand:
-   - Diagram type used (flowchart, sequenceDiagram, etc.)
-   - Node naming conventions
-   - File path annotations
-   - Layer grouping (routes, controllers, repositories, Firestore, domain)
-   - Direction (LR or TB)
-   - Styling rules (if any)
-   - Formatting consistency
+You must follow the exact style and structure used in existing diagrams.
 
-2) You MUST replicate the exact style.
-   Do not invent a new diagram format.
-   Do not change direction.
-   Do not introduce new naming conventions.
+Required Output
 
-3) Only add the diagram for the new endpoint.
-   Do not modify other diagrams.
-   Do not remove anything.
-   Append it in the appropriate section.
+Locate the file:
+.docs/diagrams/<existing-diagrams-file>.txt
+(the file that already contains other Mermaid diagrams)
 
-------------------------------------------------------------
-ARCHITECTURAL FLOW TO REPRESENT
-------------------------------------------------------------
+Append a new Mermaid diagram named clearly, e.g.:
 
-Client
-  ↓
-HabitSeriesRoutes.js
-  ↓
-HabitSeriesController.getHabitSeriesByIdEndpoint
-  ↓
-FirestoreHabitSeriesRepository.getHabitSeriesById
-  ↓
-Firestore:
-    users/{uid}/habitSeries/{seriesId}
-    users/{uid}/habitSeries/{seriesId}/actions
-  ↓
-01domain/entities/HabitSeries
-  ↓
-HTTP 200 (or 404 / 400 / 500)
+# CreateActions — POST /api/habits/series/:seriesId/actions
 
-Include:
+The diagram must mirror the CreateHabitSeries flow style:
 
-- Validation step
-- Auth middleware (authenticate)
-- NOT_FOUND path
-- INTERNAL_ERROR path
-- Successful serialization path
+subgraph INFRA (controller, auth, jwt, body validation, adapters, tx, dto)
 
-------------------------------------------------------------
-REQUIREMENTS
-------------------------------------------------------------
+subgraph APP (use case, sanitize, pass 1/2/3, parse, schema validation, mapping)
 
-- Use Mermaid syntax only.
-- Match existing indentation style.
-- Match naming precision (file paths if previously shown).
-- If previous diagrams include file path comments, include them.
-- Keep it clean and consistent.
+subgraph DOMAIN (user check, plan check, subscription/trial, limit check, series ownership, monthly usage checks, tx re-check)
 
-------------------------------------------------------------
-OUTPUT FORMAT
-------------------------------------------------------------
+explicit error arrows to controller catch → errorMiddleware → mapErrorToHttp
 
-Return ONLY the Mermaid diagram block.
-Do not explain.
-Do not describe.
-Do not add commentary.
-Do not summarize.
+Explicitly indicate:
 
-Just the diagram code ready to paste into .docs/diagrams/diagrams-code.txt.
+NO energy system
+
+monthly actions limit enforcement (pre-check and tx check)
+
+series is provided to AI for action generation
+
+exactly 1 action is generated per request
+
+language validated ("es"|"en")
+
+Commit format: output ONLY the final diagram snippet that is added, plus the exact file path and insertion position (end of file is fine).
+
+Definition of done:
+
+Diagram added in the correct file, consistent style, ready to render.

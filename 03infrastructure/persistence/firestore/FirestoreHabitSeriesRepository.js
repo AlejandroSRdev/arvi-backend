@@ -203,11 +203,6 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
         name: actionData.name,
         description: actionData.description,
         difficulty: actionData.difficulty,
-        score: actionData.score ?? 0,
-        completed: actionData.completed ?? false,
-        completedAt: actionData.completedAt?.toDate?.() ?? null,
-        verificationResponse: actionData.verificationResponse ?? null,
-        bonusPoints: actionData.bonusPoints ?? 0,
       })
     );
 

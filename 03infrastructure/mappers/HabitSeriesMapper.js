@@ -21,10 +21,10 @@ export function toHabitSeriesOutputDTO(habitSeries) {
     description: habitSeries.description,
 
     actions: habitSeries.actions.map(action => ({
+      id: action.id,
       name: action.name,
       description: action.description,
       difficulty: action.difficulty,
-      // assumed to already be 'low' | 'medium' | 'high' at domain boundary
     })),
 
     createdAt: habitSeries.createdAt.toISOString(),

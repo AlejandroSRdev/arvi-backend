@@ -9,7 +9,10 @@
     "dev": "nodemon server.js",
     "check:imports": "madge --extensions js .",
     "predeploy": "npm run check:imports",
-    "verify": "node verify.js"
+    "verify": "node verify.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "arch:check": "madge --circular src/"
   },
   "keywords": [
     "arvi",
