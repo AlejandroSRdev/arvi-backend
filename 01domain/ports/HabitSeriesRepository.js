@@ -25,7 +25,7 @@ export class IHabitSeriesRepository {
   /**
    * @param {string} userId
    * @param {number} limit - Maximum number of results to return
-   * @returns {Promise<Array<{id: string, createdAt: string, updatedAt: string}>>}
+   * @returns {Promise<Array<{title: string, createdAt: string}>>}
    */
   async listByUser(userId, limit) {
     throw new Error('Not implemented');

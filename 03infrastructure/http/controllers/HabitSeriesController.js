@@ -182,7 +182,7 @@ const MAX_LIMIT = 50;
  *
  * Response (200 OK):
  * {
- *   data: [{ id, createdAt, updatedAt }],
+ *   data: [{ title, createdAt }],
  *   count: number
  * }
  */

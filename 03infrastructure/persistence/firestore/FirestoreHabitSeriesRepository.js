@@ -25,7 +25,7 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
    *
    * @param {string} userId
    * @param {number} limit - Must already be validated and clamped by the caller
-   * @returns {Promise<Array<{id: string, createdAt: string, updatedAt: string}>>}
+   * @returns {Promise<Array<{title: string, createdAt: string}>>}
    */
   async listByUser(userId, limit) {
     const snapshot = await db
@@ -39,9 +39,8 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
     return snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
-        id: doc.id,
+        title: data.title ?? null,
         createdAt: data.createdAt?.toDate?.().toISOString() ?? null,
-        updatedAt: data.updatedAt?.toDate?.().toISOString() ?? null,
       };
     });
   }
