@@ -17,6 +17,9 @@ export class Action {
 
   // Difficulty normalization is required because AI output may use non-canonical values.
   static fromAIOutput(input, id) {
+    if (!id || !String(id).trim()) {
+      throw new Error('Action id must be non-empty');
+    }
     return new Action(
       id,
       input.name,
@@ -26,6 +29,9 @@ export class Action {
   }
 
   static create(params) {
+    if (!params.id || !String(params.id).trim()) {
+      throw new Error('Action id must be non-empty');
+    }
     if (!params.name || !String(params.name).trim()) {
       throw new Error('Action name must be non-empty');
     }

@@ -137,9 +137,15 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
         const seriesId = parsedData.id || Date.now().toString();
         const seriesRef = userRef.collection('habitSeries').doc(seriesId);
 
+        const actionsWithIds = (parsedData.actions ?? []).map((action, index) => ({
+          ...action,
+          id: `${seriesId}_action_${index}`,
+        }));
+
         const dataToStore = {
           ...parsedData,
           id: seriesId,
+          actions: actionsWithIds,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
         };
