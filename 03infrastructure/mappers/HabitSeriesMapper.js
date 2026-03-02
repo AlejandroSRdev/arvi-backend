@@ -5,9 +5,16 @@
  * Translates HabitSeries domain entities into HabitSeriesOutputDTO for HTTP API responses.
  */
 
-export function toHabitSeriesOutputDTO(habitSeries) {
-  console.log(`[MAPPER] [Infrastructure] toHabitSeriesOutputDTO called for id=${habitSeries.id}, rank=${habitSeries.getRank()}`);
+export function toActionOutputDTO(action) {
+  return {
+    id: action.id,
+    name: action.name,
+    description: action.description,
+    difficulty: action.difficulty,
+  };
+}
 
+export function toHabitSeriesOutputDTO(habitSeries) {
   return {
     id: habitSeries.id,
     title: habitSeries.title,
@@ -19,11 +26,6 @@ export function toHabitSeriesOutputDTO(habitSeries) {
       difficulty: action.difficulty,
       // assumed to already be 'low' | 'medium' | 'high' at domain boundary
     })),
-
-    rank: habitSeries.getRank(),
-    // derived from domain logic, not stored
-
-    totalScore: habitSeries.totalScore,
 
     createdAt: habitSeries.createdAt.toISOString(),
     lastActivityAt: habitSeries.lastActivityAt.toISOString(),

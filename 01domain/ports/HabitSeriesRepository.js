@@ -15,10 +15,10 @@ export class IHabitSeriesRepository {
   }
 
   /**
-   * All operations — persist series, deduct energy, increment counter — must execute atomically.
+   * All operations — persist series, increment counter — must execute atomically.
    * If any step fails, no changes are committed.
    */
-  async atomicCommitCreation(userId, seriesData, totalEnergyConsumed) {
+  async atomicCommitCreation(userId, seriesData) {
     throw new Error('Not implemented');
   }
 
@@ -37,6 +37,34 @@ export class IHabitSeriesRepository {
    * @returns {Promise<HabitSeries | null>}
    */
   async getHabitSeriesById(userId, seriesId) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Returns monthly usage for a user in a given month.
+   *
+   * @param {string} userId
+   * @param {string} monthKey - e.g. "2026-03"
+   * @returns {Promise<{ actionsUsed: number, monthKey: string } | null>}
+   */
+  async getMonthlyUsage(userId, monthKey) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Atomically appends an action to a series and increments monthly usage.
+   *
+   * All operations — append action, increment counter — must execute atomically.
+   * If any step fails, no changes are committed.
+   *
+   * @param {string} userId
+   * @param {string} seriesId
+   * @param {object} actionData - Plain action data to persist
+   * @param {string} monthKey - e.g. "2026-03"
+   * @param {number} monthlyLimit - Limit to re-verify inside transaction
+   * @returns {Promise<{ actionId: string }>}
+   */
+  async atomicCommitActionCreation(userId, seriesId, actionData, monthKey, monthlyLimit) {
     throw new Error('Not implemented');
   }
 }

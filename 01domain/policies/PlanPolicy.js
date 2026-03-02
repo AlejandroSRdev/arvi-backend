@@ -2,152 +2,84 @@
  * Layer: Domain
  * File: PlanPolicy.js
  * Responsibility:
- * Defines all plan configurations, energy limits, feature access rules, and the token-to-energy conversion rate.
+ * Defines subscription plans, usage limits (series & actions),
+ * and Stripe integration mapping.
  */
+
+import { PLAN_LIMITS } from '../value_objects/user/Limits.js';
 
 const stripeMode = process.env.STRIPE_MODE || 'test';
 
 export const PLANS = {
-  FREEMIUM: {
-    id: 'freemium',
-    name: 'Freemium',
-    price: 0,
-    maxEnergy: 0,
-    dailyRecharge: 0,
-    maxWeeklySummaries: 0,
-    maxActiveSeries: 0,
-    stripePriceId: null,
-    features: [
-      'Acceso limitado sin trial',
-      'Requiere activar trial de 48h',
-    ]
-  },
-
   TRIAL: {
     id: 'trial',
-    name: 'Trial (48 horas)',
+    name: 'Trial',
     price: 0,
-    maxEnergy: 135,
-    dailyRecharge: 135,
-    duration: 48,
-    maxWeeklySummaries: 9999,
-    maxActiveSeries: 9999,
-    stripePriceId: null,
-    features: [
-      '135 energía inicial',
-      '+135 energía después de 24h (total: 270)',
-      'Funcionalidades PRO por 48 horas',
-      'Series de hábitos ilimitadas',
-      'Resúmenes semanales ilimitados',
-    ]
-  },
-
-  MINI: {
-    id: 'mini',
-    name: 'Mini',
-    price: 1.99,
     currency: 'USD',
-    maxEnergy: 75,
-    dailyRecharge: 75,
-    maxWeeklySummaries: 2,
-    maxActiveSeries: 2,
-    stripePriceId: stripeMode === 'live'
-      ? process.env.PRICE_MINI_LIVE
-      : process.env.PRICE_MINI_TEST,
-    features: [
-      '75 energía diaria',
-      '2 series de hábitos activas',
-      '2 resúmenes semanales',
-    ]
+    durationDays: 3,
+
+    maxActiveSeries: PLAN_LIMITS.TRIAL.activeSeries,
+    maxMonthlyActions: PLAN_LIMITS.TRIAL.monthlyActions,
+
+    stripePriceId: null,
+    isSubscription: false,
   },
 
   BASE: {
     id: 'base',
     name: 'Base',
-    price: 6.99,
+    price: 2.99,
     currency: 'USD',
-    maxEnergy: 150,
-    dailyRecharge: 150,
-    maxWeeklySummaries: 5,
-    maxActiveSeries: 5,
+
+    maxActiveSeries: PLAN_LIMITS.BASE.activeSeries,
+    maxMonthlyActions: PLAN_LIMITS.BASE.monthlyActions,
+
     stripePriceId: stripeMode === 'live'
       ? process.env.PRICE_BASE_LIVE
       : process.env.PRICE_BASE_TEST,
-    features: [
-      '150 energía diaria',
-      '5 series de hábitos activas',
-      '5 resúmenes semanales',
-    ]
+
+    isSubscription: true,
   },
 
   PRO: {
     id: 'pro',
     name: 'Pro',
-    price: 12.99,
+    price: 5.99,
     currency: 'USD',
-    maxEnergy: 300,
-    dailyRecharge: 300,
-    maxWeeklySummaries: 9999,
-    maxActiveSeries: 9999,
+
+    maxActiveSeries: PLAN_LIMITS.PRO.activeSeries,
+    maxMonthlyActions: PLAN_LIMITS.PRO.monthlyActions,
+
     stripePriceId: stripeMode === 'live'
       ? process.env.PRICE_PRO_LIVE
       : process.env.PRICE_PRO_TEST,
-    features: [
-      '300 energía diaria',
-      'Series de hábitos ilimitadas',
-      'Resúmenes semanales ilimitados',
-    ]
+
+    isSubscription: true,
   },
 };
 
-export function getPlan(planId, isTrialActive = false) {
-  if (planId === 'freemium' && isTrialActive) {
-    return PLANS.TRIAL;
-  }
-
-  const plan = PLANS[planId?.toUpperCase()];
-
-  if (!plan) {
-    console.warn(`⚠️ Plan desconocido: ${planId}, usando FREEMIUM`);
-    return PLANS.FREEMIUM;
-  }
-
-  return plan;
+/**
+ * Returns the plan configuration for a given plan ID.
+ * Returns null for unknown or freemium plans (no AI feature access).
+ */
+export function getPlan(planId) {
+  return Object.values(PLANS).find(p => p.id === planId) || null;
 }
 
-// 1 energy unit = 100 tokens; always rounded up.
-export function tokensToEnergy(tokens) {
-  return Math.ceil(tokens / 100);
+/**
+ * Returns true if the effective plan grants access to AI features.
+ * Freemium (no plan match) has no access.
+ */
+export function hasFeatureAccess(effectivePlan, feature) {
+  return !!getPlan(effectivePlan);
 }
 
-export function canConsumeEnergy(planId, energiaActual, energiaNecesaria) {
-  const plan = getPlan(planId);
-
-  if (plan.maxEnergy >= 9999) {
-    return true;
-  }
-
-  return energiaActual >= energiaNecesaria;
-}
-
-export const FEATURE_ACCESS = {
-  'ai.chat': ['trial', 'mini', 'base', 'pro'],
-  'ai.json_convert': ['trial', 'mini', 'base', 'pro'],
-  'energy.consume': ['trial', 'mini', 'base', 'pro'],
-  'weekly_summaries': ['trial', 'mini', 'base', 'pro'],
-  'active_series': ['trial', 'mini', 'base', 'pro'],
-  'habits.series.create': ['trial', 'mini', 'base', 'pro'],
-  'execution.summary.generate': ['trial', 'mini', 'base', 'pro'],
-};
-
-export function hasFeatureAccess(planId, featureKey) {
-  const allowedPlans = FEATURE_ACCESS[featureKey];
-
-  if (!allowedPlans) {
-    console.warn(`⚠️ Feature desconocida: ${featureKey}`);
-    return false;
-  }
-
-  return allowedPlans.includes(planId);
+/**
+ * Returns the monthly action creation limit for a given effective plan.
+ * Returns 0 for plans with no access.
+ */
+export function monthlyActionsLimit(effectivePlan) {
+  const plan = getPlan(effectivePlan);
+  return plan ? plan.maxMonthlyActions : 0;
 }
 

@@ -1,52 +1,126 @@
-You are acting as a senior backend engineer working on a Node.js + Express backend using clean architecture (domain, application, infrastructure layers).
+PROMPT PARA CLAUDE — PREPARAR TEST POSTMAN CREATE ACTION
 
-We are stabilizing the contract of:
+You are preparing the backend for real manual testing using Postman.
 
-GET /api/habits/series
+Your task is NOT to refactor anything.
 
-FINAL REQUIRED RESPONSE SHAPE:
+Your task is to provide everything needed to manually test:
+
+POST /api/habits/series/:seriesId/actions
+
+Do NOT modify code.
+Do NOT optimize architecture.
+Do NOT introduce changes.
+Only expose what is needed for testing.
+
+1. Confirm Endpoint Contract
+
+Return the exact final contract:
+
+Method
+
+POST
+
+URL
+
+/api/habits/series/:seriesId/actions
+
+Include:
+
+Example full URL with localhost port
+
+Example seriesId
+
+2. Required Headers
+
+Specify:
+
+Authorization: Bearer <JWT>
+
+Content-Type: application/json
+
+Clarify:
+
+Whether idempotencyKey is required
+
+Whether difficulty is required in body or AI-generated
+
+Any other required fields
+
+3. Exact Request Body Example
+
+Provide a valid example body that will succeed.
+
+Example format:
 
 {
-  "data": [
-    {
-      "id": "string",
-      "title": "string",
-      "createdAt": "ISO string"
-    }
-  ],
-  "count": number
+  "idempotencyKey": "550e8400-e29b-41d4-a716-446655440000"
 }
 
-Important constraints:
+OR include fields if needed.
 
-1) id MUST be included.
-2) title MUST be included.
-3) createdAt MUST be included.
-4) updatedAt MUST NOT be included.
-5) No internal DB fields must leak.
-6) Ordering must remain createdAt DESC.
-7) limit query parameter must remain functional (default 20, max 50).
-8) count must still represent total number of returned items.
+Do not guess — inspect actual controller validation.
 
-Architecture rules:
+4. Required Database Preconditions
 
-- Do NOT modify the full object endpoint:
-  GET /api/habits/series/:seriesId
+Specify exactly what must exist before testing:
 
-- Do NOT move business logic into controllers.
-- Keep mapping deterministic and explicit.
-- If repository currently returns partial projection, adjust projection minimally.
-- If domain entity already contains id, title, createdAt, reuse it.
-- If mapping is happening in application layer, modify DTO there.
-- Do NOT refactor unrelated code.
-- Do NOT introduce new abstractions.
+User must exist.
 
-Tasks:
+Subscription must be active.
 
-1) Identify where the list projection is built (repository or mapper).
-2) Modify only that projection to include id + title + createdAt.
-3) Explicitly construct the response DTO.
-4) Show only necessary code changes.
-5) Briefly explain why the solution respects clean architecture boundaries.
+Trial not expired.
 
-Focus strictly on contract correctness and stability.
+MonthlyUsage document must exist or will be auto-created.
+
+HabitSeries must exist and belong to user.
+
+Provide example Firestore documents (JSON-like structure).
+
+5. Expected Success Response (201)
+
+Return full example JSON response exactly as returned by DTO.
+
+6. Expected Error Scenarios
+
+Provide example responses for:
+
+401 invalid JWT
+
+403 trial expired
+
+403 monthly limit reached
+
+404 series not found
+
+Return real JSON shape used by error middleware.
+
+7. How to Simulate Limit Exceeded
+
+Explain precisely:
+
+How many actions must already exist.
+
+How to modify MonthlyUsage to trigger rejection.
+
+8. Final Checklist Before Testing
+
+Provide a short checklist:
+
+Server running
+
+Stripe webhook not required for this test
+
+JWT generated correctly
+
+Correct seriesId
+
+Definition of Done:
+
+You provide a fully reproducible Postman test guide without requiring code changes.
+
+No architecture discussion.
+No refactor.
+No commentary.
+
+Only actionable test instructions.

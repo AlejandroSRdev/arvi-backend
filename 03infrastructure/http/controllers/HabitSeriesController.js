@@ -6,22 +6,21 @@
  */
 
 import { createHabitSeries } from '../../../02application/use-cases/CreateHabitSeriesUseCase.js';
+import { createAction } from '../../../02application/use-cases/CreateActionUseCase.js';
 import { AuthenticationError, NotFoundError, ValidationError } from '../../../errors/Index.js';
 import { logger } from '../../logger/Logger.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
-import { toHabitSeriesOutputDTO } from '../../mappers/HabitSeriesMapper.js';
+import { toHabitSeriesOutputDTO, toActionOutputDTO } from '../../mappers/HabitSeriesMapper.js';
 import { HTTP_STATUS } from '../HttpStatus.js';
 
 // Dependency injection
 let userRepository;
 let habitSeriesRepository;
-let energyRepository;
 let aiProvider;
 
 export function setDependencies(deps) {
   userRepository = deps.userRepository;
   habitSeriesRepository = deps.habitSeriesRepository;
-  energyRepository = deps.energyRepository;
   aiProvider = deps.aiProvider;
 }
 
@@ -72,8 +71,6 @@ function validateRequestBody(body) {
  *     description: string,
  *     difficulty: 'low' | 'medium' | 'high'
  *   }>
- * - rank: 'bronze' | 'silver' | 'golden' | 'diamond'
- * - totalScore: number
  * - createdAt: string (ISO)
  * - lastActivityAt: string (ISO)
  */
@@ -103,7 +100,6 @@ export async function createHabitSeriesEndpoint(req, res, next) {
     const habitSeries = await createHabitSeries(userId, payload, {
       userRepository,
       habitSeriesRepository,
-      energyRepository,
       aiProvider,
     });
 
@@ -272,10 +268,63 @@ export async function getHabitSeriesByIdEndpoint(req, res, next) {
   }
 }
 
+/**
+ * POST /api/habits/series/:seriesId/actions
+ *
+ * Creates a new AI-generated action and appends it to the specified habit series.
+ * Enforces monthly usage limits per plan.
+ *
+ * Params:
+ * - seriesId: string
+ *
+ * Request body:
+ * - language: 'es' | 'en'
+ *
+ * Response (201 Created):
+ * - id: string
+ * - name: string
+ * - description: string
+ * - difficulty: string
+ */
+export async function createActionEndpoint(req, res, next) {
+  try {
+    const userId = req.user?.uid;
+    const seriesId = req.params?.seriesId;
+
+    if (!userId) {
+      throw new AuthenticationError('User not authenticated');
+    }
+
+    if (!seriesId || typeof seriesId !== 'string' || seriesId.trim() === '') {
+      throw new ValidationError('seriesId is required');
+    }
+
+    const { language } = req.body || {};
+
+    if (!language || (language !== 'es' && language !== 'en')) {
+      throw new ValidationError('language is required and must be "es" or "en"');
+    }
+
+    const action = await createAction(userId, seriesId, { language }, {
+      userRepository,
+      habitSeriesRepository,
+      aiProvider,
+    });
+
+    const responseDTO = toActionOutputDTO(action);
+
+    return res.status(HTTP_STATUS.CREATED).json(responseDTO);
+
+  } catch (err) {
+    return next(err);
+  }
+}
+
 export default {
   createHabitSeriesEndpoint,
   deleteHabitSeriesEndpoint,
   getHabitSeriesEndpoint,
   getHabitSeriesByIdEndpoint,
+  createActionEndpoint,
   setDependencies,
 };

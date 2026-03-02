@@ -9,15 +9,15 @@ import { getModelConfig } from '../../01domain/policies/ModelSelectionPolicy.js'
 import { ValidationError } from '../../errors/Index.js';
 
 /**
- * Execute an AI call and return content with energy consumed.
+ * Execute an AI call and return content.
  *
- * No persistence or energy mutation occurs here.
+ * No persistence or side effects occur here.
  *
  * @param {string} userId - User ID
  * @param {Array<Object>} messages - Array of messages [{role, content}]
  * @param {Object} options - {model, temperature, maxTokens, forceJson, step?}
  * @param {Object} deps - Injected dependencies {aiProvider}
- * @returns {Promise<{content: *, energyConsumed: number}>}
+ * @returns {Promise<{content: *}>}
  */
 export async function generateAIResponse(userId, messages, options = {}, deps) {
   const { aiProvider } = deps;
@@ -44,27 +44,25 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
   if (step) {
     console.log('[AI_STEP]', {
       step,
-      energyConsumed: response.energyConsumed,
       timestamp: new Date().toISOString()
     });
   }
 
   return {
     content: response.content,
-    energyConsumed: response.energyConsumed
   };
 }
 
 /**
  * Execute an AI call with automatic model selection based on functionType.
  *
- * No persistence or energy mutation occurs here.
+ * No persistence or side effects occur here.
  *
  * @param {string} userId - User ID
  * @param {Array<Object>} messages - Array of messages [{role, content}]
  * @param {string} functionType - Function type for model selection
  * @param {Object} deps - Injected dependencies {aiProvider}
- * @returns {Promise<{content: *, energyConsumed: number}>}
+ * @returns {Promise<{content: *}>}
  */
 export async function generateAIResponseWithFunctionType(userId, messages, functionType, deps) {
   const config = getModelConfig(functionType);

@@ -5,7 +5,7 @@
  * Represents a single habit action as a domain value object, encapsulating identity, difficulty, score, and completion state.
  */
 
-import { parseDifficulty } from "./Difficulty.js";
+import { parseDifficulty, isDifficulty } from "./Difficulty.js";
 
 export class Action {
   constructor(
@@ -46,6 +46,10 @@ export class Action {
   }
 
   static create(params) {
+    if (!isDifficulty(params.difficulty)) {
+      throw new Error(`Action difficulty must be 'low', 'medium', or 'high'. Received: ${params.difficulty}`);
+    }
+
     return new Action(
       params.id,
       params.name,
@@ -57,30 +61,6 @@ export class Action {
       params.verificationResponse ?? null,
       params.bonusPoints ?? 0
     );
-  }
-
-  toDTO() {
-    return {
-      name: this.name,
-      description: this.description,
-      difficulty: this.difficulty,
-    };
-  }
-
-  toFullDTO() {
-    return {
-      id: this.id,
-      name: this.name,
-      description: this.description,
-      difficulty: this.difficulty,
-      score: this.score,
-      completed: this.completed,
-      completedAt: this.completedAt
-        ? this.completedAt.toISOString()
-        : null,
-      verificationResponse: this.verificationResponse,
-      bonusPoints: this.bonusPoints,
-    };
   }
 }
 

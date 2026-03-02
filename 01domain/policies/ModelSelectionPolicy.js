@@ -29,6 +29,20 @@ export const MODEL_MAPPING = {
     description: 'Create thematic habit series - STRUCTURING PASS'
   },
 
+  'action_creative': {
+    model: 'gemini-2.5-flash',
+    temperature: 0.8,
+    maxTokens: 500,
+    description: 'Create habit action - CREATIVE PASS'
+  },
+
+  'action_structure': {
+    model: 'gpt-4o-mini',
+    temperature: 0.2,
+    maxTokens: 400,
+    description: 'Create habit action - STRUCTURING PASS'
+  },
+
   // JSON conversion — always uses gpt-4o-mini for strict structural fidelity
   'json_conversion': {
     model: 'gpt-4o-mini',

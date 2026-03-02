@@ -2,7 +2,7 @@
  * Layer: Application
  * File: CreateHabitSeriesUseCase.js
  * Responsibility:
- * Orchestrates AI-driven habit series creation with pre-AI validation, three-pass AI execution, and atomic persistence of series and energy.
+ * Orchestrates AI-driven habit series creation with pre-AI validation, three-pass AI execution, and atomic persistence.
  */
 
 import { hasFeatureAccess, getPlan } from '../../01domain/policies/PlanPolicy.js';
@@ -11,7 +11,6 @@ import { generateAIResponse } from '../services/AIExecutionService.js';
 import {
   ValidationError,
   AuthorizationError,
-  InsufficientEnergyError,
   MaxActiveSeriesReachedError,
 } from '../../errors/Index.js';
 
@@ -93,11 +92,10 @@ function validateSchema(data) {
 }
 
 /**
- * Create a habit series via AI with atomic energy consumption.
+ * Create a habit series via AI.
  *
- * Energy is accumulated in memory during AI passes and deducted
- * in a single atomic transaction together with persistence and
- * counter increment. No partial state is possible.
+ * Executes three AI passes then atomically persists the series
+ * and increments the counter. No partial state is possible.
  *
  * @param {string} userId - User ID
  * @param {Object} payload - Request payload
@@ -151,16 +149,9 @@ export async function createHabitSeries(userId, payload, deps) {
     throw new MaxActiveSeriesReachedError(maxActiveSeries, activeSeriesCount);
   }
 
-  // Read-only pre-check — energy is not deducted until the atomic commit
-  const currentEnergy = user.energy?.currentAmount || 0;
-  if (currentEnergy <= 0) {
-    throw new InsufficientEnergyError(1, currentEnergy);
-  }
-
-  // STEP 2: AI EXECUTION (3 passes) — energy accumulated in memory, not deducted yet
+  // STEP 2: AI EXECUTION (3 passes)
 
   const { language, assistantContext, testData } = payload;
-  let totalEnergyConsumed = 0;
 
   // Sanitize before any AI processing to prevent prompt injection
   const sanitizedTestData = Object.fromEntries(
@@ -189,7 +180,6 @@ export async function createHabitSeries(userId, payload, deps) {
     { aiProvider }
   );
 
-  totalEnergyConsumed += creativeResponse.energyConsumed;
   const rawCreativeText = creativeResponse.content;
 
   // Pass 2 — structure: extract JSON from creative text
@@ -212,7 +202,6 @@ export async function createHabitSeries(userId, payload, deps) {
     { aiProvider }
   );
 
-  totalEnergyConsumed += structureResponse.energyConsumed;
   const rawStructuredText = structureResponse.content;
 
   // Pass 3 — schema: enforce strict JSON schema compliance
@@ -234,14 +223,6 @@ export async function createHabitSeries(userId, payload, deps) {
     },
     { aiProvider }
   );
-
-  totalEnergyConsumed += schemaResponse.energyConsumed;
-
-  console.log('[ENERGY_ACCUMULATED]', {
-    totalEnergyConsumed,
-    userId,
-    timestamp: new Date().toISOString()
-  });
 
   // STEP 3: POST-AI VALIDATION
 
@@ -265,11 +246,10 @@ export async function createHabitSeries(userId, payload, deps) {
 
   console.log('[SCHEMA] [Habit Series] Schema validation OK');
 
-  // STEP 4: ATOMIC COMMIT — persist series, deduct energy, and increment counter in one transaction
+  // STEP 4: ATOMIC COMMIT — persist series and increment counter in one transaction
 
   console.log('[ATOMIC_COMMIT_START]', {
     userId,
-    totalEnergyConsumed,
     timestamp: new Date().toISOString()
   });
 
@@ -277,20 +257,17 @@ export async function createHabitSeries(userId, payload, deps) {
   try {
     const persistResult = await habitSeriesRepository.atomicCommitCreation(
       userId,
-      parsedSeries,
-      totalEnergyConsumed
+      parsedSeries
     );
     seriesId = persistResult.id;
 
     console.log('[ATOMIC_COMMIT_SUCCESS]', {
       userId,
-      totalEnergyConsumed,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('[ATOMIC_COMMIT_FAILURE]', {
       userId,
-      totalEnergyConsumed,
       error: error.message,
       timestamp: new Date().toISOString()
     });
