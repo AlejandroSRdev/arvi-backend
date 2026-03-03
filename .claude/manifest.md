@@ -155,22 +155,10 @@ export async function someEndpoint(req, res, next) {
 ### Error Classes by Layer
 
 **Domain** (`errors/domain/`):
-- `InsufficientEnergyError`
-- `TrialAlreadyUsedError`
-- `MaxActiveSeriesReachedError`
 
 **Application** (`errors/application/`):
-- `ValidationError`
-- `AuthenticationError`
-- `AuthorizationError`
-- `NotFoundError`
 
 **Infrastructure** (`errors/infrastructure/`):
-- `AIProviderFailureError`
-- `AITemporaryUnavailableError`
-- `DataAccessFailureError`
-- `TransactionFailureError`
-- `UnknownInfrastructureError`
 
 All classes are exported from `errors/Index.js`.
 
@@ -217,18 +205,88 @@ It is a regulated orchestration core.
 
 ---
 
-## 9. Operational Constraints
+## 9. Frontend Context (Flutter)
 
-- Hosted on Render.
-- Firestore as current persistence layer.
-- Node >= 18, ES Modules.
-- Production traffic is light but real.
-- Logging must be controlled and meaningful.
-- No heavy refactors without operational justification.
+The system includes a mobile frontend built with Flutter.
+
+The frontend:
+
+- Communicates exclusively through authenticated HTTP requests.
+- Does not contain business logic.
+- Does not decide subscription state.
+- Does not activate or deactivate plans.
+- Acts only as a UI layer and Stripe Checkout redirect initiator.
+
+All subscription state transitions are determined server-side via Stripe webhooks.
+
+The frontend must strictly follow backend-defined contracts.
+Any mismatch between frontend expectations and backend responses is considered a contract error.
 
 ---
 
-## 10. Development Rules for Claude Code
+## 10. Billing & Payment System (Stripe)
+
+Stripe is the external billing authority.
+
+Design principles:
+
+- Checkout sessions only create payment intent.
+- Subscription state changes are applied exclusively via verified webhooks.
+- Webhook events are processed atomically and idempotently.
+- Stripe event ID is the idempotency boundary.
+- Database state is the final authority.
+
+The backend must tolerate:
+- Event retries
+- Duplicate events
+- Potential out-of-order delivery
+
+No subscription state is trusted unless persisted through the webhook transaction layer.
+
+---
+
+## 11. Deployment Context (Render)
+
+The system is deployed using **Render** as the hosting platform.
+
+Deployment principles:
+
+- The backend is hosted as a web service with autoscaling enabled.
+- Environment variables are used to configure secrets and sensitive data.
+- Build and deployment pipelines must remain simple and predictable.
+- Logs are streamed to the Render dashboard for observability.
+
+Deployment rules:
+
+- Always test changes locally before deploying.
+- Ensure environment variables are updated in Render before deploying changes that depend on them.
+- Avoid hardcoding platform-specific configurations in the codebase.
+- Monitor resource usage (CPU, memory) to ensure the service remains within allocated limits.
+
+---
+
+## 12. Database Context (Firestore)
+
+The system uses **Firestore** as the primary database.
+
+Database principles:
+
+- Firestore is used in **native mode** for scalability and low-latency reads.
+- All data access is mediated through the application layer.
+- Queries must be optimized to minimize read and write costs.
+- Data is structured to support hierarchical relationships and efficient querying.
+
+Database rules:
+
+- Avoid deep nesting of documents beyond Firestore's recommended limits.
+- Use batched writes for atomic operations involving multiple documents.
+- Indexes must be explicitly defined for complex queries.
+- Regularly review and clean up unused or stale data to control costs.
+- Ensure Firestore security rules are updated to enforce access control policies.
+
+---
+
+## 13. Development Rules for Claude Code
 
 When modifying the system:
 
@@ -248,7 +306,7 @@ If not, it is likely not a priority.
 
 ---
 
-## 11. Author & Ownership
+## 14. Author & Ownership
 
 Designed and maintained by:
 Alejandro Saavedra Ruiz
