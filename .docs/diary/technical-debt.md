@@ -40,3 +40,43 @@ HTTP 500
 
 Introduce `DomainError` extending `BaseError`.  
 Map domain violations to proper HTTP status codes.
+
+
+## 2026-03-03 — Stripe Checkout Session Technical Debt
+
+### 1. Potential Race Condition — Stripe Customer Creation
+If two concurrent checkout requests are executed for the same user without a persisted `stripeCustomerId`, multiple Stripe customers could be created.
+- Needs transactional protection or repository-level locking.
+- Consider atomic "create-if-null" pattern.
+
+### 2. Idempotency Key Scope
+Current idempotency key: `checkout:{userId}:{planKey}`
+- Prevents duplicate concurrent sessions.
+- May be too rigid for long-term retries (e.g., user retries days later).
+- Consider scoping idempotency to short-lived attempts (timestamp or UUID).
+
+### 3. Missing Domain Policy on Active Subscriptions
+No explicit domain rule prevents:
+- Creating checkout for already active subscription.
+- Re-purchasing same plan unintentionally.
+
+A domain-level validation policy should define allowed transitions (e.g., BASE → PRO, PRO → PRO, etc.).
+
+### Out-of-Order Event Processing
+
+Current webhook logic assumes event arrival order reflects real subscription state progression.
+
+Scenario risk:
+1. `invoice.paid` (activation)
+2. `customer.subscription.deleted` (cancellation)
+3. Delayed `invoice.paid` arrives afterward
+
+Because state transitions are applied based on processing order (not event creation timestamp),
+a delayed event could incorrectly re-activate a canceled subscription.
+
+Stripe usually delivers events in order, but this is not strictly guaranteed.
+
+Future hardening:
+- Compare event `created` timestamp before applying state change.
+- Or persist and validate subscription status transitions explicitly.
+- Or enforce monotonic state transitions in domain policy.
