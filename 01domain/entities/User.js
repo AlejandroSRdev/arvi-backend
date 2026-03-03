@@ -6,6 +6,8 @@
  */
 
 
+const VALID_SUBSCRIPTION_STATUSES = ['INACTIVE', 'ACTIVE', 'CANCELED', 'PAST_DUE'];
+
 export class User {
   constructor(
     id,
@@ -13,7 +15,8 @@ export class User {
     password,
     plan,
     trial,
-    limits
+    limits,
+    billing = {}
   ) {
     // ─────────────────────────────
     // Identity & credentials
@@ -111,12 +114,67 @@ export class User {
       throw new Error("Monthly actions limit cannot be negative");
     }
 
+    // ─────────────────────────────
+    // Billing invariants
+    // ─────────────────────────────
+
+    const subscriptionStatus = billing.subscriptionStatus ?? 'INACTIVE';
+    const stripeCustomerId = billing.stripeCustomerId ?? null;
+    const stripeSubscriptionId = billing.stripeSubscriptionId ?? null;
+    const subscriptionUpdatedAt = billing.subscriptionUpdatedAt ?? null;
+
+    if (!VALID_SUBSCRIPTION_STATUSES.includes(subscriptionStatus)) {
+      throw new Error(`Invalid subscription status: ${subscriptionStatus}`);
+    }
+
+    // An active subscription must have a paid plan
+    if (subscriptionStatus === 'ACTIVE' && plan.toUpperCase() === 'FREE') {
+      throw new Error('Active subscription requires a paid plan');
+    }
+
+    // Subscription ID is only valid for non-INACTIVE states
+    if (stripeSubscriptionId !== null && subscriptionStatus === 'INACTIVE') {
+      throw new Error('stripeSubscriptionId is only valid for non-INACTIVE subscriptions');
+    }
+
     this.id = id;
     this.email = normalizedEmail;
     this.password = password;
     this.plan = plan;
     this.trial = trial;
     this.limits = limits;
+    this.subscriptionStatus = subscriptionStatus;
+    this.stripeCustomerId = stripeCustomerId;
+    this.stripeSubscriptionId = stripeSubscriptionId;
+    this.subscriptionUpdatedAt = subscriptionUpdatedAt;
+  }
+
+  /**
+   * Transition to an active paid subscription.
+   */
+  activateSubscription({ plan, stripeCustomerId, stripeSubscriptionId }) {
+    this.plan = plan;
+    this.stripeCustomerId = stripeCustomerId;
+    this.stripeSubscriptionId = stripeSubscriptionId;
+    this.subscriptionStatus = 'ACTIVE';
+    this.subscriptionUpdatedAt = new Date();
+  }
+
+  /**
+   * Mark the subscription as canceled; retains stripeCustomerId for potential reactivation.
+   */
+  cancelSubscription() {
+    this.subscriptionStatus = 'CANCELED';
+    this.stripeSubscriptionId = null;
+    this.subscriptionUpdatedAt = new Date();
+  }
+
+  /**
+   * Mark the subscription as past due (payment failed).
+   */
+  markPastDue() {
+    this.subscriptionStatus = 'PAST_DUE';
+    this.subscriptionUpdatedAt = new Date();
   }
 
   /**
@@ -129,7 +187,8 @@ export class User {
       params.password,
       params.plan,
       params.trial,
-      params.limits
+      params.limits,
+      params.billing
     );
   }
 }

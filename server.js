@@ -12,6 +12,8 @@ import express from 'express';
 import authRoutes from './03infrastructure/http/routes/Auth.routes.js';
 import habitSeriesRoutes from './03infrastructure/http/routes/HabitSeriesRoutes.js';
 import userRoutes from './03infrastructure/http/routes/User.routes.js';
+import billingRoutes from './03infrastructure/http/routes/Billing.routes.js';
+import webhookRoutes from './03infrastructure/http/routes/Webhook.routes.js';
 
 // Import middleware (Hexagonal Architecture)
 import { errorMiddleware } from './03infrastructure/http/middlewares/errorMiddleware.js';
@@ -49,6 +51,10 @@ import PasswordHasher from './03infrastructure/security/PasswordHasher.js';
 import { setDependencies as setAuthDeps } from './03infrastructure/http/controllers/AuthController.js';
 import { setDependencies as setHabitSeriesDeps } from './03infrastructure/http/controllers/HabitSeriesController.js';
 import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
+import { setDependencies as setBillingDeps } from './03infrastructure/http/controllers/BillingController.js';
+
+// Import Stripe service
+import * as stripeService from './03infrastructure/billing/stripe/StripeService.js';
 
 // Initialize Firebase Admin SDK
 initializeFirebase();
@@ -85,6 +91,12 @@ setHabitSeriesDeps({
   aiProvider
 });
 
+// BillingController requires: userRepository, stripeService
+setBillingDeps({
+  userRepository,
+  stripeService,
+});
+
 const app = express();
 
 // ═══════════════════════════════════════════════════════════════
@@ -94,7 +106,11 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(cors());
 
-// JSON parser for all routes
+// Webhook routes must be mounted BEFORE express.json() so that
+// express.raw() receives the unmodified body for Stripe signature verification.
+app.use('/api/webhooks', webhookRoutes);
+
+// JSON parser for all other routes
 app.use(express.json());
 
 // ═══════════════════════════════════════════════════════════════
@@ -127,9 +143,10 @@ app.get('/', (req, res) => {
 // API ROUTES (NEW ARCHITECTURE)
 // ═══════════════════════════════════════════════════════════════
 
-app.use('/api/auth', authRoutes);       // ✅ Authentication
-app.use('/api/user', userRoutes);       // ✅ User management
+app.use('/api/auth', authRoutes);          // ✅ Authentication
+app.use('/api/user', userRoutes);          // ✅ User management
 app.use('/api/habits', habitSeriesRoutes); // ✅ Habit series
+app.use('/api/billing', billingRoutes);    // ✅ Billing (Stripe checkout)
 
 // ═══════════════════════════════════════════════════════════════
 // GLOBAL ERROR HANDLING
@@ -150,6 +167,8 @@ app.use((req, res) => {
       'GET /api/habits/series/:seriesId',
       'DELETE /api/habits/series/:seriesId',
       'POST /api/habits/series/:seriesId/actions',
+      'POST /api/billing/create-checkout-session',
+      'POST /api/webhooks/stripe',
     ],
   });
 });
@@ -181,6 +200,8 @@ app.listen(PORT, () => {
   console.log('     • GET    /api/habits/series/:seriesId  - Get habit series by ID');
   console.log('     • DELETE /api/habits/series/:id        - Delete habit series');
   console.log('     • POST   /api/habits/series/:id/actions - Add AI-generated action to series');
+  console.log('     • POST   /api/billing/create-checkout-session - Create Stripe Checkout Session');
+  console.log('     • POST   /api/webhooks/stripe              - Stripe webhook handler');
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');
