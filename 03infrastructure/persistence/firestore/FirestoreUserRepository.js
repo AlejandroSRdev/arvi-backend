@@ -26,6 +26,10 @@ export class FirestoreUserRepository extends IUserRepository {
         email: user.email,
         password: user.password,
         plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        stripeCustomerId: user.stripeCustomerId,
+        stripeSubscriptionId: user.stripeSubscriptionId,
+        subscriptionUpdatedAt: user.subscriptionUpdatedAt,
 
         trial: {
           durationDays: user.trial.durationDays,
@@ -57,9 +61,15 @@ export class FirestoreUserRepository extends IUserRepository {
         return null;
       }
 
+      const data = doc.data();
       return {
         id: doc.id,
-        ...doc.data(),
+        ...data,
+        // Billing defaults for legacy users that predate this schema
+        subscriptionStatus: data.subscriptionStatus ?? 'INACTIVE',
+        stripeCustomerId: data.stripeCustomerId ?? null,
+        stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+        subscriptionUpdatedAt: data.subscriptionUpdatedAt ?? null,
       };
     } catch (error) {
       if (error.code) throw error;
@@ -82,9 +92,14 @@ export class FirestoreUserRepository extends IUserRepository {
     }
 
     const doc = snapshot.docs[0];
+    const data = doc.data();
     return {
       id: doc.id,
-      ...doc.data(),
+      ...data,
+      subscriptionStatus: data.subscriptionStatus ?? 'INACTIVE',
+      stripeCustomerId: data.stripeCustomerId ?? null,
+      stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+      subscriptionUpdatedAt: data.subscriptionUpdatedAt ?? null,
     };
   }
 
@@ -103,9 +118,14 @@ export class FirestoreUserRepository extends IUserRepository {
     }
 
     const doc = snapshot.docs[0];
+    const data = doc.data();
     return {
       id: doc.id,
-      ...doc.data(),
+      ...data,
+      subscriptionStatus: data.subscriptionStatus ?? 'INACTIVE',
+      stripeCustomerId: data.stripeCustomerId ?? null,
+      stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+      subscriptionUpdatedAt: data.subscriptionUpdatedAt ?? null,
     };
   }
 
@@ -164,6 +184,79 @@ export class FirestoreUserRepository extends IUserRepository {
       'limits.activeSeriesCount': FieldValue.increment(-1),
       updatedAt: FieldValue.serverTimestamp(),
     });
+  }
+
+  /**
+   * Atomically process a Stripe event: check idempotency, update user plan, record event.
+   * If the event was already processed, the transaction is a no-op.
+   *
+   * @param {string} eventId - Stripe event ID (used as Firestore document ID)
+   * @param {string} userId
+   * @param {Object} userUpdates - Fields to update on the user document (dot-notation supported)
+   */
+  async atomicProcessStripeEvent(eventId, userId, userUpdates) {
+    try {
+      const userRef = db.collection(USERS_COLLECTION).doc(userId);
+      const eventRef = db.collection('stripe_events').doc(eventId);
+
+      let skipped = false;
+
+      await db.runTransaction(async (transaction) => {
+        const eventDoc = await transaction.get(eventRef);
+
+        // Idempotency: event already recorded, skip
+        if (eventDoc.exists) {
+          skipped = true;
+          return;
+        }
+
+        // Remove null/undefined entries to avoid overwriting with nulls
+        const filteredUpdates = Object.fromEntries(
+          Object.entries(userUpdates).filter(([, v]) => v !== undefined && v !== null)
+        );
+
+        transaction.update(userRef, {
+          ...filteredUpdates,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        transaction.set(eventRef, {
+          eventId,
+          userId,
+          processedAt: FieldValue.serverTimestamp(),
+        });
+      });
+
+      return { skipped };
+    } catch (error) {
+      if (error.code) throw error;
+      throw new DataAccessFailureError({
+        operation: 'atomicProcessStripeEvent',
+        collection: 'stripe_events',
+        cause: error,
+      });
+    }
+  }
+
+  /**
+   * Persist a failed Stripe event for manual reconciliation.
+   * Failures in this method are logged but not propagated — recording failure
+   * must not mask the original non-retryable condition.
+   *
+   * @param {Object} params
+   * @param {string} params.eventId
+   * @param {string} params.type
+   * @param {string} params.reason
+   */
+  async recordFailedStripeEvent(params) {
+    try {
+      await db.collection('stripe_failed_events').add({
+        ...params,
+        recordedAt: FieldValue.serverTimestamp(),
+      });
+    } catch (error) {
+      console.error(`[WEBHOOK] Failed to record failed event ${params.eventId}: ${error.message}`);
+    }
   }
 }
 

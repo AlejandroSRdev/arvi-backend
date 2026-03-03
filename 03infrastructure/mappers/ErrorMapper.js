@@ -138,6 +138,16 @@ export function mapErrorToHttp(error) {
     };
   }
 
+  if (error.code === 'STRIPE_PROVIDER_FAILURE') {
+    return {
+      status: HTTP_STATUS.BAD_GATEWAY,
+      body: {
+        error: 'PAYMENT_PROVIDER_UNAVAILABLE',
+        message: 'Payment provider is temporarily unavailable',
+      },
+    };
+  }
+
   // ─────────────────────────────────────────────
   // FALLBACK (UNEXPECTED ERRORS)
   // ─────────────────────────────────────────────

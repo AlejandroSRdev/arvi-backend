@@ -10,3 +10,4 @@ export { AIProviderFailureError } from './AIProviderFailureError.js';
 export { DataAccessFailureError } from './DataAccessFailureError.js';
 export { TransactionFailureError } from './TransactionFailureError.js';
 export { UnknownInfrastructureError } from './UnknownInfrastructureError.js';
+export { StripeProviderFailureError } from './StripeProviderFailureError.js';

@@ -26,4 +26,14 @@ export const logger = {
       console.log(data);
     }
   },
+
+  // Structured billing observability — outputs a single JSON line per trace point.
+  // Each record is self-contained: event name + correlation fields + timestamp.
+  log(event, data = {}) {
+    console.log(JSON.stringify({ event, ...data, ts: new Date().toISOString() }));
+  },
+
+  logError(event, data = {}) {
+    console.error(JSON.stringify({ event, ...data, ts: new Date().toISOString() }));
+  },
 };

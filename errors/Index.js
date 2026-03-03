@@ -18,6 +18,6 @@ export {
 
 export {
   AIProviderFailureError, AITemporaryUnavailableError, DataAccessFailureError, InfrastructureError, TransactionFailureError,
-  UnknownInfrastructureError
+  UnknownInfrastructureError, StripeProviderFailureError
 } from './infrastructure/Index.js';
 
