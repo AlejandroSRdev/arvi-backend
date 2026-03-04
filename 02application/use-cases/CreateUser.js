@@ -45,20 +45,20 @@ export async function createUser(email, password, deps) {
 
   const userId = randomUUID();
 
-  // TEMPORARY: Users are created with PRO plan by default
-  // to validate limits and system coherence during early stages.
+  // Freemium users have no paid plan and no AI feature access.
+  // Limits are zero until a subscription is activated via Stripe webhook.
   const user = User.create({
     id: userId,
     email,
     password: passwordHash,
-    plan: "pro",
+    plan: "freemium",
     trial: Trial.inactive(),
-    limits: Limits.pro(),
+    limits: new Limits(0, 0, 0),
   });
 
   await userRepository.save(user);
 
-  return { userId };
+  return { userId, plan: user.plan };
 }
 
 export default {

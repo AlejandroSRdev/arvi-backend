@@ -12,7 +12,3 @@ services:
         sync: false        # la pondrá a mano en Render
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: SUCCESS_BASE_URL
-        value: "https://getarvi.com/success"
-      - key: CANCEL_URL
-        value: "https://getarvi.com/cancel"
