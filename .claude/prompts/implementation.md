@@ -1,117 +1,45 @@
-You are the BILLING INTEGRATION REFINEMENT agent.
+You are performing a controlled refactor in a production backend.
 
-CONTEXT:
-- The raw Stripe integration (checkout + webhook) is already implemented by another agent.
-- The User domain model has already been upgraded to include:
-    - stripeCustomerId
-    - stripeSubscriptionId
-    - plan
-    - subscriptionStatus
-- You must NOT refactor unrelated modules.
-- You must NOT interfere with the existing webhook transaction logic.
-- You must NOT modify routing or server initialization.
+Objective:
+Fix CreateUser flow to align with the new Stripe-based billing model.
 
-Your responsibility is to make Stripe metadata and customer association production-grade and deterministic.
+Context:
+- Stripe is now the source of truth for paid subscriptions.
+- Users must not default to "pro".
+- All new users must start in "freemium".
+- The User entity and repository already contain new Stripe-related fields (stripeCustomerId, stripeSubscriptionId, planStatus, etc.).
+- The current implementation hardcodes plan: "pro" and Limits.pro() in CreateUser.js.
+- The AuthController response body also hardcodes plan: "pro".
 
---------------------------------------------
-OBJECTIVE
---------------------------------------------
+Tasks:
 
-Ensure that:
+1. Update CreateUser.js:
+   - Remove any hardcoded "pro" plan assignment.
+   - Initialize user with:
+     - plan: "freemium"
+     - planStatus: appropriate default (e.g., "INACTIVE" or null depending on current model)
+     - stripeCustomerId: null
+     - stripeSubscriptionId: null
+     - limits consistent with freemium plan (use PlanPolicy, not hardcoded limits).
+   - Ensure no legacy billing logic remains.
 
-1) Each user has at most ONE Stripe Customer.
-2) Checkout Sessions are created using stripeCustomerId (not only email).
-3) Metadata is propagated properly to:
-   - Checkout Session
-   - Subscription
-   - Invoice (indirectly via subscription metadata)
-4) Webhook identification of user becomes deterministic and not email-dependent.
+2. Update AuthController:
+   - Remove hardcoded "pro" in response.
+   - Ensure response reflects actual plan returned from the use case.
 
---------------------------------------------
-REQUIRED CHANGES
---------------------------------------------
+3. Ensure:
+   - No changes break existing login flow.
+   - No changes affect Stripe webhook processing.
+   - No paid plan is activated outside webhook flow.
+   - No temporary values remain.
 
-1️⃣ CUSTOMER CREATION POLICY
+Constraints:
+- Do not modify Stripe webhook logic.
+- Do not introduce new business rules.
+- Do not redesign PlanPolicy.
+- Only adjust user creation and response layer.
 
-In the checkout use case:
-
-- If user.stripeCustomerId exists:
-    → Reuse it when creating Checkout Session.
-- If it does NOT exist:
-    → Create a Stripe Customer first.
-    → Persist stripeCustomerId in user (via repository).
-    → Then create Checkout Session using that customer.
-
-Do NOT rely on customerEmail alone.
-
---------------------------------------------
-
-2️⃣ METADATA RESTRUCTURE
-
-When creating Checkout Session:
-
-- Set metadata at session level:
-    metadata: {
-        userId: <internal user id>,
-        internalPlan: <PLAN_KEY>
-    }
-
-- Also set subscription-level metadata:
-    subscription_data: {
-        metadata: {
-            userId: <internal user id>,
-            internalPlan: <PLAN_KEY>
-        }
-    }
-
-Rationale:
-- invoice.paid events may not contain session metadata.
-- subscription metadata is more reliable for lifecycle events.
-
---------------------------------------------
-
-3️⃣ REMOVE EMAIL AS PRIMARY IDENTIFIER
-
-In webhook handling logic:
-
-- Prefer this order of identification:
-    1) event.data.object.metadata.userId
-    2) subscription.metadata.userId
-    3) stripeCustomerId mapping
-    4) email ONLY as last fallback (and log warning)
-
-Do NOT rely solely on email anymore.
-
---------------------------------------------
-
-4️⃣ NO BEHAVIORAL CHANGES
-
-- Do not change idempotency logic.
-- Do not change atomic transaction structure.
-- Do not introduce new event types.
-- Do not add portal logic.
-- Do not refactor domain lifecycle.
-
---------------------------------------------
-
-5️⃣ OUTPUT EXPECTATIONS
-
-Provide:
-
-- Updated checkout use case snippet (customer creation + metadata propagation)
-- Updated stripeService.createCheckoutSession call structure
-- Updated webhook identification snippet (deterministic user resolution)
-- Keep changes minimal and focused
-
---------------------------------------------
-
-GOAL
-
-After this change:
-- The system is no longer email-coupled.
-- Each user has a single Stripe customer.
-- Metadata provides deterministic user mapping.
-- The SaaS billing layer is structurally sound.
-
-Do not over-engineer.
-Keep it minimal, safe, and production-grade.
+Output:
+- Provide updated CreateUser.js.
+- Provide updated AuthController.js (only modified parts).
+- Brief summary of changes made.

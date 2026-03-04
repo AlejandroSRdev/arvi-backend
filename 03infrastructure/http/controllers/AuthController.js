@@ -35,7 +35,7 @@ export async function register(req, res, next) {
       throw new ValidationError("Email and password are required");
     }
 
-    const { userId } = await createUser(
+    const { userId, plan } = await createUser(
       email,
       password,
       { userRepository, passwordHasher }
@@ -49,7 +49,7 @@ export async function register(req, res, next) {
       user: {
         id: userId,
         email,
-        plan: "pro",
+        plan,
       },
     });
   } catch (err) {
