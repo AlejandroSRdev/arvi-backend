@@ -9,8 +9,8 @@ import { HabitSeries } from '../../../01domain/entities/HabitSeries.js';
 import { IHabitSeriesRepository } from '../../../01domain/ports/HabitSeriesRepository.js';
 import { Action } from '../../../01domain/value_objects/habits/Action.js';
 import {
-  AuthorizationError,
   DataAccessFailureError,
+  MonthlyActionsQuotaExceededError,
   TransactionFailureError,
   ValidationError,
 } from '../../../errors/Index.js';
@@ -317,31 +317,29 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
   }
 
   /**
-   * Atomically appends an action to a series and increments monthly usage.
+   * Atomically appends an action to a series and decrements the user's monthly quota.
    *
-   * Runs inside a single Firestore transaction so all operations
-   * succeed or fail together. No partial state is possible.
+   * Re-verifies the quota inside the transaction to guard against concurrent requests.
+   * Runs inside a single Firestore transaction so all operations succeed or fail together.
    *
    * @param {string} userId
    * @param {string} seriesId
    * @param {object} actionData - Plain action data to persist
-   * @param {string} monthKey - e.g. "2026-03"
-   * @param {number} monthlyLimit - Limit re-verified inside transaction for concurrency safety
    * @returns {Promise<{ actionId: string }>}
    */
-  async atomicCommitActionCreation(userId, seriesId, actionData, monthKey, monthlyLimit) {
-    if (!userId || !seriesId || !actionData || !monthKey) {
-      throw new ValidationError('userId, seriesId, actionData, and monthKey are required for atomic commit');
+  async atomicCommitActionCreation(userId, seriesId, actionData) {
+    if (!userId || !seriesId || !actionData) {
+      throw new ValidationError('userId, seriesId, and actionData are required for atomic commit');
     }
 
-    const seriesRef = db.collection('users').doc(userId).collection('habitSeries').doc(seriesId);
-    const monthlyUsageRef = db.collection('users').doc(userId).collection('monthlyUsage').doc(monthKey);
+    const userRef = db.collection('users').doc(userId);
+    const seriesRef = userRef.collection('habitSeries').doc(seriesId);
 
     try {
       const result = await db.runTransaction(async (transaction) => {
         // READS FIRST (Firestore requires all reads before any writes)
+        const userDoc = await transaction.get(userRef);
         const seriesDoc = await transaction.get(seriesRef);
-        const monthlyUsageDoc = await transaction.get(monthlyUsageRef);
 
         if (!seriesDoc.exists) {
           throw new DataAccessFailureError({
@@ -350,13 +348,15 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
           });
         }
 
-        // Re-verify monthly limit to guard against concurrent requests
-        const currentActionsUsed = monthlyUsageDoc.exists
-          ? (monthlyUsageDoc.data().actionsUsed ?? 0)
+        // Re-verify quota to guard against concurrent requests
+        const remaining = userDoc.exists
+          ? (userDoc.data().limits?.monthlyActionsRemaining ?? 0)
           : 0;
 
-        if (currentActionsUsed >= monthlyLimit) {
-          throw new AuthorizationError(`Monthly action limit of ${monthlyLimit} reached`);
+        if (remaining <= 0) {
+          throw new MonthlyActionsQuotaExceededError(
+            userDoc.data().limits?.monthlyActionsMax ?? 0
+          );
         }
 
         // WRITES AFTER ALL READS
@@ -368,19 +368,10 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
           updatedAt: FieldValue.serverTimestamp(),
         });
 
-        if (monthlyUsageDoc.exists) {
-          transaction.update(monthlyUsageRef, {
-            actionsUsed: FieldValue.increment(1),
-            updatedAt: FieldValue.serverTimestamp(),
-          });
-        } else {
-          transaction.set(monthlyUsageRef, {
-            monthKey,
-            actionsUsed: 1,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-          });
-        }
+        transaction.update(userRef, {
+          'limits.monthlyActionsRemaining': FieldValue.increment(-1),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
 
         return { actionId: actionData.id };
       });
@@ -388,7 +379,7 @@ export class FirestoreHabitSeriesRepository extends IHabitSeriesRepository {
       return result;
     } catch (error) {
       // Re-throw typed errors as-is
-      if (error instanceof DataAccessFailureError || error instanceof AuthorizationError) {
+      if (error instanceof DataAccessFailureError || error instanceof MonthlyActionsQuotaExceededError) {
         throw error;
       }
 

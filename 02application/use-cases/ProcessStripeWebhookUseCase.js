@@ -90,21 +90,36 @@ async function handleInvoicePaid(event, userRepository) {
   const planKey = invoiceObject?.subscription_details?.metadata?.internalPlan
     ?? invoiceObject?.subscription_details?.metadata?.plan;
   const planId = PLAN_KEY_TO_ID[planKey?.toUpperCase()];
+
   if (!planId) {
-    billingLogError('stripe_webhook_non_retryable_error', {
-      eventId,
-      reason: `Unknown plan key: ${planKey}`,
-    });
-    await userRepository.recordFailedStripeEvent({
-      eventId,
-      type: event.type,
-      reason: `Unknown plan key: ${planKey}`,
-      userId,
-    });
+    // Plan key absent or unrecognized — safely ignore plan update.
+    // Optionally refresh stripeSubscriptionId if the invoice carries one.
+    billingLog('stripe_webhook_invoice_paid_no_plan', { eventId, userId, planKey: planKey ?? null });
+
+    if (invoiceObject.subscription) {
+      try {
+        const { skipped } = await userRepository.atomicProcessStripeEvent(eventId, userId, {
+          stripeSubscriptionId: invoiceObject.subscription,
+        });
+        if (skipped) {
+          billingLog('stripe_webhook_idempotent_skip', { eventId, userId });
+        }
+      } catch (err) {
+        billingLogError('stripe_webhook_transaction_rolled_back', {
+          eventId,
+          reason: err.message,
+          retryable: RETRYABLE_CODES.has(err.code),
+        });
+        throw err;
+      }
+    }
     return;
   }
 
   const planConfig = Object.values(PLANS).find(p => p.id === planId);
+
+  // Reset monthly actions quota to the new plan's full limit
+  const monthlyActionsResetAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   billingLog('stripe_webhook_transaction_started', { eventId });
 
@@ -115,6 +130,9 @@ async function handleInvoicePaid(event, userRepository) {
       stripeCustomerId: invoiceObject.customer ?? null,
       stripeSubscriptionId: invoiceObject.subscription ?? null,
       'limits.maxActiveSeries': planConfig?.maxActiveSeries ?? null,
+      'limits.monthlyActionsMax': planConfig?.maxMonthlyActions ?? null,
+      'limits.monthlyActionsRemaining': planConfig?.maxMonthlyActions ?? null,
+      'limits.monthlyActionsResetAt': monthlyActionsResetAt,
     });
 
     if (skipped) {
@@ -125,7 +143,7 @@ async function handleInvoicePaid(event, userRepository) {
     billingLog('stripe_webhook_transaction_committed', {
       eventId,
       userId,
-      subscriptionStatus: 'ACTIVE',
+      planStatus: 'ACTIVE',
       plan: planId,
     });
   } catch (err) {
@@ -181,6 +199,13 @@ async function handleCheckoutSessionCompleted(event, userRepository) {
 
   const planConfig = Object.values(PLANS).find(p => p.id === planId);
 
+  // Pre-read to determine whether subscribedAt should be set (only on first activation)
+  const existingUser = await userRepository.getUser(userId);
+  const subscribedAt = existingUser?.subscribedAt ?? new Date().toISOString();
+
+  // Reset monthly actions quota to the new plan's full limit
+  const monthlyActionsResetAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
   billingLog('stripe_webhook_transaction_started', { eventId });
 
   try {
@@ -190,6 +215,11 @@ async function handleCheckoutSessionCompleted(event, userRepository) {
       stripeCustomerId: session.customer ?? null,
       stripeSubscriptionId: session.subscription ?? null,
       'limits.maxActiveSeries': planConfig?.maxActiveSeries ?? null,
+      'limits.monthlyActionsMax': planConfig?.maxMonthlyActions ?? null,
+      'limits.monthlyActionsRemaining': planConfig?.maxMonthlyActions ?? null,
+      'limits.monthlyActionsResetAt': monthlyActionsResetAt,
+      subscribedAt,
+      canceledAt: null,
     });
 
     if (skipped) {
@@ -200,7 +230,7 @@ async function handleCheckoutSessionCompleted(event, userRepository) {
     billingLog('stripe_webhook_transaction_committed', {
       eventId,
       userId,
-      subscriptionStatus: 'ACTIVE',
+      planStatus: 'ACTIVE',
       plan: planId,
     });
   } catch (err) {
@@ -252,7 +282,7 @@ async function handleInvoicePaymentFailed(event, userRepository) {
     billingLog('stripe_webhook_transaction_committed', {
       eventId,
       userId,
-      subscriptionStatus: 'PAST_DUE',
+      planStatus: 'PAST_DUE',
     });
   } catch (err) {
     billingLogError('stripe_webhook_transaction_rolled_back', {
@@ -299,6 +329,10 @@ async function handleSubscriptionDeleted(event, userRepository) {
     const { skipped } = await userRepository.atomicProcessStripeEvent(eventId, userId, {
       plan: 'freemium',
       planStatus: 'CANCELED',
+      stripeSubscriptionId: null,
+      canceledAt: new Date().toISOString(),
+      'limits.monthlyActionsMax': 0,
+      'limits.monthlyActionsRemaining': 0,
     });
 
     if (skipped) {
@@ -309,7 +343,7 @@ async function handleSubscriptionDeleted(event, userRepository) {
     billingLog('stripe_webhook_transaction_committed', {
       eventId,
       userId,
-      subscriptionStatus: 'CANCELED',
+      planStatus: 'CANCELED',
       plan: 'freemium',
     });
   } catch (err) {

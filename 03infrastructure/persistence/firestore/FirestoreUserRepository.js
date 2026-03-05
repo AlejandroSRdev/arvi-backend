@@ -26,10 +26,10 @@ export class FirestoreUserRepository extends IUserRepository {
         email: user.email,
         password: user.password,
         plan: user.plan,
-        subscriptionStatus: user.subscriptionStatus,
         stripeCustomerId: user.stripeCustomerId,
         stripeSubscriptionId: user.stripeSubscriptionId,
-        subscriptionUpdatedAt: user.subscriptionUpdatedAt,
+        subscribedAt: user.subscribedAt,
+        canceledAt: user.canceledAt,
 
         trial: {
           durationDays: user.trial.durationDays,
@@ -39,6 +39,9 @@ export class FirestoreUserRepository extends IUserRepository {
         limits: {
           maxActiveSeries: user.limits.maxActiveSeries,
           activeSeriesCount: user.limits.activeSeriesCount,
+          monthlyActionsMax: user.limits.monthlyActionsLimit ?? 0,
+          monthlyActionsRemaining: user.limits.monthlyActionsLimit ?? 0,
+          monthlyActionsResetAt: null,
         },
       };
 
@@ -66,10 +69,10 @@ export class FirestoreUserRepository extends IUserRepository {
         id: doc.id,
         ...data,
         // Billing defaults for legacy users that predate this schema
-        subscriptionStatus: data.subscriptionStatus ?? 'INACTIVE',
         stripeCustomerId: data.stripeCustomerId ?? null,
         stripeSubscriptionId: data.stripeSubscriptionId ?? null,
-        subscriptionUpdatedAt: data.subscriptionUpdatedAt ?? null,
+        subscribedAt: data.subscribedAt ?? null,
+        canceledAt: data.canceledAt ?? null,
       };
     } catch (error) {
       if (error.code) throw error;
@@ -96,10 +99,10 @@ export class FirestoreUserRepository extends IUserRepository {
     return {
       id: doc.id,
       ...data,
-      subscriptionStatus: data.subscriptionStatus ?? 'INACTIVE',
       stripeCustomerId: data.stripeCustomerId ?? null,
       stripeSubscriptionId: data.stripeSubscriptionId ?? null,
-      subscriptionUpdatedAt: data.subscriptionUpdatedAt ?? null,
+      subscribedAt: data.subscribedAt ?? null,
+      canceledAt: data.canceledAt ?? null,
     };
   }
 
@@ -122,10 +125,10 @@ export class FirestoreUserRepository extends IUserRepository {
     return {
       id: doc.id,
       ...data,
-      subscriptionStatus: data.subscriptionStatus ?? 'INACTIVE',
       stripeCustomerId: data.stripeCustomerId ?? null,
       stripeSubscriptionId: data.stripeSubscriptionId ?? null,
-      subscriptionUpdatedAt: data.subscriptionUpdatedAt ?? null,
+      subscribedAt: data.subscribedAt ?? null,
+      canceledAt: data.canceledAt ?? null,
     };
   }
 
@@ -210,9 +213,9 @@ export class FirestoreUserRepository extends IUserRepository {
           return;
         }
 
-        // Remove null/undefined entries to avoid overwriting with nulls
+        // Remove undefined entries; explicit null values are allowed (e.g. clearing canceledAt)
         const filteredUpdates = Object.fromEntries(
-          Object.entries(userUpdates).filter(([, v]) => v !== undefined && v !== null)
+          Object.entries(userUpdates).filter(([, v]) => v !== undefined)
         );
 
         transaction.update(userRef, {

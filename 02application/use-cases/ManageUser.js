@@ -117,8 +117,10 @@ export async function getSubscriptionStatus(userId, deps) {
 
   return {
     plan: user.plan,
-    subscriptionStatus: user.subscriptionStatus || null,
+    planStatus: user.planStatus || null,
     stripeCustomerId: user.stripeCustomerId || null,
+    subscribedAt: user.subscribedAt || null,
+    canceledAt: user.canceledAt || null,
     trial: user.trial || null,
   };
 }

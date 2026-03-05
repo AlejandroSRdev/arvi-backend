@@ -6,13 +6,14 @@
  * and atomic persistence. Uses monthly usage limits instead of energy.
  */
 
-import { hasFeatureAccess, getPlan, monthlyActionsLimit } from '../../01domain/policies/PlanPolicy.js';
+import { hasFeatureAccess, getPlan } from '../../01domain/policies/PlanPolicy.js';
 import { getModelConfig } from '../../01domain/policies/ModelSelectionPolicy.js';
 import { generateAIResponse } from '../services/AIExecutionService.js';
 import {
   ValidationError,
   AuthorizationError,
   NotFoundError,
+  MonthlyActionsQuotaExceededError,
 } from '../../errors/Index.js';
 
 import CreativeActionPrompt from '../prompts/action_prompts/CreativeActionPrompt.js';
@@ -59,13 +60,6 @@ function validateActionSchema(data) {
   }
 
   return { valid: true };
-}
-
-function getCurrentMonthKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
 }
 
 /**
@@ -116,18 +110,15 @@ export async function createAction(userId, seriesId, payload, deps) {
     );
   }
 
+  // Check quota before any further DB calls or AI execution to fail fast
+  const monthlyRemaining = user.limits?.monthlyActionsRemaining ?? 0;
+  if (monthlyRemaining <= 0) {
+    throw new MonthlyActionsQuotaExceededError(user.limits?.monthlyActionsMax ?? 0);
+  }
+
   const series = await habitSeriesRepository.getHabitSeriesById(userId, seriesId);
   if (!series) {
     throw new NotFoundError('Habit series not found');
-  }
-
-  const monthKey = getCurrentMonthKey();
-  const monthlyUsage = await habitSeriesRepository.getMonthlyUsage(userId, monthKey);
-  const actionsUsed = monthlyUsage?.actionsUsed ?? 0;
-  const limit = monthlyActionsLimit(effectivePlan);
-
-  if (actionsUsed >= limit) {
-    throw new AuthorizationError(`Monthly action limit of ${limit} reached`);
   }
 
   // STEP 2: AI EXECUTION (3 passes)
@@ -235,9 +226,7 @@ export async function createAction(userId, seriesId, payload, deps) {
     await habitSeriesRepository.atomicCommitActionCreation(
       userId,
       seriesId,
-      actionData,
-      monthKey,
-      limit
+      actionData
     );
 
     console.log('[ATOMIC_COMMIT_SUCCESS]', {

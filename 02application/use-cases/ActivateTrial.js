@@ -45,6 +45,10 @@ export async function activateTrial(userId, deps) {
     'energia.actual': PLANS.TRIAL.maxEnergy,
     'energia.maxima': PLANS.TRIAL.maxEnergy,
     'energia.ultimaRecarga': now,
+    // Grant monthly action quota for the trial duration
+    'limits.monthlyActionsMax': PLANS.TRIAL.maxMonthlyActions,
+    'limits.monthlyActionsRemaining': PLANS.TRIAL.maxMonthlyActions,
+    'limits.monthlyActionsResetAt': expiresAt.toISOString(),
   });
 
   return {
