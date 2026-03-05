@@ -139,6 +139,132 @@ async function handleInvoicePaid(event, userRepository) {
 }
 
 /**
+ * Handle checkout.session.completed: activate the subscription for the user.
+ * This is the primary activation event when using Stripe Checkout.
+ */
+async function handleCheckoutSessionCompleted(event, userRepository) {
+  const { id: eventId } = event;
+  const session = event.data.object;
+
+  // client_reference_id is the most reliable source; metadata.userId is the fallback
+  const userId = session.client_reference_id ?? session.metadata?.userId ?? null;
+  if (!userId) {
+    billingLogError('stripe_webhook_non_retryable_error', {
+      eventId,
+      reason: 'Cannot determine userId from checkout.session.completed payload',
+    });
+    await userRepository.recordFailedStripeEvent({
+      eventId,
+      type: event.type,
+      reason: 'Cannot determine userId from checkout.session.completed payload',
+      customerId: session.customer ?? null,
+    });
+    return;
+  }
+
+  // internalPlan is the current key; plan is the legacy fallback
+  const planKey = session.metadata?.internalPlan ?? session.metadata?.plan ?? null;
+  const planId = PLAN_KEY_TO_ID[planKey?.toUpperCase()];
+  if (!planId) {
+    billingLogError('stripe_webhook_non_retryable_error', {
+      eventId,
+      reason: `Unknown plan key: ${planKey}`,
+    });
+    await userRepository.recordFailedStripeEvent({
+      eventId,
+      type: event.type,
+      reason: `Unknown plan key: ${planKey}`,
+      userId,
+    });
+    return;
+  }
+
+  const planConfig = Object.values(PLANS).find(p => p.id === planId);
+
+  billingLog('stripe_webhook_transaction_started', { eventId });
+
+  try {
+    const { skipped } = await userRepository.atomicProcessStripeEvent(eventId, userId, {
+      plan: planId,
+      planStatus: 'ACTIVE',
+      stripeCustomerId: session.customer ?? null,
+      stripeSubscriptionId: session.subscription ?? null,
+      'limits.maxActiveSeries': planConfig?.maxActiveSeries ?? null,
+    });
+
+    if (skipped) {
+      billingLog('stripe_webhook_idempotent_skip', { eventId, userId });
+      return;
+    }
+
+    billingLog('stripe_webhook_transaction_committed', {
+      eventId,
+      userId,
+      subscriptionStatus: 'ACTIVE',
+      plan: planId,
+    });
+  } catch (err) {
+    billingLogError('stripe_webhook_transaction_rolled_back', {
+      eventId,
+      reason: err.message,
+      retryable: RETRYABLE_CODES.has(err.code),
+    });
+    throw err;
+  }
+}
+
+/**
+ * Handle invoice.payment_failed: mark the subscription as past due.
+ * Stripe will retry automatically; do not cancel the plan yet.
+ */
+async function handleInvoicePaymentFailed(event, userRepository) {
+  const { id: eventId } = event;
+  const invoiceObject = event.data.object;
+
+  const userId = await resolveUserIdFromInvoice(invoiceObject, userRepository);
+  if (!userId) {
+    billingLogError('stripe_webhook_non_retryable_error', {
+      eventId,
+      reason: 'Cannot determine userId from invoice.payment_failed payload',
+    });
+    await userRepository.recordFailedStripeEvent({
+      eventId,
+      type: event.type,
+      reason: 'Cannot determine userId from invoice.payment_failed payload',
+      customerId: invoiceObject.customer ?? null,
+      customerEmail: invoiceObject.customer_email ?? null,
+    });
+    return;
+  }
+
+  billingLog('stripe_webhook_transaction_started', { eventId });
+
+  try {
+    const { skipped } = await userRepository.atomicProcessStripeEvent(eventId, userId, {
+      planStatus: 'PAST_DUE',
+    });
+
+    if (skipped) {
+      billingLog('stripe_webhook_idempotent_skip', { eventId, userId });
+      return;
+    }
+
+    billingLog('stripe_webhook_transaction_committed', {
+      eventId,
+      userId,
+      subscriptionStatus: 'PAST_DUE',
+    });
+  } catch (err) {
+    billingLogError('stripe_webhook_transaction_rolled_back', {
+      eventId,
+      reason: err.message,
+      retryable: RETRYABLE_CODES.has(err.code),
+    });
+    throw err;
+  }
+}
+
+/**
  * Handle customer.subscription.deleted: deactivate the user's plan.
  */
 async function handleSubscriptionDeleted(event, userRepository) {
@@ -208,14 +334,21 @@ export async function processStripeWebhook(event, deps) {
   const { userRepository } = deps;
   const { type, id: eventId } = event;
 
+  if (type === 'checkout.session.completed') {
+    return handleCheckoutSessionCompleted(event, userRepository);
+  }
+
   if (type === 'invoice.paid') {
     return handleInvoicePaid(event, userRepository);
+  }
+
+  if (type === 'invoice.payment_failed') {
+    return handleInvoicePaymentFailed(event, userRepository);
   }
 
   if (type === 'customer.subscription.deleted') {
     return handleSubscriptionDeleted(event, userRepository);
   }
 
-  // Unhandled event types are silently ignored
   billingLog('stripe_webhook_unhandled_event', { eventId, eventType: type });
 }
