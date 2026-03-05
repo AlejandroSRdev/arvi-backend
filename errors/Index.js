@@ -7,7 +7,7 @@
 export { BaseError } from './base/BaseError.js';
 
 export {
-  MaxActiveSeriesReachedError, TrialAlreadyUsedError
+  MaxActiveSeriesReachedError, MonthlyActionsQuotaExceededError, TrialAlreadyUsedError
 } from './domain/Index.js';
 
 export {

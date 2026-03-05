@@ -1,83 +1,46 @@
-You are modifying an existing Stripe webhook processing use case.
+You are editing a Node.js backend with a hexagonal architecture.
 
-File:
-Application layer
-ProcessStripeWebhookUseCase.js
+Task: simplify subscription state in User entity.
+
+Current fields (example):
+- plan
+- planStatus
+- subscriptionStatus
+- subscriptionUpdatedAt
+- stripeCustomerId
+- stripeSubscriptionId
 
 Goal:
-Fix the webhook event handling so the system correctly processes the full Stripe subscription lifecycle when using Stripe Checkout.
+1) Remove subscriptionStatus and subscriptionUpdatedAt from the User entity and all persistence mappings.
+2) Add two fields:
+   - subscribedAt (nullable timestamp)
+   - canceledAt (nullable timestamp)
+
+Event handling updates:
+- checkout.session.completed:
+  - set plan = <mapped plan>
+  - set planStatus = "ACTIVE"
+  - set stripeCustomerId, stripeSubscriptionId
+  - set subscribedAt = now (only if not already set)
+  - set canceledAt = null
+- customer.subscription.deleted:
+  - set plan = "freemium"
+  - set planStatus = "CANCELED"
+  - set canceledAt = now
+  - do NOT delete stripeCustomerId (keep)
+  - stripeSubscriptionId can be kept or nulled — follow current conventions, but be consistent
+- invoice.paid:
+  - do NOT require metadata plan; if missing, safely ignore.
+  - optionally refresh stripeSubscriptionId if present and user doesn't have it
+
+Also check:
+- any DTOs, Firestore serializers, schema validators, domain models, TypeScript types (if any), tests, docs, and migrations.
 
 Constraints:
-- Preserve the existing architecture.
-- Do NOT change repository interfaces.
-- Do NOT remove idempotency (atomicProcessStripeEvent).
-- Maintain retryable vs non-retryable error semantics.
-- Maintain existing logging style (billingLog / billingLogError).
-- Keep the code simple and consistent with the current file.
+- Preserve idempotency and atomicProcessStripeEvent.
+- Preserve existing logging patterns.
+- Do not introduce new architecture layers.
 
-Current problem:
-The system ignores `checkout.session.completed`, and `invoice.paid` expects metadata that is not guaranteed to exist if the session metadata was not propagated to the subscription.
-
-Tasks:
-
-1) Add support for the event:
-
-checkout.session.completed
-
-This event should activate the subscription for the user.
-
-The handler must:
-- read the Stripe session object
-- determine userId using:
-    session.client_reference_id
-    OR session.metadata.userId
-- determine planKey using:
-    session.metadata.internalPlan
-    OR session.metadata.plan
-- map the planKey using PLAN_KEY_TO_ID
-- update the user via userRepository.atomicProcessStripeEvent
-
-Fields to persist:
-
-plan
-planStatus = "ACTIVE"
-stripeCustomerId = session.customer
-stripeSubscriptionId = session.subscription
-
-2) Add a new handler:
-
-handleInvoicePaymentFailed
-
-Triggered by:
-invoice.payment_failed
-
-Behavior:
-- resolve userId using resolveUserIdFromInvoice
-- set:
-
-planStatus = "PAST_DUE"
-
-Stripe will retry payments automatically; do not cancel the plan.
-
-3) Update processStripeWebhook so it routes events:
-
-checkout.session.completed
-invoice.paid
-invoice.payment_failed
-customer.subscription.deleted
-
-All other events must continue to be logged with:
-
-billingLog('stripe_webhook_unhandled_event')
-
-4) Maintain existing patterns:
-
-- atomicProcessStripeEvent(eventId, userId, updatePayload)
-- logging events
-- recording logical failures via recordFailedStripeEvent
-- retryable errors must still propagate
-
-5) Ensure the new handlers follow the same error-handling pattern as handleInvoicePaid.
-
-Deliverable:
-Return the full updated contents of ProcessStripeWebhookUseCase.js with the new handlers and updated router.
+Deliverables:
+- List files changed with a brief justification.
+- Provide patch/diff or updated code sections.

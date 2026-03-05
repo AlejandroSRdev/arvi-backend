@@ -6,8 +6,6 @@
  */
 
 
-const VALID_SUBSCRIPTION_STATUSES = ['INACTIVE', 'ACTIVE', 'CANCELED', 'PAST_DUE'];
-
 export class User {
   constructor(
     id,
@@ -118,24 +116,10 @@ export class User {
     // Billing invariants
     // ─────────────────────────────
 
-    const subscriptionStatus = billing.subscriptionStatus ?? 'INACTIVE';
     const stripeCustomerId = billing.stripeCustomerId ?? null;
     const stripeSubscriptionId = billing.stripeSubscriptionId ?? null;
-    const subscriptionUpdatedAt = billing.subscriptionUpdatedAt ?? null;
-
-    if (!VALID_SUBSCRIPTION_STATUSES.includes(subscriptionStatus)) {
-      throw new Error(`Invalid subscription status: ${subscriptionStatus}`);
-    }
-
-    // An active subscription must have a paid plan
-    if (subscriptionStatus === 'ACTIVE' && plan.toUpperCase() === 'FREE') {
-      throw new Error('Active subscription requires a paid plan');
-    }
-
-    // Subscription ID is only valid for non-INACTIVE states
-    if (stripeSubscriptionId !== null && subscriptionStatus === 'INACTIVE') {
-      throw new Error('stripeSubscriptionId is only valid for non-INACTIVE subscriptions');
-    }
+    const subscribedAt = billing.subscribedAt ?? null;
+    const canceledAt = billing.canceledAt ?? null;
 
     this.id = id;
     this.email = normalizedEmail;
@@ -143,10 +127,10 @@ export class User {
     this.plan = plan;
     this.trial = trial;
     this.limits = limits;
-    this.subscriptionStatus = subscriptionStatus;
     this.stripeCustomerId = stripeCustomerId;
     this.stripeSubscriptionId = stripeSubscriptionId;
-    this.subscriptionUpdatedAt = subscriptionUpdatedAt;
+    this.subscribedAt = subscribedAt;
+    this.canceledAt = canceledAt;
   }
 
   /**
@@ -156,26 +140,26 @@ export class User {
     this.plan = plan;
     this.stripeCustomerId = stripeCustomerId;
     this.stripeSubscriptionId = stripeSubscriptionId;
-    this.subscriptionStatus = 'ACTIVE';
-    this.subscriptionUpdatedAt = new Date();
+    // Only record the first activation date; preserve it on renewals/upgrades
+    if (!this.subscribedAt) {
+      this.subscribedAt = new Date();
+    }
+    this.canceledAt = null;
   }
 
   /**
    * Mark the subscription as canceled; retains stripeCustomerId for potential reactivation.
    */
   cancelSubscription() {
-    this.subscriptionStatus = 'CANCELED';
     this.stripeSubscriptionId = null;
-    this.subscriptionUpdatedAt = new Date();
+    this.canceledAt = new Date();
   }
 
   /**
    * Mark the subscription as past due (payment failed).
+   * planStatus is persisted directly via webhook; no date field needed here.
    */
-  markPastDue() {
-    this.subscriptionStatus = 'PAST_DUE';
-    this.subscriptionUpdatedAt = new Date();
-  }
+  markPastDue() {}
 
   /**
    * The sole valid entry point to create a User.

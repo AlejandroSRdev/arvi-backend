@@ -1,108 +1,33 @@
-You are the ENVIRONMENT CONFIGURATION REFINEMENT agent.
+You are fixing a critical business rule: monthly actions quota per plan.
 
-CONTEXT:
-The Stripe integration is already implemented.
-The system previously supported:
-    STRIPE_MODE=test | live
-    Separate test and live Stripe keys in the environment.
+Context:
+Plans already define allowed monthly actions per plan (e.g., PRO, BASE, etc).
+Currently only maxActiveSeries is enforced; monthly actions are not correctly initialized/updated.
 
-Your task is to restore and professionalize this environment resolution strategy.
+Goals:
+1) Ensure User has limits fields to support monthly actions:
+   - limits.monthlyActionsMax (number)
+   - limits.monthlyActionsRemaining (number)
+   - limits.monthlyActionsResetAt (timestamp, optional but recommended)
+2) On user creation:
+   - initialize these limits according to plan (default freemium)
+   - monthlyActionsRemaining = monthlyActionsMax
+3) On plan activation/change (Stripe events):
+   - update monthlyActionsMax according to the new plan
+   - set monthlyActionsRemaining = monthlyActionsMax (simple approach for now)
+   - set/reset monthlyActionsResetAt appropriately (e.g., now + 30 days or next month boundary)
+4) On action creation endpoint/use-case:
+   - atomically decrement monthlyActionsRemaining by 1
+   - if remaining is 0, reject with domain error (quota exceeded)
+   - ensure idempotency if action creation supports idempotency keys
+   - ensure concurrency safety (transaction / compare-and-swap), consistent with existing patterns
 
-You must NOT:
-- Modify billing logic.
-- Modify webhook logic.
-- Modify use cases.
-- Modify routing.
-- Modify domain models.
-- Introduce new features.
+Constraints:
+- Do not redesign the whole billing system.
+- Keep minimal, production-operable behavior.
+- Make sure the user creation path uses the same plan policy source of truth.
+- Update tests if they exist, add at least 2 minimal tests: (a) user created has correct limits, (b) action decrements and blocks at 0.
 
-Your responsibility is strictly environment configuration and Stripe client initialization.
-
---------------------------------------------
-OBJECTIVE
---------------------------------------------
-
-Implement a clean, deterministic Stripe environment selection mechanism based on:
-
-    STRIPE_MODE = "test" | "live"
-
---------------------------------------------
-REQUIRED ENV STRUCTURE
---------------------------------------------
-
-Assume environment variables exist in this format:
-
-STRIPE_MODE=test
-
-STRIPE_SECRET_KEY_TEST=...
-STRIPE_WEBHOOK_SECRET_TEST=...
-
-STRIPE_SECRET_KEY_LIVE=...
-STRIPE_WEBHOOK_SECRET_LIVE=...
-
---------------------------------------------
-IMPLEMENTATION REQUIREMENTS
---------------------------------------------
-
-1️⃣ Centralize Stripe configuration resolution in one place (e.g., stripeConfig module).
-
-2️⃣ Resolve keys based on STRIPE_MODE:
-
-If STRIPE_MODE === "live":
-    use STRIPE_SECRET_KEY_LIVE
-    use STRIPE_WEBHOOK_SECRET_LIVE
-
-If STRIPE_MODE === "test":
-    use STRIPE_SECRET_KEY_TEST
-    use STRIPE_WEBHOOK_SECRET_TEST
-
-3️⃣ Validate configuration at startup:
-
-- If STRIPE_MODE is missing → throw explicit error.
-- If selected key is missing → throw explicit error.
-- Do not silently fallback.
-
-4️⃣ Export a resolved configuration object:
-
-{
-  mode,
-  secretKey,
-  webhookSecret
-}
-
-5️⃣ Stripe client initialization must consume only the resolved configuration.
-
---------------------------------------------
-LOGGING REQUIREMENTS
---------------------------------------------
-
-At application startup (once):
-
-Log clearly:
-
-"Stripe initialized in TEST mode"
-or
-"Stripe initialized in LIVE mode"
-
-Do NOT log secret values.
-
---------------------------------------------
-DO NOT
---------------------------------------------
-
-- Do not infer mode from NODE_ENV.
-- Do not hardcode keys.
-- Do not duplicate resolution logic in multiple files.
-- Do not change existing Stripe service API.
-
---------------------------------------------
-OUTPUT EXPECTATIONS
---------------------------------------------
-
-- Show new stripeConfig module.
-- Show updated stripe client initialization using resolved config.
-- Keep changes minimal and isolated.
-- No unrelated refactors.
-
-Goal:
-Make Stripe environment switching explicit, safe, and production-grade.
+Deliverables:
+- Identify the plan policy source of truth and where to wire the limits update.
+- Provide code changes and brief rationale.

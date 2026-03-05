@@ -30,6 +30,19 @@ export function mapErrorToHttp(error) {
     };
   }
 
+  if (error.code === 'MONTHLY_ACTIONS_QUOTA_EXCEEDED') {
+    return {
+      status: HTTP_STATUS.FORBIDDEN,
+      body: {
+        error: 'MONTHLY_ACTIONS_QUOTA_EXCEEDED',
+        message: 'Monthly action creation quota has been reached',
+        details: {
+          limit: error.metadata?.limit,
+        },
+      },
+    };
+  }
+
   if (error.code === 'TRIAL_ALREADY_USED') {
     return {
       status: HTTP_STATUS.BAD_REQUEST,

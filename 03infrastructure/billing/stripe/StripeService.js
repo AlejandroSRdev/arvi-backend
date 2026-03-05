@@ -40,6 +40,9 @@ export async function createCustomer({ email, metadata }) {
  * @returns {Promise<{ url: string, sessionId: string }>}
  */
 export async function createCheckoutSession({ customerId, priceId, metadata, idempotencyKey }) {
+  // Log mode + priceId before the API call to make test/live mismatches immediately visible in logs.
+  console.log(`[Stripe] Creating checkout session | mode=${stripeConfig.mode} | plan=${metadata?.internalPlan} | priceId=${priceId}`);
+
   try {
     const session = await stripe.checkout.sessions.create(
       {
@@ -59,7 +62,7 @@ export async function createCheckoutSession({ customerId, priceId, metadata, ide
   } catch (err) {
     throw new StripeProviderFailureError({
       operation: 'createCheckoutSession',
-      message: err.message,
+      message: `[mode=${stripeConfig.mode} plan=${metadata?.internalPlan} priceId=${priceId}] ${err.message}`,
       cause: err,
     });
   }

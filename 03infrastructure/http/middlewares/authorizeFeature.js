@@ -71,7 +71,7 @@ export function authorizeFeature(featureKey) {
       req.userPlan = {
         planId: effectivePlan,
         isTrialActive: effectivePlan === 'trial',
-        subscriptionStatus: user.subscriptionStatus,
+        planStatus: user.planStatus,
       };
 
       next();
