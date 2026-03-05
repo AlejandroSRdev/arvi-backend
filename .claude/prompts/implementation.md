@@ -1,45 +1,83 @@
-You are performing a controlled refactor in a production backend.
+You are modifying an existing Stripe webhook processing use case.
 
-Objective:
-Fix CreateUser flow to align with the new Stripe-based billing model.
+File:
+Application layer
+ProcessStripeWebhookUseCase.js
 
-Context:
-- Stripe is now the source of truth for paid subscriptions.
-- Users must not default to "pro".
-- All new users must start in "freemium".
-- The User entity and repository already contain new Stripe-related fields (stripeCustomerId, stripeSubscriptionId, planStatus, etc.).
-- The current implementation hardcodes plan: "pro" and Limits.pro() in CreateUser.js.
-- The AuthController response body also hardcodes plan: "pro".
+Goal:
+Fix the webhook event handling so the system correctly processes the full Stripe subscription lifecycle when using Stripe Checkout.
+
+Constraints:
+- Preserve the existing architecture.
+- Do NOT change repository interfaces.
+- Do NOT remove idempotency (atomicProcessStripeEvent).
+- Maintain retryable vs non-retryable error semantics.
+- Maintain existing logging style (billingLog / billingLogError).
+- Keep the code simple and consistent with the current file.
+
+Current problem:
+The system ignores `checkout.session.completed`, and `invoice.paid` expects metadata that is not guaranteed to exist if the session metadata was not propagated to the subscription.
 
 Tasks:
 
-1. Update CreateUser.js:
-   - Remove any hardcoded "pro" plan assignment.
-   - Initialize user with:
-     - plan: "freemium"
-     - planStatus: appropriate default (e.g., "INACTIVE" or null depending on current model)
-     - stripeCustomerId: null
-     - stripeSubscriptionId: null
-     - limits consistent with freemium plan (use PlanPolicy, not hardcoded limits).
-   - Ensure no legacy billing logic remains.
+1) Add support for the event:
 
-2. Update AuthController:
-   - Remove hardcoded "pro" in response.
-   - Ensure response reflects actual plan returned from the use case.
+checkout.session.completed
 
-3. Ensure:
-   - No changes break existing login flow.
-   - No changes affect Stripe webhook processing.
-   - No paid plan is activated outside webhook flow.
-   - No temporary values remain.
+This event should activate the subscription for the user.
 
-Constraints:
-- Do not modify Stripe webhook logic.
-- Do not introduce new business rules.
-- Do not redesign PlanPolicy.
-- Only adjust user creation and response layer.
+The handler must:
+- read the Stripe session object
+- determine userId using:
+    session.client_reference_id
+    OR session.metadata.userId
+- determine planKey using:
+    session.metadata.internalPlan
+    OR session.metadata.plan
+- map the planKey using PLAN_KEY_TO_ID
+- update the user via userRepository.atomicProcessStripeEvent
 
-Output:
-- Provide updated CreateUser.js.
-- Provide updated AuthController.js (only modified parts).
-- Brief summary of changes made.
+Fields to persist:
+
+plan
+planStatus = "ACTIVE"
+stripeCustomerId = session.customer
+stripeSubscriptionId = session.subscription
+
+2) Add a new handler:
+
+handleInvoicePaymentFailed
+
+Triggered by:
+invoice.payment_failed
+
+Behavior:
+- resolve userId using resolveUserIdFromInvoice
+- set:
+
+planStatus = "PAST_DUE"
+
+Stripe will retry payments automatically; do not cancel the plan.
+
+3) Update processStripeWebhook so it routes events:
+
+checkout.session.completed
+invoice.paid
+invoice.payment_failed
+customer.subscription.deleted
+
+All other events must continue to be logged with:
+
+billingLog('stripe_webhook_unhandled_event')
+
+4) Maintain existing patterns:
+
+- atomicProcessStripeEvent(eventId, userId, updatePayload)
+- logging events
+- recording logical failures via recordFailedStripeEvent
+- retryable errors must still propagate
+
+5) Ensure the new handlers follow the same error-handling pattern as handleInvoicePaid.
+
+Deliverable:
+Return the full updated contents of ProcessStripeWebhookUseCase.js with the new handlers and updated router.
