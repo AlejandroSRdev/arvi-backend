@@ -9,6 +9,7 @@ import { User } from "../../01domain/entities/User.js";
 import { Limits } from "../../01domain/value_objects/user/Limits.js";
 import { Trial } from "../../01domain/value_objects/user/Trial.js";
 import { ValidationError } from "../../errors/Index.js";
+import { PLANS } from "../../01domain/policies/PlanPolicy.js";
 
 /**
  * Create a new user in the system
@@ -45,15 +46,13 @@ export async function createUser(email, password, deps) {
 
   const userId = randomUUID();
 
-  // Freemium users have no paid plan and no AI feature access.
-  // Limits are zero until a subscription is activated via Stripe webhook.
   const user = User.create({
     id: userId,
     email,
     password: passwordHash,
-    plan: "freemium",
-    trial: Trial.inactive(),
-    limits: new Limits(0, 0, 0),
+    plan: "TRIAL",
+    trial: Trial.active(),
+    limits: new Limits(PLANS.TRIAL.maxActiveSeries, 0, PLANS.TRIAL.maxMonthlyActions),
   });
 
   await userRepository.save(user);
