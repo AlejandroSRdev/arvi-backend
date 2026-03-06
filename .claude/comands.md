@@ -803,3 +803,7 @@ Flag ambiguity to the user when:
     .claude/prompts/security4.md \                                        
   | claude run 
 ```
+
+Endpoint documentation: 
+
+Execute the task in .claude/prompts/documentation.md with complete accuracy and obedience
