@@ -1,5 +1,42 @@
 # ARVI BACKEND — ARCHITECTURAL MANIFEST
 
+---
+
+## 0. Role of This Document (Authoritative Source)
+
+This document defines the architectural truth of the system.
+
+It exists to ensure that both humans and AI assistants (such as Claude Code) understand the intended design of the backend.
+
+**Source of Truth Rules**
+
+This manifest is the authoritative description of the architecture.
+
+Claude Code must follow these rules when interacting with the codebase:
+
+- Architecture is defined here, not inferred from code.
+- If code appears to contradict this document, assume the code may be temporary or imperfect.
+- Code inspection is allowed only to understand implementation details, not to redefine architecture.
+- Architectural decisions must always align with this document.
+
+**Code Inspection Guidelines for Claude**
+
+Claude may read specific files only for:
+
+- Understanding implementation details
+- Locating where logic currently lives
+- Verifying contracts between layers
+
+Claude must not:
+
+- Infer architecture from file structure alone
+- Move logic across layers unless explicitly instructed
+- Refactor architecture based on stylistic preferences
+
+This manifest defines how the system is supposed to work, even if parts of the code are still evolving.
+
+---
+
 ## 1. Core System Intent
 
 Arvi Backend is a regulated AI orchestration system.
@@ -9,7 +46,7 @@ It enforces domain rules, usage limits, and invariants before and after AI execu
 
 The system exists to:
 
-> Provide structured, personalized habit-based recommendations under explicit business constraints.
+- Provide structured, personalized habit-based recommendations under explicit business constraints.
 
 AI is a tool.
 The domain governs it.
@@ -18,17 +55,21 @@ The domain governs it.
 
 ## 2. Strategic Phase (Current Reality)
 
-The system is in **Minimum Operational Phase**.
+The system is in Minimum Operational Phase.
 
-Priority:
-- Real usage over architectural elegance.
-- Exposure to real users.
-- Controlled observability.
-- Stability under light production load.
+**Priority:**
 
-Do NOT introduce over-engineering.
-Do NOT refactor for theoretical purity.
-Refactor only under real operational pressure.
+- Real usage over architectural elegance
+- Exposure to real users
+- Controlled observability
+- Stability under light production load
+
+**Rules for development:**
+
+- Do NOT introduce over-engineering
+- Do NOT refactor for theoretical purity
+- Refactor only under real operational pressure
+- Favor stability over structural experimentation
 
 ---
 
@@ -36,153 +77,213 @@ Refactor only under real operational pressure.
 
 The system follows Hexagonal Architecture (Ports & Adapters).
 
-Directory structure:
+**Directory structure:**
 
-01domain/
-02application/
-03infrastructure/
-errors/
+- 01domain/
+- 02application/
+- 03infrastructure/
+- errors/
+
+**Dependency rule:**
+
+Infrastructure → Application → Domain
 
 Dependencies ALWAYS point inward.
 
-No layer may depend on an outer layer.
+Inner layers must never depend on outer layers.
 
 ---
 
 ## 4. Layer Responsibilities
 
-### 01domain/
+The system uses strict separation between domain logic, application orchestration, and infrastructure integration.
 
-Contains:
+### 01domain/
+**Contains**
+
 - Entities
 - Value Objects
-- Policies
+- Domain policies
 - Domain rules and invariants
 
-Characteristics:
+**Responsibilities**
+
+- Define the core business model
+- Enforce domain invariants
+- Represent domain concepts independently from technology
+
+**Characteristics**
+
 - Framework-agnostic
 - No Express
 - No Firebase
 - No AI provider knowledge
+- No Stripe or external service knowledge
+- No I/O operations
 - Pure business logic
 
-The domain never calls external systems.
+**Rules**
 
----
+The domain layer must:
+
+- Never call external systems
+- Never depend on infrastructure code
+- Never perform persistence operations
+- Never contain HTTP or framework concerns
+
+The domain layer represents business truth only.
 
 ### 02application/
+**Contains**
 
-Contains:
 - Use cases
-- Orchestration services
-- Business flow coordination
+- Application services
+- Business flow orchestration
 
-Responsibilities:
-- Enforce domain invariants
-- Coordinate AI execution
-- Coordinate persistence
-- Apply access rules (limits, identity, energy model)
+**Responsibilities**
+
+- Execute use cases
+- Coordinate domain objects
+- Coordinate external operations through ports
+- Enforce system-level rules
+
+System-level rules include:
+
+- Identity enforcement
+- Usage limits
+- Energy model constraints
+- Access control policies
+
+**Dependency Rules**
 
 Application layer depends on:
+
 - Domain
 - Abstract ports
 
-It does NOT depend on concrete infrastructure implementations.
+Application layer must NOT depend on:
 
----
+- Express
+- Firebase
+- OpenAI
+- Gemini
+- Stripe
+- Any concrete infrastructure implementation
+
+All external interactions occur only through ports.
+
+Application orchestrates behavior but does not implement infrastructure details.
 
 ### 03infrastructure/
+**Contains**
 
-Contains:
-- HTTP (Express controllers, routes)
+- HTTP interface (Express controllers, routes)
 - Middlewares
 - Firebase adapters
 - AI provider adapters (OpenAI, Gemini)
+- Payment service adapters (Stripe)
 - Mappers
 - External service implementations
 
-Characteristics:
+**Responsibilities**
+
+- Handle I/O boundaries
+- Translate HTTP requests into application use case calls
+- Implement ports defined by application layer
+- Integrate external systems
+
+**Characteristics**
+
 - Thin controllers
 - No business logic
-- Adapters implement ports defined by inner layers
-- Replaceable components
+- Infrastructure implements contracts defined by application layer
+- Components are replaceable without affecting inner layers
+- External services are accessed only through adapters.
 
-AI providers are accessed ONLY through adapters.
+**Examples:**
 
----
+- AI providers → OpenAI, Gemini
+- Payment provider → Stripe
+- Persistence → Firebase
 
 ### errors/
 
-Centralized error handling by layer.
+Centralized error handling organized by layer.
 
-Each layer defines and throws its own error types.
+Each layer defines and throws its own typed errors.
 
-Infrastructure maps errors to HTTP responses.
+Infrastructure translates errors into HTTP responses.
 
-No raw provider errors should leak to the client.
+Provider-specific errors must never reach the client.
 
 ---
 
 ## 5. Error Handling Contract
 
-All errors flow through a single centralized pipeline:
+All errors flow through a centralized pipeline:
 
-```
-throw typed error → controller catch → next(err) → errorMiddleware → mapErrorToHttp
-```
+throw typed error
+→ controller catch
+→ next(err)
+→ errorMiddleware
+→ mapErrorToHttp
 
-### Rules (Non-Negotiable)
+**Non-Negotiable Rules**
 
-- Controllers MUST accept `next` as a parameter.
-- Controllers MUST call `next(err)` in their catch block — never `res.status(...).json(...)` for errors.
-- All failure conditions MUST throw a typed error class from `errors/`.
-- `mapErrorToHttp` (`03infrastructure/mappers/ErrorMapper.js`) is the ONLY place where errors are translated to HTTP status codes and response bodies.
-- Untyped or provider-specific errors must never reach the client.
+Controllers MUST:
 
-### Controller Pattern (Mandatory)
+- Accept next as a parameter
+- Call next(err) for all errors
+- Never send error responses directly
 
-```js
+All failure conditions MUST throw typed error classes.
+
+Error translation to HTTP occurs only in one place:
+
+03infrastructure/mappers/ErrorMapper.js
+
+**Controller Pattern (Mandatory)**
+
 export async function someEndpoint(req, res, next) {
   try {
+
     if (!condition) throw new ValidationError('...');
-    // ...
+
   } catch (err) {
     return next(err);
   }
 }
-```
 
-### Error Classes by Layer
+**Error Classes by Layer**
 
-**Domain** (`errors/domain/`):
+- Domain errors → errors/domain/
+- Application errors → errors/application/
+- Infrastructure errors → errors/infrastructure/
 
-**Application** (`errors/application/`):
+All error classes are exported via:
 
-**Infrastructure** (`errors/infrastructure/`):
-
-All classes are exported from `errors/Index.js`.
+errors/Index.js
 
 ---
 
 ## 6. AI Integration Rules
 
-AI is an infrastructure concern.
+AI is strictly an infrastructure concern.
 
-Rules:
+**Rules:**
 
-- Domain must not know AI exists.
-- Application orchestrates AI execution as part of a use case.
-- AI providers are accessed via adapters only.
-- Provider-specific logic must never leak inward.
-- Output must be validated and normalized before leaving the system.
-
-AI output is never trusted blindly.
+- Domain must not know AI exists
+- Application orchestrates AI execution
+- AI providers are accessed only via adapters
+- Provider-specific logic must never leak inward
+- AI output must be validated before leaving the system
+- AI output is never trusted blindly.
 
 ---
 
 ## 7. System Invariants
 
-Always preserve:
+The system must always preserve:
 
 - Structured JSON output validation
 - Explicit usage limits
@@ -195,11 +296,13 @@ Always preserve:
 
 ## 8. What This System Is NOT
 
-- Not an AI wrapper.
-- Not a prompt playground.
-- Not a monolithic Express app.
-- Not framework-driven.
-- Not provider-dependent.
+This system is NOT:
+
+- An AI wrapper
+- A prompt playground
+- A monolithic Express application
+- Framework-driven
+- Provider-dependent
 
 It is a regulated orchestration core.
 
@@ -209,80 +312,78 @@ It is a regulated orchestration core.
 
 The system includes a mobile frontend built with Flutter.
 
-The frontend:
+**The frontend:**
 
-- Communicates exclusively through authenticated HTTP requests.
-- Does not contain business logic.
-- Does not decide subscription state.
-- Does not activate or deactivate plans.
-- Acts only as a UI layer and Stripe Checkout redirect initiator.
+- Communicates exclusively via authenticated HTTP requests
+- Contains no business logic
+- Does not determine subscription state
+- Only initiates Stripe Checkout redirects
 
-All subscription state transitions are determined server-side via Stripe webhooks.
+Subscription state is determined server-side via Stripe webhooks.
 
-The frontend must strictly follow backend-defined contracts.
-Any mismatch between frontend expectations and backend responses is considered a contract error.
+The backend is the source of truth.
 
 ---
 
 ## 10. Billing & Payment System (Stripe)
 
-Stripe is the external billing authority.
+Stripe acts as the external billing processor.
 
-Design principles:
+**Design principles:**
 
-- Checkout sessions only create payment intent.
-- Subscription state changes are applied exclusively via verified webhooks.
-- Webhook events are processed atomically and idempotently.
-- Stripe event ID is the idempotency boundary.
-- Database state is the final authority.
+- Checkout sessions only create payment intent
+- Subscription state changes occur exclusively through webhooks
+- Webhook events are processed atomically
+- Stripe Event ID acts as idempotency boundary
+- Database state is the final authority
 
 The backend must tolerate:
+
 - Event retries
 - Duplicate events
-- Potential out-of-order delivery
+- Out-of-order delivery
 
-No subscription state is trusted unless persisted through the webhook transaction layer.
+No subscription state is trusted unless persisted through webhook processing.
 
 ---
 
 ## 11. Deployment Context (Render)
 
-The system is deployed using **Render** as the hosting platform.
+Deployment platform: Render
 
-Deployment principles:
+**Deployment principles:**
 
-- The backend is hosted as a web service with autoscaling enabled.
-- Environment variables are used to configure secrets and sensitive data.
-- Build and deployment pipelines must remain simple and predictable.
-- Logs are streamed to the Render dashboard for observability.
+- Backend hosted as web service
+- Autoscaling enabled
+- Environment variables manage secrets
+- Logs streamed to Render dashboard
 
-Deployment rules:
+**Rules:**
 
-- Always test changes locally before deploying.
-- Ensure environment variables are updated in Render before deploying changes that depend on them.
-- Avoid hardcoding platform-specific configurations in the codebase.
-- Monitor resource usage (CPU, memory) to ensure the service remains within allocated limits.
+- Always test locally before deployment
+- Update environment variables before deploying dependent code
+- Avoid platform-specific logic in code
+- Monitor CPU and memory usage
 
 ---
 
 ## 12. Database Context (Firestore)
 
-The system uses **Firestore** as the primary database.
+Primary database: Firestore (Native Mode)
 
-Database principles:
+**Principles:**
 
-- Firestore is used in **native mode** for scalability and low-latency reads.
-- All data access is mediated through the application layer.
-- Queries must be optimized to minimize read and write costs.
-- Data is structured to support hierarchical relationships and efficient querying.
+- Low-latency reads
+- Scalable document storage
+- Query cost awareness
 
-Database rules:
+**Rules:**
 
-- Avoid deep nesting of documents beyond Firestore's recommended limits.
-- Use batched writes for atomic operations involving multiple documents.
-- Indexes must be explicitly defined for complex queries.
-- Regularly review and clean up unused or stale data to control costs.
-- Ensure Firestore security rules are updated to enforce access control policies.
+- Avoid excessive document nesting
+- Use batched writes when necessary
+- Define indexes explicitly
+- Periodically clean unused data
+- Maintain security rules aligned with backend access model
 
 ---
 
@@ -290,17 +391,17 @@ Database rules:
 
 When modifying the system:
 
-1. Respect architectural boundaries.
-2. Do not move business logic into controllers.
-3. Do not let infrastructure leak into domain.
-4. Prefer minimal changes over structural rewrites.
-5. Optimize for clarity and stability.
-6. Avoid unnecessary abstractions.
-7. Preserve inward dependency direction.
+- Respect architectural boundaries
+- Do not move business logic into controllers
+- Do not allow infrastructure concerns to leak into domain
+- Prefer minimal changes over structural rewrites
+- Optimize for clarity and stability
+- Avoid unnecessary abstractions
+- Preserve inward dependency direction
 
-Before implementing any change, ask:
+**Before implementing changes ask:**
 
-> Does this improve operational reliability or move the system closer to real usage?
+Does this improve operational reliability or move the system closer to real usage?
 
 If not, it is likely not a priority.
 
@@ -309,7 +410,9 @@ If not, it is likely not a priority.
 ## 14. Author & Ownership
 
 Designed and maintained by:
+
 Alejandro Saavedra Ruiz
 
 Single-engineer operated system.
-Architectural clarity is mandatory for sustainability.
+
+Architectural clarity is mandatory for long-term sustainability.

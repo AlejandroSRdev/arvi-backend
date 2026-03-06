@@ -1,0 +1,38 @@
+ paths:
+    /api/billing/create-checkout-session:
+      post:
+        summary: Create a Stripe Checkout session for subscription plan acquisition
+        security:
+          - bearerAuth: []
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - plan
+                properties:
+                  plan:
+                    type: string
+                    enum:
+                      - BASE
+                      - PRO
+                    example: BASE
+        responses:
+          "200":
+            description: Stripe Checkout session created successfully
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    url:
+                      type: string
+                      example: "https://checkout.stripe.com/session/..."
+          "401":
+            description: Unauthorized — JWT token missing or invalid
+          "429":
+            description: Too many requests — rate limit exceeded
+          "502":
+            description: Stripe provider failure
