@@ -18,7 +18,7 @@ export class FirestoreUserRepository extends IUserRepository {
    * All domain decisions (plan, limits, trial)
    * must be made BEFORE calling this method.
    */
-  async save(user) {
+  async save(user, planDates = {}) {
     try {
       const userRef = db.collection(USERS_COLLECTION).doc(user.id);
 
@@ -26,6 +26,8 @@ export class FirestoreUserRepository extends IUserRepository {
         email: user.email,
         password: user.password,
         plan: user.plan,
+        planStartedAt: planDates.planStartedAt ?? null,
+        planExpiresAt: planDates.planExpiresAt ?? null,
         stripeCustomerId: user.stripeCustomerId,
         stripeSubscriptionId: user.stripeSubscriptionId,
         subscribedAt: user.subscribedAt,

@@ -52,6 +52,7 @@ import { setDependencies as setAuthDeps } from './03infrastructure/http/controll
 import { setDependencies as setHabitSeriesDeps } from './03infrastructure/http/controllers/HabitSeriesController.js';
 import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
 import { setDependencies as setBillingDeps } from './03infrastructure/http/controllers/BillingController.js';
+import { setDependencies as setResolvePlanDeps } from './03infrastructure/http/middlewares/resolvePlan.js';
 
 // Import Stripe service
 import * as stripeService from './03infrastructure/billing/stripe/StripeService.js';
@@ -95,6 +96,11 @@ setHabitSeriesDeps({
 setBillingDeps({
   userRepository,
   stripeService,
+});
+
+// resolvePlan middleware requires: userRepository
+setResolvePlanDeps({
+  userRepository,
 });
 
 const app = express();

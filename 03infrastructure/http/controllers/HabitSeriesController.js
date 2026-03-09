@@ -98,6 +98,7 @@ export async function createHabitSeriesEndpoint(req, res, next) {
 
     // Invoke use-case
     const habitSeries = await createHabitSeries(userId, payload, {
+      planId: req.plan,
       userRepository,
       habitSeriesRepository,
       aiProvider,
@@ -306,6 +307,7 @@ export async function createActionEndpoint(req, res, next) {
     }
 
     const action = await createAction(userId, seriesId, { language }, {
+      planId: req.plan,
       userRepository,
       habitSeriesRepository,
       aiProvider,

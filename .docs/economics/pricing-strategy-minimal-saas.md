@@ -66,7 +66,8 @@ Business risk is product retention, not infrastructure cost.
 
 ### Trial
 - Duration: 3 days
-- Up to 5 series
+- Up to 5 active series
+- Up to 25 monthly actions
 - No payment required
 
 Purpose:
@@ -78,8 +79,7 @@ Purpose:
 
 ### Base Plan — $2.99 / month
 - Up to 10 active series
-- Monthly usage reset
-- Future action creation included within monthly limit
+- Up to 50 monthly actions
 
 Positioning:
 Low entry subscription.
@@ -89,8 +89,8 @@ Designed for validation phase.
 ---
 
 ### Pro Plan — $5.99 / month
-- Up to 50 active series
-- Higher monthly usage limits
+- Up to 20 active series
+- Up to 100 monthly actions
 - Designed for advanced or power users
 
 Positioning:
@@ -114,7 +114,7 @@ High ceiling without being "unlimited".
 Backend must implement:
 
 - Subscription entity (separate from User)
-- Plan type (trial, base, pro)
+- Plan type (trial, base, pro, freemium)
 - Usage counters (series_created, actions_created)
 - Billing cycle tracking
 - Monthly reset mechanism

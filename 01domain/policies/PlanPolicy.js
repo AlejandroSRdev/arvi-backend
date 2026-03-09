@@ -83,3 +83,41 @@ export function monthlyActionsLimit(effectivePlan) {
   return plan ? plan.maxMonthlyActions : 0;
 }
 
+/**
+ * Resolves the effective plan ID for a user.
+ * For trial users, returns null if the trial has expired (time-based, no background job needed).
+ * For all other plans, returns user.plan as-is (Stripe webhooks govern their lifecycle).
+ *
+ * @param {Object} user - Raw user object from repository (must have plan, planExpiresAt)
+ * @returns {string|null} Effective plan ID, or null if access has expired
+ */
+export function resolveUserPlan(user) {
+  if (user.plan === PLANS.TRIAL.id) {
+    const now = new Date();
+    const expiresAt = user.planExpiresAt instanceof Date
+      ? user.planExpiresAt
+      : new Date(user.planExpiresAt);
+
+    if (now >= expiresAt) return null;
+  }
+
+  return user.plan || null;
+}
+
+/**
+ * Returns the usage limits for a given plan ID.
+ * Returns null for unknown plans.
+ *
+ * @param {string} planId - Plan ID (e.g. 'trial', 'base', 'pro')
+ * @returns {{ maxActiveSeries: number, maxMonthlyActions: number }|null}
+ */
+export function getPlanLimits(planId) {
+  const plan = getPlan(planId);
+  if (!plan) return null;
+
+  return {
+    maxActiveSeries: plan.maxActiveSeries,
+    maxMonthlyActions: plan.maxMonthlyActions,
+  };
+}
+

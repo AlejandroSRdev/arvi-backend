@@ -9,11 +9,13 @@ import express from 'express';
 import { createHabitSeriesEndpoint, deleteHabitSeriesEndpoint, getHabitSeriesByIdEndpoint, getHabitSeriesEndpoint, createActionEndpoint } from '../controllers/HabitSeriesController.js';
 import { authenticate } from '../middlewares/authenticate.js';
 import { generalRateLimiter } from '../middlewares/rateLimiter.js';
+import { resolvePlan } from '../middlewares/resolvePlan.js';
 
 const router = express.Router();
 
 router.use(generalRateLimiter); // Apply rate limiting to all habit series routes
 router.use(authenticate);
+router.use(resolvePlan);
 
 /**
  * GET /api/habits/series

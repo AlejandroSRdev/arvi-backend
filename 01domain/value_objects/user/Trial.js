@@ -14,6 +14,10 @@ class Trial {
     static inactive() {
         return new Trial(1, new Date(0));
     }
+
+    static active(durationDays) {
+        return new Trial(durationDays, new Date());
+    }
 }
 
 export { Trial };

@@ -46,16 +46,22 @@ export async function createUser(email, password, deps) {
 
   const userId = randomUUID();
 
+  const now = new Date();
+  const durationDays = PLANS.TRIAL.durationDays;
+  const planExpiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
   const user = User.create({
     id: userId,
     email,
     password: passwordHash,
-    plan: "TRIAL",
-    trial: Trial.active(),
+    plan: PLANS.TRIAL.id,
+    trial: Trial.active(durationDays),
     limits: new Limits(PLANS.TRIAL.maxActiveSeries, 0, PLANS.TRIAL.maxMonthlyActions),
   });
 
-  await userRepository.save(user);
+  // planStartedAt and planExpiresAt are passed separately so the repository
+  // can persist them as top-level fields for efficient plan resolution queries.
+  await userRepository.save(user, { planStartedAt: now, planExpiresAt });
 
   return { userId, plan: user.plan };
 }
