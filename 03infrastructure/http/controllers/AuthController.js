@@ -35,21 +35,25 @@ export async function register(req, res, next) {
       throw new ValidationError("Email and password are required");
     }
 
-    const { userId, plan } = await createUser(
+    const { userId } = await createUser(
       email,
       password,
       { userRepository, passwordHasher }
     );
 
+    const token = jwt.sign(
+      { userId },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
     console.log(`AUTH_REGISTER_SUCCESS userId=${userId}`);
 
     return res.status(HTTP_STATUS.CREATED).json({
-      success: true,
-      message: "User registered successfully",
+      token,
       user: {
         id: userId,
         email,
-        plan,
       },
     });
   } catch (err) {

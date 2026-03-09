@@ -1,34 +1,54 @@
-Goal:
-Implement a minimal and deterministic trial plan system.
+TASK: Modify the register endpoint so that it issues a JWT token after successful user creation.
 
-Requirements:
+CONTEXT
+The backend currently has two authentication endpoints:
 
-1. When a user registers, they automatically receive the TRIAL plan.
+POST /auth/register
+POST /auth/login
 
-2. The TRIAL plan must last for the duration defined in:
-PLANS.TRIAL.durationDays
+The login endpoint returns a signed JWT token.
+The register endpoint only creates the user and returns confirmation, which forces the user to log in again immediately.
 
-3. Store in the user document:
-- plan
-- planStartedAt
-- planExpiresAt
+This produces unnecessary friction.
 
-4. Implement helper functions:
+OBJECTIVE
+Make the register endpoint return the same authentication payload structure as the login endpoint.
 
-resolveUserPlan(user)
-→ returns planId or null if expired
+REQUIREMENTS
 
-getPlanLimits(planId)
-→ returns limits defined in PLANS
+1. After successful user creation:
+   - Generate a JWT using the same signing logic used in the login endpoint.
+   - Do not duplicate JWT logic. Reuse the existing token generation utility/service.
 
-5. The trial expires automatically based on time comparison.
-No cron jobs or background tasks.
+2. The register response must return:
 
-6. Registration flow must assign trial plan correctly.
+{
+  "token": "<jwt>",
+  "user": {
+    "email": "...",
+    "id": "..."
+  }
+}
 
-7. The system must gracefully handle expired trials.
+3. The token must contain the same claims as the login token.
 
-Output:
-- updated register use case
-- resolveUserPlan helper
-- getPlanLimits helper
+4. No changes to:
+   - password hashing
+   - validation logic
+   - user persistence
+   - authentication middleware
+
+5. Maintain existing error handling.
+
+CONSTRAINTS
+
+- Do not introduce new dependencies.
+- Do not refactor unrelated authentication code.
+- Only modify what is necessary for the response behavior.
+
+DELIVERABLE
+
+Return the modified code for:
+
+- register controller
+- any minimal adjustment required to reuse the existing JWT service

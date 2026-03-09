@@ -14,6 +14,7 @@ import {
   deleteUserAccount,
   getSubscriptionStatus,
 } from '../../../02application/use-cases/ManageUser.js';
+import { getUserDashboard } from '../../../02application/use-cases/GetUserDashboardUseCase.js';
 
 // Dependency injection
 let userRepository;
@@ -90,6 +91,24 @@ export async function getSubscription(req, res) {
 }
 
 /**
+ * GET /api/user/dashboard
+ */
+export async function getDashboard(req, res) {
+  try {
+    const userId = req.user?.uid;
+
+    const dashboard = await getUserDashboard(userId, { userRepository });
+
+    res.status(HTTP_STATUS.OK).json(dashboard);
+  } catch (err) {
+    logger.error('Error en getDashboard:', err);
+
+    const httpError = mapErrorToHttp(err);
+    res.status(httpError.status).json(httpError.body);
+  }
+}
+
+/**
  * DELETE /api/user/account
  */
 export async function deleteAccount(req, res) {
@@ -117,5 +136,6 @@ export default {
   updateProfile,
   getSubscription,
   deleteAccount,
+  getDashboard,
   setDependencies,
 };
