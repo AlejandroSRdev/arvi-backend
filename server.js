@@ -10,9 +10,9 @@ import express from 'express';
 
 // Import routes (Hexagonal Architecture)
 import authRoutes from './03infrastructure/http/routes/Auth.routes.js';
+import billingRoutes from './03infrastructure/http/routes/Billing.routes.js';
 import habitSeriesRoutes from './03infrastructure/http/routes/HabitSeriesRoutes.js';
 import userRoutes from './03infrastructure/http/routes/User.routes.js';
-import billingRoutes from './03infrastructure/http/routes/Billing.routes.js';
 import webhookRoutes from './03infrastructure/http/routes/Webhook.routes.js';
 
 // Import middleware (Hexagonal Architecture)
@@ -49,9 +49,9 @@ import PasswordHasher from './03infrastructure/security/PasswordHasher.js';
 
 // Import Controllers for dependency injection
 import { setDependencies as setAuthDeps } from './03infrastructure/http/controllers/AuthController.js';
+import { setDependencies as setBillingDeps } from './03infrastructure/http/controllers/BillingController.js';
 import { setDependencies as setHabitSeriesDeps } from './03infrastructure/http/controllers/HabitSeriesController.js';
 import { setDependencies as setUserDeps } from './03infrastructure/http/controllers/UserController.js';
-import { setDependencies as setBillingDeps } from './03infrastructure/http/controllers/BillingController.js';
 import { setDependencies as setResolvePlanDeps } from './03infrastructure/http/middlewares/resolvePlan.js';
 
 // Import Stripe service
@@ -151,10 +151,12 @@ app.get('/', (req, res) => {
 // ═══════════════════════════════════════════════════════════════
 
 app.get('/billing/success', (req, res) => {
+  console.log('Received billing success redirect from Stripe. Redirecting to arvi://billing/success');
   res.redirect('arvi://billing/success');
 });
 
 app.get('/billing/cancel', (req, res) => {
+  console.log('Received billing cancel redirect from Stripe. Redirecting to arvi://billing/cancel');
   res.redirect('arvi://billing/cancel');
 });
 
