@@ -94,14 +94,29 @@ export async function getSubscription(req, res) {
  * GET /api/user/dashboard
  */
 export async function getDashboard(req, res) {
-  try {
-    const userId = req.user?.uid;
+  const userId = req.user?.uid;
 
+  try {
+    logger.info('[dashboard] request received', { userId });
+
+    logger.info('[dashboard] executing GetUserDashboardUseCase', { userId });
     const dashboard = await getUserDashboard(userId, { userRepository });
 
+    logger.info('[dashboard] dashboard computed', {
+      userId,
+      plan: dashboard.profile?.plan,
+      activeSeriesCount: dashboard.limits?.activeSeriesCount,
+      monthlyActionsRemaining: dashboard.limits?.monthlyActionsRemaining,
+    });
+
+    logger.info('[dashboard] response sent', { userId });
     res.status(HTTP_STATUS.OK).json(dashboard);
   } catch (err) {
-    logger.error('Error en getDashboard:', err);
+    logger.error('[dashboard] error', {
+      userId,
+      message: err.message,
+      stack: err.stack,
+    });
 
     const httpError = mapErrorToHttp(err);
     res.status(httpError.status).json(httpError.body);
