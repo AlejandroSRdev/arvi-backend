@@ -146,6 +146,19 @@ app.get('/', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// BILLING REDIRECT ENDPOINTS (deep link bridge)
+// Stripe Checkout redirects here; we forward to the mobile deep link.
+// ═══════════════════════════════════════════════════════════════
+
+app.get('/billing/success', (req, res) => {
+  res.redirect('arvi://billing/success');
+});
+
+app.get('/billing/cancel', (req, res) => {
+  res.redirect('arvi://billing/cancel');
+});
+
+// ═══════════════════════════════════════════════════════════════
 // API ROUTES (NEW ARCHITECTURE)
 // ═══════════════════════════════════════════════════════════════
 
@@ -174,6 +187,8 @@ app.use((req, res) => {
       'DELETE /api/habits/series/:seriesId',
       'POST /api/habits/series/:seriesId/actions',
       'POST /api/billing/create-checkout-session',
+      'GET /billing/success',
+      'GET /billing/cancel',
       'POST /api/webhooks/stripe',
     ],
   });
@@ -207,6 +222,8 @@ app.listen(PORT, () => {
   console.log('     • DELETE /api/habits/series/:id        - Delete habit series');
   console.log('     • POST   /api/habits/series/:id/actions - Add AI-generated action to series');
   console.log('     • POST   /api/billing/create-checkout-session - Create Stripe Checkout Session');
+  console.log('     • GET    /billing/success                  - Redirect to arvi://billing/success');
+  console.log('     • GET    /billing/cancel                   - Redirect to arvi://billing/cancel');
   console.log('     • POST   /api/webhooks/stripe              - Stripe webhook handler');
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');

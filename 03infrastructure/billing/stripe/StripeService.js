@@ -52,8 +52,8 @@ export async function createCheckoutSession({ customerId, priceId, metadata, ide
         line_items: [{ price: priceId, quantity: 1 }],
         metadata,
         subscription_data: { metadata },
-        success_url: `${process.env.SUCCESS_BASE_URL}?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: process.env.CANCEL_URL,
+        success_url: `${process.env.BASE_API_URL}/billing/success`,
+        cancel_url: `${process.env.BASE_API_URL}/billing/cancel`,
       },
       { idempotencyKey }
     );
