@@ -1,33 +1,92 @@
-You are fixing a critical business rule: monthly actions quota per plan.
+TASK: Implement a dashboard endpoint that aggregates user profile and limits data for the frontend.
 
-Context:
-Plans already define allowed monthly actions per plan (e.g., PRO, BASE, etc).
-Currently only maxActiveSeries is enforced; monthly actions are not correctly initialized/updated.
+CONTEXT
 
-Goals:
-1) Ensure User has limits fields to support monthly actions:
-   - limits.monthlyActionsMax (number)
-   - limits.monthlyActionsRemaining (number)
-   - limits.monthlyActionsResetAt (timestamp, optional but recommended)
-2) On user creation:
-   - initialize these limits according to plan (default freemium)
-   - monthlyActionsRemaining = monthlyActionsMax
-3) On plan activation/change (Stripe events):
-   - update monthlyActionsMax according to the new plan
-   - set monthlyActionsRemaining = monthlyActionsMax (simple approach for now)
-   - set/reset monthlyActionsResetAt appropriately (e.g., now + 30 days or next month boundary)
-4) On action creation endpoint/use-case:
-   - atomically decrement monthlyActionsRemaining by 1
-   - if remaining is 0, reject with domain error (quota exceeded)
-   - ensure idempotency if action creation supports idempotency keys
-   - ensure concurrency safety (transaction / compare-and-swap), consistent with existing patterns
+The frontend needs a single request to retrieve the basic state of the user.
 
-Constraints:
-- Do not redesign the whole billing system.
-- Keep minimal, production-operable behavior.
-- Make sure the user creation path uses the same plan policy source of truth.
-- Update tests if they exist, add at least 2 minimal tests: (a) user created has correct limits, (b) action decrements and blocks at 0.
+Currently the data exists in different parts of the backend:
 
-Deliverables:
-- Identify the plan policy source of truth and where to wire the limits update.
-- Provide code changes and brief rationale.
+- user profile
+- plan
+- usage limits
+- active series count
+
+Instead of calling multiple endpoints, we want a single aggregation endpoint.
+
+OBJECTIVE
+
+Create a new endpoint:
+
+GET /user/dashboard
+
+This endpoint returns the current state of the user needed by the frontend.
+
+AUTHENTICATION
+
+This endpoint must require JWT authentication.
+
+The user id must be obtained from the authenticated request context.
+
+RESPONSE CONTRACT
+
+Return the following JSON structure:
+
+{
+  "profile": {
+    "email": "user@email.com",
+    "plan": "base"
+  },
+  "limits": {
+    "activeSeriesCount": 0,
+    "maxActiveSeries": 20,
+    "monthlyActionsMax": 100,
+    "monthlyActionsRemaining": 100
+  }
+}
+
+DATA SOURCES
+
+The endpoint must retrieve:
+
+profile.email → from user repository
+
+profile.plan → from user subscription / plan record
+
+limits.activeSeriesCount → number of currently active series for the user
+
+limits.maxActiveSeries → derived from the user plan
+
+limits.monthlyActionsMax → derived from the user plan
+
+limits.monthlyActionsRemaining → computed from usage tracking
+
+ARCHITECTURE REQUIREMENTS
+
+1. Implement a new application use case:
+
+GetUserDashboardUseCase
+
+2. The controller should only:
+   - read userId from auth middleware
+   - call the use case
+   - return the response.
+
+3. The use case must orchestrate the required repositories/services.
+
+4. No business logic must be added here.
+This endpoint only aggregates already existing information.
+
+CONSTRAINTS
+
+- Do not refactor existing domain logic.
+- Do not modify existing endpoints.
+- Do not introduce new persistence structures.
+
+DELIVERABLES
+
+Provide:
+
+1. Controller for GET /user/dashboard
+2. Use case implementation
+3. Any repository calls required
+4. Route registration

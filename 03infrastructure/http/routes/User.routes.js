@@ -8,6 +8,7 @@
 import express from 'express';
 import {
   deleteAccount,
+  getDashboard,
   getProfile,
   getSubscription,
   updateProfile,
@@ -24,5 +25,6 @@ router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 router.get('/subscription', getSubscription);
 router.delete('/account', deleteAccount);
+router.get('/dashboard', getDashboard);
 
 export default router;

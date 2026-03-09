@@ -139,7 +139,7 @@ app.get('/', (req, res) => {
     endpoints: {
       health: 'GET /health',
       auth: 'POST /api/auth/login, POST /api/auth/register',
-      user: 'GET /api/user/profile, PATCH /api/user/profile',
+      user: 'GET /api/user/profile, PATCH /api/user/profile, GET /api/user/dashboard',
       habits: 'POST /api/habits/series, GET /api/habits/series, GET /api/habits/series/:seriesId, DELETE /api/habits/series/:seriesId, POST /api/habits/series/:seriesId/actions',
     },
   });
@@ -188,6 +188,7 @@ app.use((req, res) => {
       'GET /api/habits/series/:seriesId',
       'DELETE /api/habits/series/:seriesId',
       'POST /api/habits/series/:seriesId/actions',
+      'GET /api/user/dashboard',
       'POST /api/billing/create-checkout-session',
       'GET /billing/success',
       'GET /billing/cancel',
@@ -219,7 +220,8 @@ app.listen(PORT, () => {
   console.log('     • POST /api/auth/login              - User login');
   console.log('     • POST /api/auth/register           - User registration');
   console.log('     • POST   /api/habits/series            - Create habit series via AI');
-  console.log('     • GET    /api/habits/series            - List user habit series');
+  console.log('     • GET    /api/user/dashboard              - User dashboard (profile + limits)
+     • GET    /api/habits/series            - List user habit series');
   console.log('     • GET    /api/habits/series/:seriesId  - Get habit series by ID');
   console.log('     • DELETE /api/habits/series/:id        - Delete habit series');
   console.log('     • POST   /api/habits/series/:id/actions - Add AI-generated action to series');
