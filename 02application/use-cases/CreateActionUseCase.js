@@ -5,8 +5,6 @@
  * Orchestrates AI-driven habit action creation with pre-AI validation, three-pass AI execution,
  * and atomic persistence. Uses monthly usage limits instead of energy.
  */
-
-import { hasFeatureAccess, getPlan } from '../../01domain/policies/PlanPolicy.js';
 import { getModelConfig } from '../../01domain/policies/ModelSelectionPolicy.js';
 import { generateAIResponse } from '../services/AIExecutionService.js';
 import {
@@ -33,14 +31,6 @@ const ACTION_SCHEMA = {
     difficulty: { type: 'string', enum: VALID_DIFFICULTIES },
   }
 };
-
-function determineEffectivePlan(user) {
-  let effectivePlan = user.plan || 'freemium';
-  if (effectivePlan === 'freemium' && user.trial?.activo) {
-    effectivePlan = 'trial';
-  }
-  return effectivePlan;
-}
 
 function validateActionSchema(data) {
   if (!data || typeof data !== 'object') {
@@ -78,7 +68,7 @@ function validateActionSchema(data) {
 export async function createAction(userId, seriesId, payload, deps) {
   console.log(`[USE-CASE] [Action] CreateAction started for user ${userId}, series ${seriesId}`);
 
-  const { userRepository, habitSeriesRepository, aiProvider } = deps;
+  const { userRepository, habitSeriesRepository, aiProvider, planId } = deps;
 
   if (!userRepository) {
     throw new ValidationError('Dependency required: userRepository');
@@ -101,13 +91,9 @@ export async function createAction(userId, seriesId, payload, deps) {
     throw new ValidationError('USER_NOT_FOUND');
   }
 
-  const effectivePlan = determineEffectivePlan(user);
-
-  const hasAccess = hasFeatureAccess(effectivePlan, 'habits.series.actions.create');
-  if (!hasAccess) {
-    throw new AuthorizationError(
-      `Plan ${effectivePlan} does not have access to habit action creation`
-    );
+  // planId is null when trial has expired or user has no active subscription
+  if (!planId) {
+    throw new AuthorizationError('No active plan. Access denied.');
   }
 
   // Check quota before any further DB calls or AI execution to fail fast

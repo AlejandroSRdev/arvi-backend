@@ -6,9 +6,9 @@
  */
 
 export const PLAN_LIMITS = {
-  TRIAL: { activeSeries: 2, monthlyActions: 10 },
-  BASE:  { activeSeries: 3, monthlyActions: 20 },
-  PRO:   { activeSeries: 6, monthlyActions: 50 },
+  TRIAL: { activeSeries: 5, monthlyActions: 25 },
+  BASE:  { activeSeries: 10, monthlyActions: 50 },
+  PRO:   { activeSeries: 20, monthlyActions: 100 },
 };
 
 class Limits {

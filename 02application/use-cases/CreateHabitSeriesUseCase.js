@@ -5,7 +5,7 @@
  * Orchestrates AI-driven habit series creation with pre-AI validation, three-pass AI execution, and atomic persistence.
  */
 
-import { hasFeatureAccess, getPlan } from '../../01domain/policies/PlanPolicy.js';
+import { getPlanLimits } from '../../01domain/policies/PlanPolicy.js';
 import { getModelConfig } from '../../01domain/policies/ModelSelectionPolicy.js';
 import { generateAIResponse } from '../services/AIExecutionService.js';
 import {
@@ -42,14 +42,6 @@ const HABIT_SERIES_SCHEMA = {
     }
   }
 };
-
-function determineEffectivePlan(user) {
-  let effectivePlan = user.plan || 'freemium';
-  if (effectivePlan === 'freemium' && user.trial?.activo) {
-    effectivePlan = 'trial';
-  }
-  return effectivePlan;
-}
 
 function validateSchema(data) {
   if (!data || typeof data !== 'object') {
@@ -108,7 +100,7 @@ function validateSchema(data) {
 export async function createHabitSeries(userId, payload, deps) {
   console.log(`[USE-CASE] [Habit Series] CreateHabitSeries started for user ${userId}`);
 
-  const { userRepository, habitSeriesRepository, aiProvider } = deps;
+  const { userRepository, habitSeriesRepository, aiProvider, planId } = deps;
 
   if (!userRepository) {
     throw new ValidationError('Dependency required: userRepository');
@@ -126,27 +118,22 @@ export async function createHabitSeries(userId, payload, deps) {
 
   // STEP 1: PRE-AI VALIDATION
 
+  // planId is null when trial has expired or user has no active subscription
+  if (!planId) {
+    throw new AuthorizationError('No active plan. Access denied.');
+  }
+
+  const planLimits = getPlanLimits(planId);
+
   const user = await userRepository.getUser(userId);
   if (!user) {
     throw new ValidationError('USER_NOT_FOUND');
   }
 
-  const effectivePlan = determineEffectivePlan(user);
-  const planConfig = getPlan(effectivePlan, user.trial?.activo);
+  const activeSeriesCount = user.limits?.activeSeriesCount || 0;
 
-  const hasAccess = hasFeatureAccess(effectivePlan, 'habits.series.create');
-  if (!hasAccess) {
-    throw new AuthorizationError(
-      `Plan ${effectivePlan} does not have access to habits.series.create`
-    );
-  }
-
-  const limits = user.limits || {};
-  const activeSeriesCount = limits.activeSeriesCount || 0;
-  const maxActiveSeries = planConfig.maxActiveSeries || 0;
-
-  if (activeSeriesCount >= maxActiveSeries) {
-    throw new MaxActiveSeriesReachedError(maxActiveSeries, activeSeriesCount);
+  if (activeSeriesCount >= planLimits.maxActiveSeries) {
+    throw new MaxActiveSeriesReachedError(planLimits.maxActiveSeries, activeSeriesCount);
   }
 
   // STEP 2: AI EXECUTION (3 passes)

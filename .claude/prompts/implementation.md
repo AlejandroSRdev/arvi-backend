@@ -1,46 +1,34 @@
-You are editing a Node.js backend with a hexagonal architecture.
-
-Task: simplify subscription state in User entity.
-
-Current fields (example):
-- plan
-- planStatus
-- subscriptionStatus
-- subscriptionUpdatedAt
-- stripeCustomerId
-- stripeSubscriptionId
-
 Goal:
-1) Remove subscriptionStatus and subscriptionUpdatedAt from the User entity and all persistence mappings.
-2) Add two fields:
-   - subscribedAt (nullable timestamp)
-   - canceledAt (nullable timestamp)
+Implement a minimal and deterministic trial plan system.
 
-Event handling updates:
-- checkout.session.completed:
-  - set plan = <mapped plan>
-  - set planStatus = "ACTIVE"
-  - set stripeCustomerId, stripeSubscriptionId
-  - set subscribedAt = now (only if not already set)
-  - set canceledAt = null
-- customer.subscription.deleted:
-  - set plan = "freemium"
-  - set planStatus = "CANCELED"
-  - set canceledAt = now
-  - do NOT delete stripeCustomerId (keep)
-  - stripeSubscriptionId can be kept or nulled — follow current conventions, but be consistent
-- invoice.paid:
-  - do NOT require metadata plan; if missing, safely ignore.
-  - optionally refresh stripeSubscriptionId if present and user doesn't have it
+Requirements:
 
-Also check:
-- any DTOs, Firestore serializers, schema validators, domain models, TypeScript types (if any), tests, docs, and migrations.
+1. When a user registers, they automatically receive the TRIAL plan.
 
-Constraints:
-- Preserve idempotency and atomicProcessStripeEvent.
-- Preserve existing logging patterns.
-- Do not introduce new architecture layers.
+2. The TRIAL plan must last for the duration defined in:
+PLANS.TRIAL.durationDays
 
-Deliverables:
-- List files changed with a brief justification.
-- Provide patch/diff or updated code sections.
+3. Store in the user document:
+- plan
+- planStartedAt
+- planExpiresAt
+
+4. Implement helper functions:
+
+resolveUserPlan(user)
+→ returns planId or null if expired
+
+getPlanLimits(planId)
+→ returns limits defined in PLANS
+
+5. The trial expires automatically based on time comparison.
+No cron jobs or background tasks.
+
+6. Registration flow must assign trial plan correctly.
+
+7. The system must gracefully handle expired trials.
+
+Output:
+- updated register use case
+- resolveUserPlan helper
+- getPlanLimits helper

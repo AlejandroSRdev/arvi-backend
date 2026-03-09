@@ -5,15 +5,7 @@
  * Coordinates plan-based feature access and usage limit validation for multiple application flows.
  */
 
-import { hasFeatureAccess, getPlan } from '../../01domain/policies/PlanPolicy.js';
-
-export function determineEffectivePlan(user) {
-  let effectivePlan = user.plan || 'freemium';
-  if (effectivePlan === 'freemium' && user.trial?.activo) {
-    effectivePlan = 'trial';
-  }
-  return effectivePlan;
-}
+import { hasFeatureAccess, getPlan, resolveUserPlan } from '../../01domain/policies/PlanPolicy.js';
 
 export async function validateFeatureAccess(userId, featureKey, deps) {
   const { userRepository } = deps;
@@ -24,12 +16,15 @@ export async function validateFeatureAccess(userId, featureKey, deps) {
   if (!user) {
     return { allowed: false, reason: 'USER_NOT_FOUND' };
   }
-  const effectivePlan = determineEffectivePlan(user);
-  const allowed = hasFeatureAccess(effectivePlan, featureKey);
-  if (!allowed) {
-    return { allowed: false, planId: effectivePlan, featureKey, reason: 'FEATURE_NOT_ALLOWED' };
+  const planId = resolveUserPlan(user);
+  if (!planId) {
+    return { allowed: false, planId: null, featureKey, reason: 'FEATURE_NOT_ALLOWED' };
   }
-  return { allowed: true, planId: effectivePlan, isTrialActive: effectivePlan === 'trial' };
+  const allowed = hasFeatureAccess(planId, featureKey);
+  if (!allowed) {
+    return { allowed: false, planId, featureKey, reason: 'FEATURE_NOT_ALLOWED' };
+  }
+  return { allowed: true, planId };
 }
 
 export async function validateWeeklySummariesLimit(userId, deps) {
@@ -39,8 +34,8 @@ export async function validateWeeklySummariesLimit(userId, deps) {
   const user = await userRepository.getUser(userId);
   if (!user) return { allowed: false, reason: 'USER_NOT_FOUND' };
 
-  const effectivePlan = determineEffectivePlan(user);
-  const plan = getPlan(effectivePlan, user.trial?.activo);
+  const planId = resolveUserPlan(user);
+  const plan = getPlan(planId);
 
   const now = new Date();
   const limits = user.limits || {};
@@ -86,12 +81,12 @@ export async function validateActiveSeriesLimit(userId, deps) {
   const user = await userRepository.getUser(userId);
   if (!user) return { allowed: false, reason: 'USER_NOT_FOUND' };
 
-  const effectivePlan = determineEffectivePlan(user);
-  const plan = getPlan(effectivePlan, user.trial?.activo);
+  const planId = resolveUserPlan(user);
+  const plan = getPlan(planId);
 
   const limits = user.limits || {};
   const activeSeriesCount = limits.activeSeriesCount || 0;
-  const maxActiveSeries = plan.maxActiveSeries || 0;
+  const maxActiveSeries = plan?.maxActiveSeries || 0;
 
   if (activeSeriesCount >= maxActiveSeries) {
     return {
@@ -113,7 +108,6 @@ export async function validateActiveSeriesLimit(userId, deps) {
 }
 
 export default {
-  determineEffectivePlan,
   validateFeatureAccess,
   validateWeeklySummariesLimit,
   validateActiveSeriesLimit,
