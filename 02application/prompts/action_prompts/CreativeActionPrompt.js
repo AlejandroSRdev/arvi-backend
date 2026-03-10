@@ -6,7 +6,7 @@
  * fully consistent with the existing HabitSeries.
  */
 
-function CreativeActionPrompt({ language, series }) {
+function CreativeActionPrompt({ language, series, difficulty }) {
 
 const languageConfig = {
   en: {
@@ -221,35 +221,24 @@ The description must explain:
 
 Difficulty must reflect real effort.
 
-DIFFICULTY SELECTION RULE (MANDATORY)
+DIFFICULTY LEVEL (MANDATORY)
 
-You must assign a difficulty level to the action.
+The difficulty level for this action is:
 
-The possible values are:
+${difficulty}
 
-• low
-• medium
-• high
+You MUST generate an action that realistically matches this difficulty.
 
-CRITICAL RULE:
+Difficulty definitions:
 
-The difficulty MUST be chosen RANDOMLY between the three options.
+low:
+quick and light effort, short duration
 
-Do NOT default to "medium".
+medium:
+moderate effort and focus required
 
-If existing actions already contain a difficulty, you should prefer a different difficulty to encourage variation.
-
-Examples:
-
-If previous actions are mostly "medium", prefer "low" or "high".
-If previous actions are mostly "low", prefer "medium" or "high".
-
-The system aims to maintain a **balanced distribution of difficulty levels over time**.
-
-Therefore:
-
-Avoid repeating the same difficulty unnecessarily.
-The selection should feel **varied and natural** across actions.
+high:
+demanding, longer or cognitively intensive
 
 ---
 
