@@ -1,106 +1,162 @@
-You are modifying a Node.js backend prompt used in an AI pipeline.
+You are working on a Node.js backend that integrates Stripe subscriptions.
 
-The system generates habit actions using two passes:
+The system already has a use case called `createCheckoutSession`.
 
-1) Creative pass → generates the action text
-2) Structure pass → extracts structured JSON from that text
+Your task is to improve this use case to properly handle:
 
-The system recently introduced a deterministic difficulty cycle:
+1) new subscriptions
+2) upgrades
+3) downgrades
+4) portal access when the user already has the selected plan
+5) secure validation of Stripe prices
 
-low → medium → high → low → ...
+Do NOT introduce new endpoints.
 
-The backend now decides the difficulty and passes it to the prompts.
+All logic must remain inside the existing `createCheckoutSession` use case.
 
-However, the current StructureActionPrompt still asks the model to INFER the difficulty from the text:
+Do NOT refactor unrelated code.
 
-"difficulty must be exactly one of: low, medium, high. Infer it from the complexity and demand of the action described."
-
-This breaks the deterministic system because the model overrides the backend decision.
-
-Your task is to modify StructureActionPrompt so that difficulty is NO LONGER inferred.
-
-Instead:
-
-The backend will pass a parameter called `difficulty`.
-
-The model must simply COPY that difficulty into the JSON output.
-
-Do not infer difficulty from the text.
+Only implement the required logic safely.
 
 ------------------------------------------------
 
-STEP 1
+CONTEXT
 
-Modify the function signature.
+The frontend sends a request to subscribe to a plan.
 
-Current:
+Currently it sends a Stripe priceId.
 
-function StructureActionPrompt({ language, rawText })
+However, priceIds must NEVER be trusted from the frontend.
 
-Change to:
+The backend must validate them against allowed prices stored in environment variables.
 
-function StructureActionPrompt({ language, rawText, difficulty })
+The system already supports two Stripe modes:
 
-------------------------------------------------
+- test
+- live
 
-STEP 2
-
-Update the system prompt rules.
-
-Remove this instruction:
-
-"Infer it from the complexity and demand of the action described."
-
-Replace it with:
-
-The difficulty level is already determined by the backend.
-You MUST copy the provided difficulty value exactly as given.
-
-The difficulty value is:
-
-${difficulty}
-
-You MUST output this value exactly in the "difficulty" field.
-
-You MUST NOT change, infer, or reinterpret it.
+And environment variables are already used for Stripe price IDs.
 
 ------------------------------------------------
 
-STEP 3
+STEP 1 — Create allowed price list
 
-Update the JSON schema description section.
+Create a constant that contains the valid Stripe prices.
 
-Replace the difficulty rule with:
+These must come from the existing environment variables.
 
-"difficulty" must be exactly the value provided by the backend.
-The allowed values are:
+Example:
 
-low
-medium
-high
+const ALLOWED_PRICES = [
+  process.env.STRIPE_PRICE_BASE,
+  process.env.STRIPE_PRICE_PRO
+];
 
-But you MUST use the provided difficulty value exactly.
+Do NOT hardcode Stripe price IDs.
 
-------------------------------------------------
+Always read them from `.env`.
 
-STEP 4
-
-Ensure the rest of the prompt behavior remains unchanged.
-
-The model must still:
-
-- extract name
-- extract description
-- return exactly one JSON object
-- preserve language
-- avoid creative rewriting
+This ensures the system works correctly in both Stripe test mode and live mode.
 
 ------------------------------------------------
 
-IMPORTANT
+STEP 2 — Validate requested price
 
-The structure pass must become a PURE extraction layer.
+Before doing anything with Stripe, validate the requested priceId.
 
-It must never reinterpret business logic decided by the backend.
+Example logic:
 
-Do not modify anything unrelated to this change.
+if (!ALLOWED_PRICES.includes(requestedPriceId)) {
+  throw new Error("Invalid priceId");
+}
+
+This prevents frontend manipulation of Stripe prices.
+
+------------------------------------------------
+
+STEP 3 — Retrieve user subscription
+
+If the user already has a subscriptionId stored in the database:
+
+Retrieve the subscription from Stripe:
+
+const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+Get the current priceId:
+
+const currentPriceId = subscription.items.data[0].price.id;
+
+------------------------------------------------
+
+STEP 4 — Same plan
+
+If the user is already subscribed to the requested plan:
+
+currentPriceId === requestedPriceId
+
+Do NOT create a new checkout session.
+
+Instead create a Stripe Billing Portal session:
+
+await stripe.billingPortal.sessions.create({
+  customer: customerId,
+  return_url: SUCCESS_URL
+});
+
+Return the portal URL.
+
+------------------------------------------------
+
+STEP 5 — Upgrade or downgrade
+
+If the user has a subscription but requestedPriceId is different:
+
+Update the existing subscription.
+
+Use:
+
+await stripe.subscriptions.update(subscriptionId, {
+  items: [{
+    id: subscription.items.data[0].id,
+    price: requestedPriceId
+  }],
+  proration_behavior: "create_prorations"
+});
+
+Return a simple success response.
+
+Do NOT create a checkout session here.
+
+------------------------------------------------
+
+STEP 6 — New user
+
+If the user has no subscriptionId:
+
+Create a Stripe checkout session exactly as the system currently does.
+
+mode: "subscription"
+
+Use the validated requestedPriceId.
+
+------------------------------------------------
+
+IMPORTANT RULES
+
+• Do not trust frontend priceId without validation.
+• Always read allowed price IDs from `.env`.
+• Do not introduce new endpoints.
+• Do not refactor unrelated code.
+• Do not change Stripe webhook logic.
+• Only modify the createCheckoutSession use case.
+
+------------------------------------------------
+
+EXPECTED RESULT
+
+The createCheckoutSession flow becomes:
+
+1) validate priceId
+2) if no subscription → create checkout session
+3) if same plan → open Stripe portal
+4) if different plan → update subscription
