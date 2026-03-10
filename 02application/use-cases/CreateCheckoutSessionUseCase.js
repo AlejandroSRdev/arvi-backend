@@ -71,13 +71,6 @@ export async function createCheckoutSession(userId, requestedPlan, deps) {
         returnUrl: successUrl,
       });
     }
-
-    // Different plan — update subscription in place (upgrade or downgrade).
-    await stripeService.updateSubscription(user.stripeSubscriptionId, {
-      itemId: subscription.items.data[0].id,
-      priceId: requestedPriceId,
-    });
-    return { url: null };
   }
 
   // New subscription — create a Stripe Checkout Session.
