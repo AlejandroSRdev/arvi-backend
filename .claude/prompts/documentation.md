@@ -1,138 +1,162 @@
-You will execute a structured backend documentation pipeline.
+You are working on a Node.js backend that integrates Stripe subscriptions.
 
-Follow the pipeline exactly as described.
+The system already has a use case called `createCheckoutSession`.
 
-Do not skip steps.
-Do not merge responsibilities.
-Do not generate documentation directly unless a specialized agent requires it.
+Your task is to improve this use case to properly handle:
 
-------------------------------------------------
-PIPELINE OVERVIEW
-------------------------------------------------
+1) new subscriptions
+2) upgrades
+3) downgrades
+4) portal access when the user already has the selected plan
+5) secure validation of Stripe prices
 
-The documentation process follows this sequence:
+Do NOT introduce new endpoints.
 
-1) Context enrichment using the architectural manifest
-2) Documentation orchestration
-3) Specialized documentation generation
+All logic must remain inside the existing `createCheckoutSession` use case.
 
-Agents involved:
+Do NOT refactor unrelated code.
 
-Step 1
-Context Enricher
-.claude/agents/leaders/context-enricher.md
-
-Step 2
-Endpoint Documentation Orchestrator
-.claude/agents/leaders/endpoint-documentation-orchestrator.md
-
-Step 3
-Specialized documentation agents invoked by the orchestrator:
-
-.claude/agents/workers/documenters/mermaid-documenter.md  
-.claude/agents/workers/documenters/openapi-documenter.md  
-.claude/agents/workers/documenters/system-overview-documenter.md
+Only implement the required logic safely.
 
 ------------------------------------------------
-ARCHITECTURAL SOURCE OF TRUTH
-------------------------------------------------
 
-The architecture of the backend is defined in:
+CONTEXT
 
-.claude/manifest.md
+The frontend sends a request to subscribe to a plan.
 
-The manifest is the authoritative architectural document.
+Currently it sends a Stripe priceId.
 
-Rules:
+However, priceIds must NEVER be trusted from the frontend.
 
-• Treat the manifest as the source of truth.
-• Use it to interpret layer responsibilities.
-• Use it to validate execution flow.
-• Never contradict it.
+The backend must validate them against allowed prices stored in environment variables.
 
-Code inspection may be used only to confirm implementation details.
+The system already supports two Stripe modes:
 
-Architecture must never be inferred from code alone.
+- test
+- live
+
+And environment variables are already used for Stripe price IDs.
 
 ------------------------------------------------
-STEP 1 — CONTEXT ENRICHMENT
-------------------------------------------------
 
-Send the endpoint specification to:
+STEP 1 — Create allowed price list
 
-.claude/agents/leaders/context-enricher.md
+Create a constant that contains the valid Stripe prices.
 
-That agent must:
+These must come from the existing environment variables.
 
-• Read the architectural manifest
-• Align the endpoint flow with system layers
-• Produce an enriched endpoint context
+Example:
 
-The enriched context will include:
+const ALLOWED_PRICES = [
+  process.env.STRIPE_PRICE_BASE,
+  process.env.STRIPE_PRICE_PRO
+];
 
-Endpoint  
-Purpose  
-Actors  
-Execution Flow (layer-aware)  
-Request  
-Response  
-Side Effects  
-Architecture Notes
+Do NOT hardcode Stripe price IDs.
+
+Always read them from `.env`.
+
+This ensures the system works correctly in both Stripe test mode and live mode.
 
 ------------------------------------------------
-STEP 2 — DOCUMENTATION ORCHESTRATION
-------------------------------------------------
 
-Send the enriched context to:
+STEP 2 — Validate requested price
 
-.claude/agents/leaders/endpoint-documentation-orchestrator.md
+Before doing anything with Stripe, validate the requested priceId.
 
-That agent will:
+Example logic:
 
-• Prepare inputs for specialized documenters
-• Invoke the documentation workers
-• Collect the outputs
+if (!ALLOWED_PRICES.includes(requestedPriceId)) {
+  throw new Error("Invalid priceId");
+}
 
-------------------------------------------------
-STEP 3 — DOCUMENTATION GENERATION
-------------------------------------------------
-
-The orchestrator will invoke:
-
-Mermaid documenter  
-OpenAPI documenter  
-System overview documenter
-
-Each agent will produce a specific artifact.
+This prevents frontend manipulation of Stripe prices.
 
 ------------------------------------------------
-FINAL OUTPUT
-------------------------------------------------
 
-Return the documentation in the following structure:
+STEP 3 — Retrieve user subscription
 
-----------------------------------------
+If the user already has a subscriptionId stored in the database:
 
-SYSTEM_OVERVIEW
+Retrieve the subscription from Stripe:
 
-----------------------------------------
+const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-OPENAPI_SPEC
+Get the current priceId:
 
-----------------------------------------
-
-MERMAID_DIAGRAM
-
-----------------------------------------
-
-Do not add commentary.
-
-Do not modify agent outputs.
+const currentPriceId = subscription.items.data[0].price.id;
 
 ------------------------------------------------
-ENDPOINT SPECIFICATION
+
+STEP 4 — Same plan
+
+If the user is already subscribed to the requested plan:
+
+currentPriceId === requestedPriceId
+
+Do NOT create a new checkout session.
+
+Instead create a Stripe Billing Portal session:
+
+await stripe.billingPortal.sessions.create({
+  customer: customerId,
+  return_url: SUCCESS_URL
+});
+
+Return the portal URL.
+
 ------------------------------------------------
 
-Below is the endpoint specification to document: 
+STEP 5 — Upgrade or downgrade
 
-POST /api/billing/create-checkout-session
+If the user has a subscription but requestedPriceId is different:
+
+Update the existing subscription.
+
+Use:
+
+await stripe.subscriptions.update(subscriptionId, {
+  items: [{
+    id: subscription.items.data[0].id,
+    price: requestedPriceId
+  }],
+  proration_behavior: "create_prorations"
+});
+
+Return a simple success response.
+
+Do NOT create a checkout session here.
+
+------------------------------------------------
+
+STEP 6 — New user
+
+If the user has no subscriptionId:
+
+Create a Stripe checkout session exactly as the system currently does.
+
+mode: "subscription"
+
+Use the validated requestedPriceId.
+
+------------------------------------------------
+
+IMPORTANT RULES
+
+• Do not trust frontend priceId without validation.
+• Always read allowed price IDs from `.env`.
+• Do not introduce new endpoints.
+• Do not refactor unrelated code.
+• Do not change Stripe webhook logic.
+• Only modify the createCheckoutSession use case.
+
+------------------------------------------------
+
+EXPECTED RESULT
+
+The createCheckoutSession flow becomes:
+
+1) validate priceId
+2) if no subscription → create checkout session
+3) if same plan → open Stripe portal
+4) if different plan → update subscription

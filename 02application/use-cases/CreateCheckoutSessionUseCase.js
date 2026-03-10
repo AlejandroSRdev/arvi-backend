@@ -56,12 +56,37 @@ export async function createCheckoutSession(userId, requestedPlan, deps) {
     await userRepository.updateUser(userId, { stripeCustomerId: customerId });
   }
 
-  // Idempotency key scoped to user + plan to prevent duplicate concurrent sessions
+  const requestedPriceId = plan.stripePriceId;
+  const successUrl = `${process.env.BASE_API_URL}/billing/success`;
+
+  // If the user already has an active subscription, handle upgrade/downgrade/same plan.
+  if (user.stripeSubscriptionId) {
+    const subscription = await stripeService.retrieveSubscription(user.stripeSubscriptionId);
+    const currentPriceId = subscription.items.data[0].price.id;
+
+    if (currentPriceId === requestedPriceId) {
+      // Same plan — open Stripe Billing Portal so user can manage their subscription.
+      return stripeService.createBillingPortalSession({
+        customerId,
+        returnUrl: successUrl,
+      });
+    }
+
+    // Different plan — update subscription in place (upgrade or downgrade).
+    await stripeService.updateSubscription(user.stripeSubscriptionId, {
+      itemId: subscription.items.data[0].id,
+      priceId: requestedPriceId,
+    });
+    return { url: null };
+  }
+
+  // New subscription — create a Stripe Checkout Session.
+  // Idempotency key scoped to user + plan to prevent duplicate concurrent sessions.
   const idempotencyKey = `checkout:${userId}:${planKey}`;
 
   return stripeService.createCheckoutSession({
     customerId,
-    priceId: plan.stripePriceId,
+    priceId: requestedPriceId,
     // internalPlan (not plan) so webhook identification is explicit and consistent
     metadata: { userId, internalPlan: planKey },
     idempotencyKey,

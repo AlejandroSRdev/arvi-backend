@@ -69,6 +69,68 @@ export async function createCheckoutSession({ customerId, priceId, metadata, ide
 }
 
 /**
+ * Retrieves an existing Stripe subscription by ID.
+ *
+ * @param {string} subscriptionId
+ * @returns {Promise<Object>} Stripe subscription object
+ */
+export async function retrieveSubscription(subscriptionId) {
+  try {
+    return await stripe.subscriptions.retrieve(subscriptionId);
+  } catch (err) {
+    throw new StripeProviderFailureError({
+      operation: 'retrieveSubscription',
+      message: err.message,
+      cause: err,
+    });
+  }
+}
+
+/**
+ * Creates a Stripe Billing Portal session for a customer.
+ *
+ * @param {{ customerId: string, returnUrl: string }} params
+ * @returns {Promise<{ url: string }>}
+ */
+export async function createBillingPortalSession({ customerId, returnUrl }) {
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    });
+    return { url: session.url };
+  } catch (err) {
+    throw new StripeProviderFailureError({
+      operation: 'createBillingPortalSession',
+      message: err.message,
+      cause: err,
+    });
+  }
+}
+
+/**
+ * Updates an existing subscription to a new price (upgrade or downgrade).
+ *
+ * @param {string} subscriptionId
+ * @param {{ itemId: string, priceId: string }} params
+ * @returns {Promise<void>}
+ */
+export async function updateSubscription(subscriptionId, { itemId, priceId }) {
+  try {
+    await stripe.subscriptions.update(subscriptionId, {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: 'create_prorations',
+    });
+  } catch (err) {
+    throw new StripeProviderFailureError({
+      operation: 'updateSubscription',
+      message: err.message,
+      cause: err,
+    });
+  }
+}
+
+/**
  * Verifies and constructs a Stripe webhook event from a raw request body.
  * Throws the raw Stripe error on signature mismatch (caller maps it to 400).
  *
