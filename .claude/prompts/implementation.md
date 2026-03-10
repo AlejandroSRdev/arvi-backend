@@ -1,54 +1,128 @@
-TASK: Modify the register endpoint so that it issues a JWT token after successful user creation.
+You are working on a Node.js backend that generates habit actions using an LLM.
 
-CONTEXT
-The backend currently has two authentication endpoints:
+The system currently allows the AI to decide the difficulty of an action (low / medium / high).
 
-POST /auth/register
-POST /auth/login
+This leads to a problem:
+the model almost always selects "medium".
 
-The login endpoint returns a signed JWT token.
-The register endpoint only creates the user and returns confirmation, which forces the user to log in again immediately.
+We want to fix this by making the difficulty **fully deterministic in the backend**.
 
-This produces unnecessary friction.
+The rule must be:
 
-OBJECTIVE
-Make the register endpoint return the same authentication payload structure as the login endpoint.
+low → medium → high → low → medium → high → ...
 
-REQUIREMENTS
+The LLM will no longer choose the difficulty.
+The backend will compute the next difficulty and inject it into the prompt.
 
-1. After successful user creation:
-   - Generate a JWT using the same signing logic used in the login endpoint.
-   - Do not duplicate JWT logic. Reuse the existing token generation utility/service.
+Your task is to implement this change.
 
-2. The register response must return:
+------------------------------------------------
 
-{
-  "token": "<jwt>",
-  "user": {
-    "email": "...",
-    "id": "..."
-  }
+STEP 1
+
+Create a helper function that determines the next difficulty
+based on the last action in the series.
+
+Implementation rules:
+
+- If there are no actions yet → return "low"
+- If last difficulty is "low" → return "medium"
+- If last difficulty is "medium" → return "high"
+- If last difficulty is "high" → return "low"
+
+Example implementation:
+
+function getNextDifficulty(actions) {
+  if (!actions || actions.length === 0) return "low";
+
+  const last = actions[actions.length - 1].difficulty;
+
+  if (last === "low") return "medium";
+  if (last === "medium") return "high";
+  if (last === "high") return "low";
+
+  return "medium";
 }
 
-3. The token must contain the same claims as the login token.
+------------------------------------------------
 
-4. No changes to:
-   - password hashing
-   - validation logic
-   - user persistence
-   - authentication middleware
+STEP 2
 
-5. Maintain existing error handling.
+Modify the action generation flow so that:
 
-CONSTRAINTS
+1. The backend calls `getNextDifficulty(series.actions)`
+2. The result is stored as `nextDifficulty`
+3. `nextDifficulty` is passed to the CreativeActionPrompt.
 
-- Do not introduce new dependencies.
-- Do not refactor unrelated authentication code.
-- Only modify what is necessary for the response behavior.
+Example:
 
-DELIVERABLE
+const difficulty = getNextDifficulty(series.actions);
 
-Return the modified code for:
+CreativeActionPrompt({
+  language,
+  series,
+  difficulty
+});
 
-- register controller
-- any minimal adjustment required to reuse the existing JWT service
+------------------------------------------------
+
+STEP 3
+
+Modify CreativeActionPrompt.js.
+
+Current signature:
+
+function CreativeActionPrompt({ language, series })
+
+Change it to:
+
+function CreativeActionPrompt({ language, series, difficulty })
+
+------------------------------------------------
+
+STEP 4
+
+Update the prompt instructions.
+
+Remove any instruction that asks the model to choose the difficulty.
+
+Instead inject the difficulty explicitly:
+
+DIFFICULTY LEVEL (MANDATORY)
+
+The difficulty level for this action is:
+
+${difficulty}
+
+You MUST generate an action that realistically matches this difficulty.
+
+Difficulty definitions:
+
+low:
+quick and light effort, short duration
+
+medium:
+moderate effort and focus required
+
+high:
+demanding, longer or cognitively intensive
+
+------------------------------------------------
+
+STEP 5
+
+The model must still output the difficulty field in the action,
+but it must always match the injected difficulty.
+
+------------------------------------------------
+
+IMPORTANT
+
+Do not change anything unrelated to this fix.
+
+Only:
+
+• add the helper function
+• modify the prompt signature
+• inject the difficulty into the prompt
+• remove random difficulty behavior

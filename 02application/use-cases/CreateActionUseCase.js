@@ -22,6 +22,18 @@ import { parseDifficulty } from '../../01domain/value_objects/habits/Difficulty.
 
 const VALID_DIFFICULTIES = ['low', 'medium', 'high'];
 
+function getNextDifficulty(actions) {
+  if (!actions || actions.length === 0) return "low";
+
+  const last = actions[actions.length - 1].difficulty;
+
+  if (last === "low") return "medium";
+  if (last === "medium") return "high";
+  if (last === "high") return "low";
+
+  return "medium";
+}
+
 const ACTION_SCHEMA = {
   type: 'object',
   required: ['name', 'description', 'difficulty'],
@@ -111,8 +123,11 @@ export async function createAction(userId, seriesId, payload, deps) {
 
   const { language } = payload;
 
+  // Difficulty is fully deterministic: cycles low → medium → high → low ...
+  const difficulty = getNextDifficulty(series.actions);
+
   // Pass 1 — creative: generate free-form human-readable action content
-  const creativeMessages = CreativeActionPrompt({ language, series });
+  const creativeMessages = CreativeActionPrompt({ language, series, difficulty });
 
   const creativeConfig = getModelConfig('action_creative');
   const creativeResponse = await generateAIResponse(
