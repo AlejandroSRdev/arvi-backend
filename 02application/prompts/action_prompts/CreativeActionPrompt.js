@@ -219,13 +219,37 @@ The description must explain:
 3. When the action is completed  
 4. Why the action contributes to the habit objective  
 
-Include a difficulty level:
-
-• low  
-• medium  
-• high  
-
 Difficulty must reflect real effort.
+
+DIFFICULTY SELECTION RULE (MANDATORY)
+
+You must assign a difficulty level to the action.
+
+The possible values are:
+
+• low
+• medium
+• high
+
+CRITICAL RULE:
+
+The difficulty MUST be chosen RANDOMLY between the three options.
+
+Do NOT default to "medium".
+
+If existing actions already contain a difficulty, you should prefer a different difficulty to encourage variation.
+
+Examples:
+
+If previous actions are mostly "medium", prefer "low" or "high".
+If previous actions are mostly "low", prefer "medium" or "high".
+
+The system aims to maintain a **balanced distribution of difficulty levels over time**.
+
+Therefore:
+
+Avoid repeating the same difficulty unnecessarily.
+The selection should feel **varied and natural** across actions.
 
 ---
 
