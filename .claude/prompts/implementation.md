@@ -1,162 +1,100 @@
-You are working on a Node.js backend that integrates Stripe subscriptions.
+# Implement clean Stripe subscription update flow for plan changes
 
-The system already has a use case called `createCheckoutSession`.
+Implement a clean refactor of the billing flow so that:
 
-Your task is to improve this use case to properly handle:
+- **new subscription** → creates a Stripe Checkout Session
+- **same active plan** → opens Stripe Billing Portal
+- **different active plan** → updates the existing Stripe subscription in place
+- **the database remains synchronized only through webhooks**, not directly from the checkout/update use case
 
-1) new subscriptions
-2) upgrades
-3) downgrades
-4) portal access when the user already has the selected plan
-5) secure validation of Stripe prices
+## Scope
 
-Do NOT introduce new endpoints.
+Work only on the minimum set of files required for this refactor.
 
-All logic must remain inside the existing `createCheckoutSession` use case.
+## Required behavior
 
-Do NOT refactor unrelated code.
+### 1. CreateCheckoutSessionUseCase
+Refactor the current use case so that:
 
-Only implement the required logic safely.
+- if the user has **no `stripeSubscriptionId`**:
+  - create a normal Stripe Checkout Session
+- if the user **has `stripeSubscriptionId`**:
+  - retrieve the Stripe subscription
+  - get the current active price from `subscription.items.data[0].price.id`
+  - if the current price is the same as the requested plan price:
+    - return a Billing Portal session
+  - if the current price is different:
+    - call `stripeService.updateSubscription(...)`
+    - do **not** create a new checkout session
+    - do **not** cancel the old subscription
+    - return a non-broken explicit response such as `{ updated: true }`
 
-------------------------------------------------
+### 2. Stripe service
+Ensure there is a clean method for updating subscriptions in Stripe.
 
-CONTEXT
+Expected behavior:
 
-The frontend sends a request to subscribe to a plan.
+- update the existing subscription item with the new price
+- use Stripe’s normal proration behavior for upgrades/downgrades
+- do not create a second subscription
+- do not cancel the previous subscription first
 
-Currently it sends a Stripe priceId.
+Use a method with a clean contract, for example:
 
-However, priceIds must NEVER be trusted from the frontend.
+- input: `subscriptionId`, `itemId`, `priceId`
+- output: Stripe subscription result or a normalized result object
 
-The backend must validate them against allowed prices stored in environment variables.
+### 3. Controller / HTTP response contract
+Adjust the controller that calls this use case so it can safely handle both response shapes:
 
-The system already supports two Stripe modes:
+- `{ url: string }`
+- `{ updated: true }`
 
-- test
-- live
+Requirements:
 
-And environment variables are already used for Stripe price IDs.
+- if `result.url` exists → return it normally
+- if `result.updated === true` → return a valid JSON response without frontend-breaking nulls
+- do **not** return `{ url: null }`
 
-------------------------------------------------
+### 4. Webhook synchronization
+Do **not** update the user plan directly inside the checkout/update use case.
 
-STEP 1 — Create allowed price list
+Instead, confirm or complete webhook handling so that plan synchronization is driven by Stripe events.
 
-Create a constant that contains the valid Stripe prices.
+At minimum, the webhook flow must correctly support:
 
-These must come from the existing environment variables.
+- `checkout.session.completed`
+- `customer.subscription.updated`
+- `customer.subscription.deleted` (if already part of current flow)
 
-Example:
+For `customer.subscription.updated`, ensure the user plan in the database is resolved from the current Stripe price ID and updated accordingly.
 
-const ALLOWED_PRICES = [
-  process.env.STRIPE_PRICE_BASE,
-  process.env.STRIPE_PRICE_PRO
-];
+### 5. Metadata continuity
+Ensure Stripe subscription metadata is sufficient for webhook reconciliation.
 
-Do NOT hardcode Stripe price IDs.
+When creating a new checkout session, make sure the resulting subscription can still be mapped back to the user in webhook processing.
 
-Always read them from `.env`.
+If needed, add `subscription_data.metadata` with at least:
+- `userId`
 
-This ensures the system works correctly in both Stripe test mode and live mode.
+Keep existing metadata conventions consistent with the current codebase.
 
-------------------------------------------------
+## Constraints
 
-STEP 2 — Validate requested price
+- Preserve the existing architectural style and responsibility boundaries
+- Do not introduce unnecessary abstractions
+- Do not rewrite unrelated billing logic
+- Do not introduce direct DB plan mutation in the use case
+- Do not keep the temporary “new checkout for plan change” behavior
+- Do not return nullable `url` fields
 
-Before doing anything with Stripe, validate the requested priceId.
+## Output expected from you
 
-Example logic:
+Provide:
 
-if (!ALLOWED_PRICES.includes(requestedPriceId)) {
-  throw new Error("Invalid priceId");
-}
+1. the modified code
+2. a short explanation of each changed file
+3. any migration or compatibility note if the frontend response handling changes
+4. any edge case you noticed during implementation
 
-This prevents frontend manipulation of Stripe prices.
-
-------------------------------------------------
-
-STEP 3 — Retrieve user subscription
-
-If the user already has a subscriptionId stored in the database:
-
-Retrieve the subscription from Stripe:
-
-const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-Get the current priceId:
-
-const currentPriceId = subscription.items.data[0].price.id;
-
-------------------------------------------------
-
-STEP 4 — Same plan
-
-If the user is already subscribed to the requested plan:
-
-currentPriceId === requestedPriceId
-
-Do NOT create a new checkout session.
-
-Instead create a Stripe Billing Portal session:
-
-await stripe.billingPortal.sessions.create({
-  customer: customerId,
-  return_url: SUCCESS_URL
-});
-
-Return the portal URL.
-
-------------------------------------------------
-
-STEP 5 — Upgrade or downgrade
-
-If the user has a subscription but requestedPriceId is different:
-
-Update the existing subscription.
-
-Use:
-
-await stripe.subscriptions.update(subscriptionId, {
-  items: [{
-    id: subscription.items.data[0].id,
-    price: requestedPriceId
-  }],
-  proration_behavior: "create_prorations"
-});
-
-Return a simple success response.
-
-Do NOT create a checkout session here.
-
-------------------------------------------------
-
-STEP 6 — New user
-
-If the user has no subscriptionId:
-
-Create a Stripe checkout session exactly as the system currently does.
-
-mode: "subscription"
-
-Use the validated requestedPriceId.
-
-------------------------------------------------
-
-IMPORTANT RULES
-
-• Do not trust frontend priceId without validation.
-• Always read allowed price IDs from `.env`.
-• Do not introduce new endpoints.
-• Do not refactor unrelated code.
-• Do not change Stripe webhook logic.
-• Only modify the createCheckoutSession use case.
-
-------------------------------------------------
-
-EXPECTED RESULT
-
-The createCheckoutSession flow becomes:
-
-1) validate priceId
-2) if no subscription → create checkout session
-3) if same plan → open Stripe portal
-4) if different plan → update subscription
+Keep the implementation minimal, coherent, and production-safe.

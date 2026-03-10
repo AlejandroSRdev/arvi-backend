@@ -71,9 +71,17 @@ export async function createCheckoutSession(userId, requestedPlan, deps) {
         returnUrl: successUrl,
       });
     }
+
+    // Different plan — upgrade or downgrade in place.
+    // No new checkout session needed; Stripe handles proration automatically.
+    await stripeService.updateSubscription(user.stripeSubscriptionId, {
+      itemId: subscription.items.data[0].id,
+      priceId: requestedPriceId,
+    });
+    return { updated: true };
   }
 
-  // New subscription — create a Stripe Checkout Session.
+  // No existing subscription — create a Stripe Checkout Session.
   // Idempotency key scoped to user + plan to prevent duplicate concurrent sessions.
   const idempotencyKey = `checkout:${userId}:${planKey}`;
 
