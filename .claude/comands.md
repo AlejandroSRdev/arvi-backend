@@ -365,7 +365,7 @@ Stop and ask the user when:
   | claude run
 ```
 
-Read those files in order (manifest = context, implementer = rol, implementation = task) and work with total precision and obedience: 
+Read those files in order (manifest = architectural context, implementer = rol, implementation = task) and work with total precision and obedience: 
       .claude/manifest.md 
       .claude/agents/workers/implementer.md 
       .claude/prompts/implementation.md  

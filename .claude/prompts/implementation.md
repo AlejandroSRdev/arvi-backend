@@ -1,128 +1,106 @@
-You are working on a Node.js backend that generates habit actions using an LLM.
+You are modifying a Node.js backend prompt used in an AI pipeline.
 
-The system currently allows the AI to decide the difficulty of an action (low / medium / high).
+The system generates habit actions using two passes:
 
-This leads to a problem:
-the model almost always selects "medium".
+1) Creative pass → generates the action text
+2) Structure pass → extracts structured JSON from that text
 
-We want to fix this by making the difficulty **fully deterministic in the backend**.
+The system recently introduced a deterministic difficulty cycle:
 
-The rule must be:
+low → medium → high → low → ...
 
-low → medium → high → low → medium → high → ...
+The backend now decides the difficulty and passes it to the prompts.
 
-The LLM will no longer choose the difficulty.
-The backend will compute the next difficulty and inject it into the prompt.
+However, the current StructureActionPrompt still asks the model to INFER the difficulty from the text:
 
-Your task is to implement this change.
+"difficulty must be exactly one of: low, medium, high. Infer it from the complexity and demand of the action described."
+
+This breaks the deterministic system because the model overrides the backend decision.
+
+Your task is to modify StructureActionPrompt so that difficulty is NO LONGER inferred.
+
+Instead:
+
+The backend will pass a parameter called `difficulty`.
+
+The model must simply COPY that difficulty into the JSON output.
+
+Do not infer difficulty from the text.
 
 ------------------------------------------------
 
 STEP 1
 
-Create a helper function that determines the next difficulty
-based on the last action in the series.
+Modify the function signature.
 
-Implementation rules:
+Current:
 
-- If there are no actions yet → return "low"
-- If last difficulty is "low" → return "medium"
-- If last difficulty is "medium" → return "high"
-- If last difficulty is "high" → return "low"
+function StructureActionPrompt({ language, rawText })
 
-Example implementation:
+Change to:
 
-function getNextDifficulty(actions) {
-  if (!actions || actions.length === 0) return "low";
-
-  const last = actions[actions.length - 1].difficulty;
-
-  if (last === "low") return "medium";
-  if (last === "medium") return "high";
-  if (last === "high") return "low";
-
-  return "medium";
-}
+function StructureActionPrompt({ language, rawText, difficulty })
 
 ------------------------------------------------
 
 STEP 2
 
-Modify the action generation flow so that:
+Update the system prompt rules.
 
-1. The backend calls `getNextDifficulty(series.actions)`
-2. The result is stored as `nextDifficulty`
-3. `nextDifficulty` is passed to the CreativeActionPrompt.
+Remove this instruction:
 
-Example:
+"Infer it from the complexity and demand of the action described."
 
-const difficulty = getNextDifficulty(series.actions);
+Replace it with:
 
-CreativeActionPrompt({
-  language,
-  series,
-  difficulty
-});
+The difficulty level is already determined by the backend.
+You MUST copy the provided difficulty value exactly as given.
+
+The difficulty value is:
+
+${difficulty}
+
+You MUST output this value exactly in the "difficulty" field.
+
+You MUST NOT change, infer, or reinterpret it.
 
 ------------------------------------------------
 
 STEP 3
 
-Modify CreativeActionPrompt.js.
+Update the JSON schema description section.
 
-Current signature:
+Replace the difficulty rule with:
 
-function CreativeActionPrompt({ language, series })
+"difficulty" must be exactly the value provided by the backend.
+The allowed values are:
 
-Change it to:
+low
+medium
+high
 
-function CreativeActionPrompt({ language, series, difficulty })
+But you MUST use the provided difficulty value exactly.
 
 ------------------------------------------------
 
 STEP 4
 
-Update the prompt instructions.
+Ensure the rest of the prompt behavior remains unchanged.
 
-Remove any instruction that asks the model to choose the difficulty.
+The model must still:
 
-Instead inject the difficulty explicitly:
-
-DIFFICULTY LEVEL (MANDATORY)
-
-The difficulty level for this action is:
-
-${difficulty}
-
-You MUST generate an action that realistically matches this difficulty.
-
-Difficulty definitions:
-
-low:
-quick and light effort, short duration
-
-medium:
-moderate effort and focus required
-
-high:
-demanding, longer or cognitively intensive
-
-------------------------------------------------
-
-STEP 5
-
-The model must still output the difficulty field in the action,
-but it must always match the injected difficulty.
+- extract name
+- extract description
+- return exactly one JSON object
+- preserve language
+- avoid creative rewriting
 
 ------------------------------------------------
 
 IMPORTANT
 
-Do not change anything unrelated to this fix.
+The structure pass must become a PURE extraction layer.
 
-Only:
+It must never reinterpret business logic decided by the backend.
 
-• add the helper function
-• modify the prompt signature
-• inject the difficulty into the prompt
-• remove random difficulty behavior
+Do not modify anything unrelated to this change.
