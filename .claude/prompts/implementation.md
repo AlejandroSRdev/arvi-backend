@@ -1,100 +1,182 @@
-# Implement clean Stripe subscription update flow for plan changes
+We need to refactor our Stripe billing flow to correctly handle plan upgrades and downgrades.
 
-Implement a clean refactor of the billing flow so that:
+Current issue
+-------------
+Our current implementation incorrectly updates the Stripe subscription directly inside the `createCheckoutSession` use case when a user already has an active subscription and requests a different plan.
 
-- **new subscription** → creates a Stripe Checkout Session
-- **same active plan** → opens Stripe Billing Portal
-- **different active plan** → updates the existing Stripe subscription in place
-- **the database remains synchronized only through webhooks**, not directly from the checkout/update use case
+This causes incorrect behavior:
+- the subscription is updated before any payment is confirmed
+- the backend may return `{ updated: true }`
+- the UI may interpret the change as completed
+- the database and Stripe state can become inconsistent
+- in some cases the user ends up with two subscriptions
 
-## Scope
+Business rule we want
+---------------------
+A plan change (upgrade or downgrade) must only happen AFTER a successful payment.
 
-Work only on the minimum set of files required for this refactor.
+Therefore:
 
-## Required behavior
+1) If the user requests the SAME plan
+   → open Stripe Billing Portal
 
-### 1. CreateCheckoutSessionUseCase
-Refactor the current use case so that:
+2) If the user requests a DIFFERENT plan
+   → create a checkout session for payment
+   → DO NOT update the Stripe subscription yet
+   → include metadata indicating a plan change
+   → the webhook will later execute the subscription update
 
-- if the user has **no `stripeSubscriptionId`**:
-  - create a normal Stripe Checkout Session
-- if the user **has `stripeSubscriptionId`**:
-  - retrieve the Stripe subscription
-  - get the current active price from `subscription.items.data[0].price.id`
-  - if the current price is the same as the requested plan price:
-    - return a Billing Portal session
-  - if the current price is different:
-    - call `stripeService.updateSubscription(...)`
-    - do **not** create a new checkout session
-    - do **not** cancel the old subscription
-    - return a non-broken explicit response such as `{ updated: true }`
+Important rule:
+The webhook must be the single source of truth for plan activation.
 
-### 2. Stripe service
-Ensure there is a clean method for updating subscriptions in Stripe.
+Required implementation changes
+--------------------------------
 
-Expected behavior:
+1. Update the `createCheckoutSession` use case.
 
-- update the existing subscription item with the new price
-- use Stripe’s normal proration behavior for upgrades/downgrades
-- do not create a second subscription
-- do not cancel the previous subscription first
+When the user already has `stripeSubscriptionId` and requests a different plan:
 
-Use a method with a clean contract, for example:
+REMOVE this logic:
 
-- input: `subscriptionId`, `itemId`, `priceId`
-- output: Stripe subscription result or a normalized result object
+- any call to `stripe.updateSubscription`
+- returning `{ updated: true }`
 
-### 3. Controller / HTTP response contract
-Adjust the controller that calls this use case so it can safely handle both response shapes:
+Instead:
 
-- `{ url: string }`
-- `{ updated: true }`
+Create a Stripe Checkout Session with:
 
-Requirements:
+mode: "payment"
 
-- if `result.url` exists → return it normally
-- if `result.updated === true` → return a valid JSON response without frontend-breaking nulls
-- do **not** return `{ url: null }`
+Include metadata so the webhook knows this is a plan change:
 
-### 4. Webhook synchronization
-Do **not** update the user plan directly inside the checkout/update use case.
+metadata:
+{
+  userId: userId,
+  action: "plan_change",
+  currentSubscriptionId: user.stripeSubscriptionId,
+  targetPriceId: requestedPriceId
+}
 
-Instead, confirm or complete webhook handling so that plan synchronization is driven by Stripe events.
+Return the checkout URL normally.
 
-At minimum, the webhook flow must correctly support:
+Important:
+This checkout session must NOT create a new subscription.
 
-- `checkout.session.completed`
-- `customer.subscription.updated`
-- `customer.subscription.deleted` (if already part of current flow)
+The goal is only to collect payment before performing the plan change.
 
-For `customer.subscription.updated`, ensure the user plan in the database is resolved from the current Stripe price ID and updated accordingly.
+2. Preserve current behavior for SAME PLAN requests.
 
-### 5. Metadata continuity
-Ensure Stripe subscription metadata is sufficient for webhook reconciliation.
+If the requested plan is the same as the current one:
 
-When creating a new checkout session, make sure the resulting subscription can still be mapped back to the user in webhook processing.
+return stripeService.createBillingPortalSession({
+  customerId,
+  returnUrl: successUrl
+})
 
-If needed, add `subscription_data.metadata` with at least:
-- `userId`
+3. Modify the `ProcessStripeWebhook` use case.
 
-Keep existing metadata conventions consistent with the current codebase.
+Handle the event:
 
-## Constraints
+event.type === "checkout.session.completed"
 
-- Preserve the existing architectural style and responsibility boundaries
-- Do not introduce unnecessary abstractions
-- Do not rewrite unrelated billing logic
-- Do not introduce direct DB plan mutation in the use case
-- Do not keep the temporary “new checkout for plan change” behavior
-- Do not return nullable `url` fields
+Read the metadata from the session.
 
-## Output expected from you
+If:
 
-Provide:
+metadata.action === "plan_change"
 
-1. the modified code
-2. a short explanation of each changed file
-3. any migration or compatibility note if the frontend response handling changes
-4. any edge case you noticed during implementation
+then perform the plan update:
 
-Keep the implementation minimal, coherent, and production-safe.
+- retrieve the current subscription
+- update the subscription price
+
+Example logic:
+
+stripe.subscriptions.update(
+  metadata.currentSubscriptionId,
+  {
+    items: [{
+      id: existingSubscriptionItemId,
+      price: metadata.targetPriceId
+    }]
+  }
+)
+
+Important:
+You must use the existing subscription item id, otherwise Stripe will create a second item.
+
+4. After updating the subscription, update the user plan in the database.
+
+Example:
+
+updateUser(userId, {
+  plan: mapPriceIdToPlan(metadata.targetPriceId)
+})
+
+5. Ensure webhook idempotency.
+
+Stripe may send the same event multiple times.
+
+Prevent duplicate updates by checking whether the user already has the target plan before executing the update.
+
+6. Add structured logs for debugging.
+
+In createCheckoutSession:
+
+log:
+- userId
+- currentPlan
+- targetPlan
+- stripeSubscriptionId
+- checkoutSessionId
+
+In webhook:
+
+log:
+- event.type
+- metadata.action
+- subscriptionId
+- targetPriceId
+- result of updateSubscription
+
+Expected final behavior
+-----------------------
+
+Upgrade or downgrade flow:
+
+User presses change plan
+        ↓
+createCheckoutSession
+(mode: payment)
+metadata.action = "plan_change"
+        ↓
+Stripe checkout page
+        ↓
+Payment succeeds
+        ↓
+Stripe webhook
+        ↓
+ProcessStripeWebhook reads metadata
+        ↓
+updateSubscription(existing subscription)
+        ↓
+update user plan in DB
+
+Constraints
+-----------
+
+Do not introduce new external dependencies.
+
+Keep the existing architecture:
+
+- use cases
+- stripeService
+- userRepository
+
+Only adjust the billing logic where required.
+
+Return the full modified code for:
+
+- createCheckoutSession use case
+- ProcessStripeWebhook use case
+- any small changes needed in stripeService

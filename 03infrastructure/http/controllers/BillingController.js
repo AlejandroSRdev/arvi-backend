@@ -5,6 +5,7 @@
  * Handles billing HTTP endpoints: checkout session creation and Stripe webhook processing.
  */
 
+import crypto from 'crypto';
 import { createCheckoutSession } from '../../../02application/use-cases/CreateCheckoutSessionUseCase.js';
 import { processStripeWebhook } from '../../../02application/use-cases/ProcessStripeWebhookUseCase.js';
 import { ValidationError } from '../../../errors/Index.js';
@@ -30,26 +31,38 @@ export async function createCheckoutSessionEndpoint(req, res, next) {
   const userId = req.user.id;
   const { plan } = req.body;
   const stripeMode = process.env.STRIPE_MODE ?? 'test';
+  const traceId = crypto.randomUUID();
 
   try {
-    logger.log('checkout_session_requested', { userId, requestedPlan: plan, stripeMode });
+    logger.log('billing.checkout.request_received', { traceId, userId, requestedPlan: plan, stripeMode });
 
     if (!plan) {
       throw new ValidationError('plan is required');
     }
 
-    const { url, sessionId } = await createCheckoutSession(userId, plan, {
+    const result = await createCheckoutSession(userId, plan, {
       userRepository,
       stripeService,
+      logger,
+      traceId,
     });
 
-    logger.log('stripe_session_created', { userId, stripeSessionId: sessionId, plan });
-
-    return res.status(HTTP_STATUS.OK).json({ url });
-  } catch (err) {
-    logger.logError('checkout_session_error', {
+    const responseType = result.updated ? 'UPDATED' : 'URL';
+    logger.log('billing.checkout.response_sent', {
+      traceId,
       userId,
-      errorType: err.code ?? err.name,
+      responseType,
+      hasUrl: !!result.url,
+      status: HTTP_STATUS.OK,
+    });
+
+    return res.status(HTTP_STATUS.OK).json({ url: result.url });
+  } catch (err) {
+    logger.logError('billing.checkout.error', {
+      traceId,
+      userId,
+      errorName: err.name,
+      errorMessage: err.message,
       retryable: err.code === 'STRIPE_PROVIDER_FAILURE',
     });
     return next(err);
@@ -80,7 +93,7 @@ export async function stripeWebhookEndpoint(req, res) {
   logger.log('stripe_webhook_received', { eventId: event.id, eventType: event.type, stripeMode });
 
   try {
-    await processStripeWebhook(event, { userRepository });
+    await processStripeWebhook(event, { userRepository, stripeService });
     return res.status(HTTP_STATUS.OK).json({ received: true });
   } catch (err) {
     // Only transient infra failures are retryable (DB timeouts, transaction contention)

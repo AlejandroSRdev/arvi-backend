@@ -157,10 +157,95 @@ async function handleInvoicePaid(event, userRepository) {
 }
 
 /**
+ * Handle checkout.session.completed with action === 'plan_change':
+ * update the existing Stripe subscription and persist the new plan to the DB.
+ */
+async function handlePlanChange(event, session, userId, userRepository, stripeService) {
+  const { id: eventId } = event;
+  const { currentSubscriptionId, targetPriceId } = session.metadata;
+
+  billingLog('stripe_webhook_plan_change_started', { eventId, userId, currentSubscriptionId, targetPriceId });
+
+  // Resolve target plan config from priceId
+  const targetPlanConfig = Object.values(PLANS).find(p => p.stripePriceId === targetPriceId);
+  if (!targetPlanConfig) {
+    billingLogError('stripe_webhook_non_retryable_error', {
+      eventId,
+      reason: `Unknown targetPriceId for plan change: ${targetPriceId}`,
+    });
+    await userRepository.recordFailedStripeEvent({
+      eventId,
+      type: event.type,
+      reason: `Unknown targetPriceId for plan change: ${targetPriceId}`,
+      userId,
+    });
+    return;
+  }
+
+  // Idempotency: if user already has the target plan, skip Stripe call + DB update
+  const existingUser = await userRepository.getUser(userId);
+  if (existingUser?.plan === targetPlanConfig.id) {
+    billingLog('stripe_webhook_idempotent_skip', { eventId, userId, reason: 'user already has target plan' });
+    return;
+  }
+
+  // Retrieve current subscription to get the existing item ID (required to avoid creating a second item)
+  let subscription;
+  try {
+    subscription = await stripeService.retrieveSubscription(currentSubscriptionId);
+  } catch (err) {
+    billingLogError('stripe_webhook_plan_change_retrieve_failed', { eventId, userId, currentSubscriptionId, reason: err.message });
+    throw err;
+  }
+
+  const existingItemId = subscription.items.data[0].id;
+
+  try {
+    await stripeService.updateSubscription(currentSubscriptionId, {
+      itemId: existingItemId,
+      priceId: targetPriceId,
+    });
+    billingLog('stripe_webhook_plan_change_subscription_updated', { eventId, userId, subscriptionId: currentSubscriptionId, targetPriceId });
+  } catch (err) {
+    billingLogError('stripe_webhook_plan_change_update_failed', { eventId, userId, currentSubscriptionId, targetPriceId, reason: err.message });
+    throw err;
+  }
+
+  const monthlyActionsResetAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  billingLog('stripe_webhook_transaction_started', { eventId });
+
+  try {
+    const { skipped } = await userRepository.atomicProcessStripeEvent(eventId, userId, {
+      plan: targetPlanConfig.id,
+      planStatus: 'ACTIVE',
+      'limits.maxActiveSeries': targetPlanConfig.maxActiveSeries ?? null,
+      'limits.monthlyActionsMax': targetPlanConfig.maxMonthlyActions ?? null,
+      'limits.monthlyActionsRemaining': targetPlanConfig.maxMonthlyActions ?? null,
+      'limits.monthlyActionsResetAt': monthlyActionsResetAt,
+    });
+
+    if (skipped) {
+      billingLog('stripe_webhook_idempotent_skip', { eventId, userId });
+      return;
+    }
+
+    billingLog('stripe_webhook_transaction_committed', { eventId, userId, planStatus: 'ACTIVE', plan: targetPlanConfig.id });
+  } catch (err) {
+    billingLogError('stripe_webhook_transaction_rolled_back', {
+      eventId,
+      reason: err.message,
+      retryable: RETRYABLE_CODES.has(err.code),
+    });
+    throw err;
+  }
+}
+
+/**
  * Handle checkout.session.completed: activate the subscription for the user.
  * This is the primary activation event when using Stripe Checkout.
  */
-async function handleCheckoutSessionCompleted(event, userRepository) {
+async function handleCheckoutSessionCompleted(event, userRepository, stripeService) {
   const { id: eventId } = event;
   const session = event.data.object;
 
@@ -178,6 +263,11 @@ async function handleCheckoutSessionCompleted(event, userRepository) {
       customerId: session.customer ?? null,
     });
     return;
+  }
+
+  // Plan change flow: payment was collected to authorize updating an existing subscription
+  if (session.metadata?.action === 'plan_change') {
+    return handlePlanChange(event, session, userId, userRepository, stripeService);
   }
 
   // internalPlan is the current key; plan is the legacy fallback
@@ -365,11 +455,11 @@ async function handleSubscriptionDeleted(event, userRepository) {
  * @returns {Promise<void>}
  */
 export async function processStripeWebhook(event, deps) {
-  const { userRepository } = deps;
+  const { userRepository, stripeService } = deps;
   const { type, id: eventId } = event;
 
   if (type === 'checkout.session.completed') {
-    return handleCheckoutSessionCompleted(event, userRepository);
+    return handleCheckoutSessionCompleted(event, userRepository, stripeService);
   }
 
   if (type === 'invoice.paid') {
