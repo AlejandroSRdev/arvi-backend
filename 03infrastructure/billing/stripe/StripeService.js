@@ -166,6 +166,25 @@ export async function updateSubscription(subscriptionId, { itemId, priceId }) {
 }
 
 /**
+ * Immediately cancels a Stripe subscription.
+ * Used to remove duplicate subscriptions created by a plan-change checkout session.
+ *
+ * @param {string} subscriptionId
+ * @returns {Promise<void>}
+ */
+export async function cancelSubscription(subscriptionId) {
+  try {
+    await stripe.subscriptions.cancel(subscriptionId);
+  } catch (err) {
+    throw new StripeProviderFailureError({
+      operation: 'cancelSubscription',
+      message: err.message,
+      cause: err,
+    });
+  }
+}
+
+/**
  * Verifies and constructs a Stripe webhook event from a raw request body.
  * Throws the raw Stripe error on signature mismatch (caller maps it to 400).
  *
