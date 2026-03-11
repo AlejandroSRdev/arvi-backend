@@ -420,33 +420,68 @@ async function handleInvoicePaymentFailed(event, userRepository) {
     throw err;
   }
 }
-
-/**
- * Handle customer.subscription.deleted: deactivate the user's plan.
- */
 async function handleSubscriptionDeleted(event, userRepository) {
   const { id: eventId } = event;
   const subscriptionObject = event.data.object;
 
-  // Subscription metadata carries userId from checkout session
+  // Stripe subscription that was deleted
+  const deletedSubscriptionId = subscriptionObject.id;
+
+  // Subscription metadata normally contains the userId
   let userId = subscriptionObject?.metadata?.userId ?? null;
 
+  // Fallback: resolve userId using the Stripe customerId
   if (!userId && subscriptionObject.customer) {
     const user = await userRepository.getUserByCustomerId(subscriptionObject.customer);
     if (user) userId = user.id;
   }
 
+  // If we cannot determine the user, log and stop processing
   if (!userId) {
     billingLogError('stripe_webhook_non_retryable_error', {
       eventId,
       reason: 'Cannot determine userId from subscription.deleted payload',
     });
+
     await userRepository.recordFailedStripeEvent({
       eventId,
       type: event.type,
       reason: 'Cannot determine userId from subscription.deleted payload',
       customerId: subscriptionObject.customer ?? null,
     });
+
+    return;
+  }
+
+  // Load user to verify authoritative subscription
+  const user = await userRepository.getUser(userId);
+
+  if (!user) {
+    billingLogError('stripe_webhook_non_retryable_error', {
+      eventId,
+      reason: 'User not found while processing subscription.deleted',
+      userId,
+    });
+    return;
+  }
+
+  /**
+   * CRITICAL FIX
+   *
+   * Only process the deletion if the deleted subscription matches
+   * the authoritative subscription stored in the user record.
+   *
+   * This prevents temporary Stripe subscriptions (created during
+   * plan-change checkouts) from accidentally downgrading the user.
+   */
+  if (deletedSubscriptionId !== user.stripeSubscriptionId) {
+    billingLog('subscription_deleted_ignored_non_authoritative', {
+      eventId,
+      userId,
+      deletedSubscriptionId,
+      storedSubscriptionId: user.stripeSubscriptionId,
+    });
+
     return;
   }
 
@@ -467,12 +502,12 @@ async function handleSubscriptionDeleted(event, userRepository) {
       return;
     }
 
-    billingLog('stripe_webhook_transaction_committed', {
+    billingLog('subscription_deleted_authoritative', {
       eventId,
       userId,
-      planStatus: 'CANCELED',
-      plan: 'freemium',
+      subscriptionId: deletedSubscriptionId,
     });
+
   } catch (err) {
     billingLogError('stripe_webhook_transaction_rolled_back', {
       eventId,
