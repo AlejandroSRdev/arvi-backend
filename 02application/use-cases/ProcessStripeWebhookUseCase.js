@@ -189,6 +189,43 @@ async function handlePlanChange(event, session, userId, userRepository, stripeSe
     return;
   }
 
+  // --- Duplicate subscription cleanup ---
+  // When a plan-change checkout completes with mode:'subscription', Stripe automatically
+  // creates a NEW subscription (session.subscription). We must cancel it immediately and
+  // keep updating the ORIGINAL subscription (metadata.currentSubscriptionId) to avoid
+  // leaving the customer with two active subscriptions.
+  const newSubscriptionId = session.subscription ?? null;
+
+  if (newSubscriptionId && newSubscriptionId !== currentSubscriptionId) {
+    billingLog('plan_change_duplicate_subscription_detected', {
+      eventId,
+      userId,
+      originalSubscriptionId: currentSubscriptionId,
+      newSubscriptionId,
+      targetPriceId,
+    });
+
+    try {
+      await stripeService.cancelSubscription(newSubscriptionId);
+      billingLog('plan_change_duplicate_subscription_cancelled', {
+        eventId,
+        userId,
+        originalSubscriptionId: currentSubscriptionId,
+        newSubscriptionId,
+        targetPriceId,
+      });
+    } catch (err) {
+      billingLogError('stripe_webhook_plan_change_cancel_duplicate_failed', {
+        eventId,
+        userId,
+        newSubscriptionId,
+        reason: err.message,
+      });
+      throw err;
+    }
+  }
+  // --- End duplicate subscription cleanup ---
+
   // Retrieve current subscription to get the existing item ID (required to avoid creating a second item)
   let subscription;
   try {
