@@ -109,6 +109,41 @@ export async function createBillingPortalSession({ customerId, returnUrl }) {
 }
 
 /**
+ * Creates a Stripe Checkout Session in payment mode to collect a one-time charge
+ * before executing a plan change on an existing subscription.
+ * The webhook reads session.metadata.action === 'plan_change' to perform the update.
+ *
+ * @param {{ customerId: string, priceId: string, metadata: Object, idempotencyKey: string }} params
+ * @returns {Promise<{ url: string, sessionId: string }>}
+ */
+export async function createPlanChangeCheckoutSession({ customerId, priceId, metadata, idempotencyKey }) {
+  console.log(`[Stripe] Creating plan-change checkout session | mode=${stripeConfig.mode} | priceId=${priceId}`);
+
+  try {
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: 'payment',
+        payment_method_types: ['card'],
+        customer: customerId,
+        line_items: [{ price: priceId, quantity: 1 }],
+        metadata,
+        success_url: `${process.env.BASE_API_URL}/billing/success`,
+        cancel_url: `${process.env.BASE_API_URL}/billing/cancel`,
+      },
+      { idempotencyKey }
+    );
+
+    return { url: session.url, sessionId: session.id };
+  } catch (err) {
+    throw new StripeProviderFailureError({
+      operation: 'createPlanChangeCheckoutSession',
+      message: err.message,
+      cause: err,
+    });
+  }
+}
+
+/**
  * Updates an existing subscription to a new price (upgrade or downgrade).
  *
  * @param {string} subscriptionId

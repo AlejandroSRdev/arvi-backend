@@ -1,181 +1,211 @@
-TASK
-Add structured observability to the endpoint:
+# Add precise trace logs to CreateCheckoutSession endpoint to identify all billing branches
 
-GET /user/dashboard
+Add **high-signal, low-noise trace logging** to the full `CreateCheckoutSession` flow so we can diagnose exactly which billing path is being executed at runtime.
 
-The goal is to make the request lifecycle clearly traceable in production logs.
+The goal is to clearly distinguish these 3 cases:
 
-This task must follow the backend architecture and logging conventions defined in the project manifest.
+1. **new subscription / acquire plan** → creates Stripe Checkout Session
+2. **same active plan / manage plan** → opens Stripe Billing Portal
+3. **different active plan / update plan** → updates existing Stripe subscription in place
 
-------------------------------------------------
+## Scope
 
-CONTEXT
+Instrument only the minimum relevant code path for this diagnosis:
 
-This endpoint aggregates user data for the frontend dashboard.
+- `CreateCheckoutSessionUseCase`
+- the controller/handler that exposes the endpoint
+- Stripe service methods directly involved in this flow, if needed for visibility
 
-It retrieves:
+Do **not** refactor business logic unless strictly necessary for logging clarity.
 
-- user profile (email, plan)
-- usage limits
-- active series count
-- remaining actions for the month
+## Logging objective
 
-Currently the endpoint lacks sufficient observability to debug issues such as:
+When a request hits the endpoint, logs must allow us to reconstruct the full decision path for a single execution from start to finish.
 
-- missing profile data
-- incorrect limits
-- unexpected null values
-- failures in repository calls
+Each execution must make it obvious:
 
-------------------------------------------------
+- which user triggered it
+- which plan was requested
+- whether the user had a Stripe customer
+- whether the user had a `stripeSubscriptionId`
+- whether Stripe subscription retrieval succeeded
+- what the current Stripe price ID was
+- what requested price ID was resolved
+- which branch was taken:
+  - `NEW_CHECKOUT`
+  - `BILLING_PORTAL`
+  - `SUBSCRIPTION_UPDATE`
+- what the final response shape was:
+  - `{ url }`
+  - `{ updated: true }`
+- whether any error happened, and at which step
 
-OBJECTIVE
+## Requirements
 
-Instrument the dashboard endpoint so that the following stages are clearly visible in logs:
+### 1. Add a trace/correlation id per request
+Generate or propagate a trace id for each endpoint execution.
 
-1. Request arrival
-2. User identity extraction
-3. Use case execution
-4. Result computation
-5. Response delivery
-6. Error situations
+Use it consistently in every log line of this flow.
 
-The logs must allow a developer to understand exactly what happened during a request.
+Example format:
 
-------------------------------------------------
+- `traceId`
+- `billingTraceId`
+- or reuse an existing request id if the project already has one
 
-IMPLEMENTATION REQUIREMENTS
+If no request id infrastructure exists, generate a simple one inside the controller for this endpoint.
 
-Observability must be added in the controller that handles:
+### 2. Log at decision points inside CreateCheckoutSessionUseCase
+Add structured logs before and after each meaningful step.
 
-GET /user/dashboard
+At minimum log:
 
-Add logs in the following places:
+#### Entry
+- trace id
+- user id
+- requested plan
+- normalized plan key
 
-1. Controller entry
+#### Plan validation result
+- whether requested plan is valid
+- resolved Stripe price id
 
-Log that the request reached the endpoint.
+#### User retrieval result
+- whether user was found
+- `stripeCustomerId` presence
+- `stripeSubscriptionId` presence
 
-Include:
+#### Customer creation or reuse
+- if customer was reused
+- if customer was created
+- created/reused customer id
+
+#### Existing subscription retrieval
+If `stripeSubscriptionId` exists, log:
+- subscription id used for retrieval
+- retrieval success/failure
+- current Stripe price id
+- requested Stripe price id
+
+#### Branch decision
+Log **exactly one** explicit branch marker:
+- `branch=NEW_CHECKOUT`
+- `branch=BILLING_PORTAL`
+- `branch=SUBSCRIPTION_UPDATE`
+
+#### Stripe operation result
+- checkout session created → session id and url presence
+- billing portal session created → url presence
+- subscription updated → subscription id and resulting price id if available
+
+#### Final return shape
+- `responseType=URL`
+- `responseType=UPDATED`
+- or equivalent
+
+### 3. Add controller-level request/response logs
+At the endpoint/controller level, log:
+
+#### Request received
+- trace id
+- authenticated user id
+- requested plan
 - endpoint name
-- userId (if available)
 
-Example:
+#### Response sent
+- trace id
+- HTTP status
+- whether response contains `url`
+- whether response contains `updated: true`
 
-Logger.info("[dashboard] request received", {
-  userId
-})
+#### Error path
+If an exception occurs:
+- trace id
+- error name
+- error message
+- step/context if available
 
-------------------------------------------------
+### 4. Prefer structured logs
+Use structured logging if the codebase already has a logger.
+If not, use consistent `console.log` / `console.error` formatting.
 
-2. Before executing the use case
+Prefer compact machine-readable logs such as:
 
-Log that the use case execution is starting.
-
-Example:
-
-Logger.info("[dashboard] executing GetUserDashboardUseCase", {
-  userId
-})
-
-------------------------------------------------
-
-3. After the use case returns
-
-Log a summary of the result.
-
-Do NOT log sensitive or large payloads.
-
-Only log useful structural indicators.
-
-Example fields:
-
-- plan
-- activeSeriesCount
-- monthlyActionsRemaining
-
-Example:
-
-Logger.info("[dashboard] dashboard computed", {
+```js
+logger.info({
+  traceId,
+  event: 'billing.checkout.branch_selected',
+  branch: 'SUBSCRIPTION_UPDATE',
   userId,
-  plan: dashboard.profile?.plan,
-  activeSeriesCount: dashboard.limits?.activeSeriesCount,
-  monthlyActionsRemaining: dashboard.limits?.monthlyActionsRemaining
-})
+  requestedPlan: planKey,
+  currentPriceId,
+  requestedPriceId
+});
 
-------------------------------------------------
+If no logger abstraction exists, keep the shape consistent anyway.
 
-4. Before sending the response
+5. Do not log sensitive data
 
-Confirm the response is about to be returned.
+Do not log:
 
-Example:
+tokens
 
-Logger.info("[dashboard] response sent", {
-  userId
-})
+full card/payment details
 
-------------------------------------------------
+full request headers
 
-5. Error handling
+secrets
 
-Wrap the controller logic in a try/catch block.
+raw webhook signatures
 
-If an error occurs:
+Customer ids, subscription ids, session ids, price ids, and user ids are acceptable for this debugging pass.
 
-- log it using Logger.error
-- include userId if available
-- include error.message
-- include error.stack
-- rethrow the error so the centralized error middleware handles it.
+Expected branch markers
 
-Example pattern:
+Make the logs explicitly searchable with these exact branch values:
 
-try {
+NEW_CHECKOUT
 
-   ...
+BILLING_PORTAL
 
-} catch (error) {
+SUBSCRIPTION_UPDATE
 
-   Logger.error("[dashboard] error", {
-      userId,
-      message: error.message,
-      stack: error.stack
-   })
+And these exact event markers where relevant:
 
-   throw error
-}
+billing.checkout.request_received
 
-------------------------------------------------
+billing.checkout.plan_validated
 
-CONSTRAINTS
+billing.checkout.user_loaded
 
-You must NOT:
+billing.checkout.customer_reused
 
-- modify business logic
-- change repository behavior
-- alter API responses
-- introduce new dependencies
-- replace the centralized Logger.js
-- create ad-hoc errors instead of using the centralized /errors system
+billing.checkout.customer_created
 
-Observability must be additive only.
+billing.checkout.subscription_loaded
 
-------------------------------------------------
+billing.checkout.branch_selected
 
-EXPECTED RESULT
+billing.checkout.checkout_created
 
-After this instrumentation, the logs for a successful request should resemble:
+billing.checkout.portal_created
 
-[dashboard] request received
-[dashboard] executing GetUserDashboardUseCase
-[dashboard] dashboard computed
-[dashboard] response sent
+billing.checkout.subscription_updated
 
-If an error occurs:
+billing.checkout.response_sent
 
-[dashboard] request received
-[dashboard] executing GetUserDashboardUseCase
-[dashboard] error
+billing.checkout.error
 
-This should allow debugging production issues without stepping through code.
+Output expected from you
+
+Provide:
+
+the modified code
+
+a short explanation of every file changed
+
+the exact log lines / event names introduced
+
+a short note explaining how I can read the logs to distinguish the 3 runtime cases quickly
+
+Keep the implementation minimal, traceable, and production-safe.
