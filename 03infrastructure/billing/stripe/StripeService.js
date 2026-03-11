@@ -122,7 +122,7 @@ export async function createPlanChangeCheckoutSession({ customerId, priceId, met
   try {
     const session = await stripe.checkout.sessions.create(
       {
-        mode: 'payment',
+        mode: 'subscription',
         payment_method_types: ['card'],
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
