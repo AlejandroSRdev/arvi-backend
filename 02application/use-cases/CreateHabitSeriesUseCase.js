@@ -98,9 +98,7 @@ function validateSchema(data) {
  * @returns {Promise<HabitSeries>} The habit series domain entity
  */
 export async function createHabitSeries(userId, payload, deps) {
-  console.log(`[USE-CASE] [Habit Series] CreateHabitSeries started for user ${userId}`);
-
-  const { userRepository, habitSeriesRepository, aiProvider, planId } = deps;
+  const { userRepository, habitSeriesRepository, aiProvider, planId, requestId = undefined } = deps;
 
   if (!userRepository) {
     throw new ValidationError('Dependency required: userRepository');
@@ -116,157 +114,181 @@ export async function createHabitSeries(userId, payload, deps) {
     throw new ValidationError('Missing required payload fields: language, testData');
   }
 
-  // STEP 1: PRE-AI VALIDATION
+  const pipelineStart = Date.now();
+  console.log(JSON.stringify({ level: 'info', event: 'pipeline.start', ts: new Date().toISOString(), pipeline: 'habit_series', userId, requestId }));
 
-  // planId is null when trial has expired or user has no active subscription
-  if (!planId) {
-    throw new AuthorizationError('No active plan. Access denied.');
-  }
-
-  const planLimits = getPlanLimits(planId);
-
-  const user = await userRepository.getUser(userId);
-  if (!user) {
-    throw new ValidationError('USER_NOT_FOUND');
-  }
-
-  const activeSeriesCount = user.limits?.activeSeriesCount || 0;
-
-  if (activeSeriesCount >= planLimits.maxActiveSeries) {
-    throw new MaxActiveSeriesReachedError(planLimits.maxActiveSeries, activeSeriesCount);
-  }
-
-  // STEP 2: AI EXECUTION (3 passes)
-
-  const { language, assistantContext, testData } = payload;
-
-  // Sanitize before any AI processing to prevent prompt injection
-  const sanitizedTestData = Object.fromEntries(
-    Object.entries(testData).map(([key, value]) => [key, sanitizeUserInput(value)])
-  );
-  const sanitizedContext = assistantContext ? sanitizeUserInput(assistantContext) : '';
-
-  // Pass 1 — creative: generate free-form human-readable content
-  const creativeMessages = CreativeHabitSeriesPrompt({
-    language,
-    assistantContext: sanitizedContext,
-    testData: sanitizedTestData
-  });
-
-  const creativeConfig = getModelConfig('habit_series_creative');
-  const creativeResponse = await generateAIResponse(
-    userId,
-    creativeMessages,
-    {
-      model: creativeConfig.model,
-      temperature: creativeConfig.temperature,
-      maxTokens: creativeConfig.maxTokens,
-      forceJson: false,
-      step: 'creative'
-    },
-    { aiProvider }
-  );
-
-  const rawCreativeText = creativeResponse.content;
-
-  // Pass 2 — structure: extract JSON from creative text
-  const structureMessages = StructureHabitSeriesPrompt({
-    language,
-    rawText: rawCreativeText
-  });
-
-  const structureConfig = getModelConfig('habit_series_structure');
-  const structureResponse = await generateAIResponse(
-    userId,
-    structureMessages,
-    {
-      model: structureConfig.model,
-      temperature: structureConfig.temperature,
-      maxTokens: structureConfig.maxTokens,
-      forceJson: true,
-      step: 'structure'
-    },
-    { aiProvider }
-  );
-
-  const rawStructuredText = structureResponse.content;
-
-  // Pass 3 — schema: enforce strict JSON schema compliance
-  const schemaMessages = JsonSchemaHabitSeriesPrompt({
-    content: rawStructuredText,
-    schema: HABIT_SERIES_SCHEMA
-  });
-
-  const schemaConfig = getModelConfig('json_conversion');
-  const schemaResponse = await generateAIResponse(
-    userId,
-    schemaMessages,
-    {
-      model: schemaConfig.model,
-      temperature: schemaConfig.temperature,
-      maxTokens: schemaConfig.maxTokens,
-      forceJson: true,
-      step: 'schema'
-    },
-    { aiProvider }
-  );
-
-  // STEP 3: POST-AI VALIDATION
-
-  let parsedSeries;
   try {
-    parsedSeries = typeof schemaResponse.content === 'string'
-      ? JSON.parse(schemaResponse.content)
-      : schemaResponse.content;
-  } catch (parseError) {
-    throw new ValidationError(`AI output is not valid JSON: ${parseError.message}`);
-  }
+    // STEP 1: PRE-AI VALIDATION
 
-  const actionCount = Array.isArray(parsedSeries?.acciones) ? parsedSeries.acciones.length : 0;
-  console.log(`[SCHEMA] [Habit Series] Validating AI output against schema, actions=${actionCount}`);
+    // planId is null when trial has expired or user has no active subscription
+    if (!planId) {
+      throw new AuthorizationError('No active plan. Access denied.');
+    }
 
-  const schemaValidation = validateSchema(parsedSeries);
-  if (!schemaValidation.valid) {
-    console.error(`[SCHEMA ERROR] [Habit Series] Schema validation failed: ${schemaValidation.error}`);
-    throw new ValidationError(`AI output schema validation failed: ${schemaValidation.error}`);
-  }
+    const planLimits = getPlanLimits(planId);
 
-  console.log('[SCHEMA] [Habit Series] Schema validation OK');
+    const user = await userRepository.getUser(userId);
+    if (!user) {
+      throw new ValidationError('USER_NOT_FOUND');
+    }
 
-  // STEP 4: ATOMIC COMMIT — persist series and increment counter in one transaction
+    const activeSeriesCount = user.limits?.activeSeriesCount || 0;
 
-  console.log('[ATOMIC_COMMIT_START]', {
-    userId,
-    timestamp: new Date().toISOString()
-  });
+    if (activeSeriesCount >= planLimits.maxActiveSeries) {
+      throw new MaxActiveSeriesReachedError(planLimits.maxActiveSeries, activeSeriesCount);
+    }
 
-  let seriesId;
-  try {
-    const persistResult = await habitSeriesRepository.atomicCommitCreation(
-      userId,
-      parsedSeries
+    // STEP 2: AI EXECUTION (3 passes)
+
+    const { language, assistantContext, testData } = payload;
+
+    // Sanitize before any AI processing to prevent prompt injection
+    const sanitizedTestData = Object.fromEntries(
+      Object.entries(testData).map(([key, value]) => [key, sanitizeUserInput(value)])
     );
-    seriesId = persistResult.id;
+    const sanitizedContext = assistantContext ? sanitizeUserInput(assistantContext) : '';
 
-    console.log('[ATOMIC_COMMIT_SUCCESS]', {
-      userId,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('[ATOMIC_COMMIT_FAILURE]', {
-      userId,
-      error: error.message,
-      timestamp: new Date().toISOString()
+    // Pass 1 — creative: generate free-form human-readable content
+    const creativeMessages = CreativeHabitSeriesPrompt({
+      language,
+      assistantContext: sanitizedContext,
+      testData: sanitizedTestData
     });
 
-    throw error;
+    const creativeConfig = getModelConfig('habit_series_creative');
+    const creativeResponse = await generateAIResponse(
+      userId,
+      creativeMessages,
+      {
+        model: creativeConfig.model,
+        temperature: creativeConfig.temperature,
+        maxTokens: creativeConfig.maxTokens,
+        forceJson: false,
+        step: 'creative',
+        requestId,
+        pipeline: 'habit_series',
+      },
+      { aiProvider }
+    );
+
+    const rawCreativeText = creativeResponse.content;
+
+    // Pass 2 — structure: extract JSON from creative text
+    const structureMessages = StructureHabitSeriesPrompt({
+      language,
+      rawText: rawCreativeText
+    });
+
+    const structureConfig = getModelConfig('habit_series_structure');
+    const structureResponse = await generateAIResponse(
+      userId,
+      structureMessages,
+      {
+        model: structureConfig.model,
+        temperature: structureConfig.temperature,
+        maxTokens: structureConfig.maxTokens,
+        forceJson: true,
+        step: 'structure',
+        requestId,
+        pipeline: 'habit_series',
+      },
+      { aiProvider }
+    );
+
+    const rawStructuredText = structureResponse.content;
+
+    // Pass 3 — schema: enforce strict JSON schema compliance
+    const schemaMessages = JsonSchemaHabitSeriesPrompt({
+      content: rawStructuredText,
+      schema: HABIT_SERIES_SCHEMA
+    });
+
+    const schemaConfig = getModelConfig('json_conversion');
+    const schemaResponse = await generateAIResponse(
+      userId,
+      schemaMessages,
+      {
+        model: schemaConfig.model,
+        temperature: schemaConfig.temperature,
+        maxTokens: schemaConfig.maxTokens,
+        forceJson: true,
+        step: 'schema',
+        requestId,
+        pipeline: 'habit_series',
+      },
+      { aiProvider }
+    );
+
+    // STEP 3: POST-AI VALIDATION
+
+    let parsedSeries;
+    try {
+      parsedSeries = typeof schemaResponse.content === 'string'
+        ? JSON.parse(schemaResponse.content)
+        : schemaResponse.content;
+    } catch (parseError) {
+      throw new ValidationError(`AI output is not valid JSON: ${parseError.message}`);
+    }
+
+    const schemaValidation = validateSchema(parsedSeries);
+    if (!schemaValidation.valid) {
+      throw new ValidationError(`AI output schema validation failed: ${schemaValidation.error}`);
+    }
+
+    // STEP 4: ATOMIC COMMIT — persist series and increment counter in one transaction
+
+    let seriesId;
+    try {
+      const persistResult = await habitSeriesRepository.atomicCommitCreation(
+        userId,
+        parsedSeries
+      );
+      seriesId = persistResult.id;
+    } catch (error) {
+      throw error;
+    }
+
+    console.log(JSON.stringify({
+      level: 'info',
+      event: 'quota.consumed',
+      ts: new Date().toISOString(),
+      resource: 'active_series',
+      userId,
+      planId,
+      count_before: activeSeriesCount,
+      count_after: activeSeriesCount + 1,
+      requestId,
+    }));
+
+    console.log(JSON.stringify({
+      level: 'info',
+      event: 'pipeline.end',
+      ts: new Date().toISOString(),
+      pipeline: 'habit_series',
+      userId,
+      duration_ms: Date.now() - pipelineStart,
+      requestId,
+    }));
+
+    // STEP 5: MAP AND RETURN DOMAIN ENTITY
+
+    const habitSeries = mapAIOutputToHabitSeries(seriesId, parsedSeries);
+
+    return habitSeries;
+
+  } catch (err) {
+    console.error(JSON.stringify({
+      level: 'error',
+      event: 'pipeline.failure',
+      ts: new Date().toISOString(),
+      pipeline: 'habit_series',
+      userId,
+      errorCode: err.code || err.name,
+      message: err.message,
+      requestId,
+    }));
+    throw err;
   }
-
-  // STEP 5: MAP AND RETURN DOMAIN ENTITY
-
-  const habitSeries = mapAIOutputToHabitSeries(seriesId, parsedSeries);
-
-  return habitSeries;
 }
 
 export default { createHabitSeries };

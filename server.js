@@ -17,6 +17,7 @@ import webhookRoutes from './03infrastructure/http/routes/Webhook.routes.js';
 
 // Import middleware (Hexagonal Architecture)
 import { errorMiddleware } from './03infrastructure/http/middlewares/errorMiddleware.js';
+import { requestLogger } from './03infrastructure/http/middlewares/requestLogger.js';
 
 // ═══════════════════════════════════════════════════════════════
 // BOOTSTRAP - DEPENDENCY COMPOSITION
@@ -111,6 +112,7 @@ const app = express();
 
 app.set('trust proxy', 1);
 app.use(cors());
+app.use(requestLogger);
 
 // Webhook routes must be mounted BEFORE express.json() so that
 // express.raw() receives the unmodified body for Stripe signature verification.

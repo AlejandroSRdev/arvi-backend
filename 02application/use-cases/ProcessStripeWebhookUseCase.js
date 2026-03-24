@@ -19,11 +19,11 @@ const PLAN_KEY_TO_ID = Object.fromEntries(
 const RETRYABLE_CODES = new Set(['DATA_ACCESS_FAILURE', 'TRANSACTION_FAILURE']);
 
 function billingLog(event, data) {
-  console.log(JSON.stringify({ event, ...data, ts: new Date().toISOString() }));
+  console.log(JSON.stringify({ level: 'info', event, ...data, ts: new Date().toISOString() }));
 }
 
 function billingLogError(event, data) {
-  console.error(JSON.stringify({ event, ...data, ts: new Date().toISOString() }));
+  console.error(JSON.stringify({ level: 'error', event, ...data, ts: new Date().toISOString() }));
 }
 
 /**
@@ -529,22 +529,24 @@ async function handleSubscriptionDeleted(event, userRepository) {
 export async function processStripeWebhook(event, deps) {
   const { userRepository, stripeService } = deps;
   const { type, id: eventId } = event;
+  const start = Date.now();
 
-  if (type === 'checkout.session.completed') {
-    return handleCheckoutSessionCompleted(event, userRepository, stripeService);
+  try {
+    if (type === 'checkout.session.completed') {
+      await handleCheckoutSessionCompleted(event, userRepository, stripeService);
+    } else if (type === 'invoice.paid') {
+      await handleInvoicePaid(event, userRepository);
+    } else if (type === 'invoice.payment_failed') {
+      await handleInvoicePaymentFailed(event, userRepository);
+    } else if (type === 'customer.subscription.deleted') {
+      await handleSubscriptionDeleted(event, userRepository);
+    } else {
+      billingLog('stripe_webhook_unhandled_event', { eventId, eventType: type });
+    }
+
+    billingLog('webhook.processed', { stripeEventId: eventId, stripeEventType: type, duration_ms: Date.now() - start });
+  } catch (err) {
+    billingLogError('webhook.failure', { stripeEventId: eventId, stripeEventType: type, duration_ms: Date.now() - start, errorCode: err.code || err.name });
+    throw err;
   }
-
-  if (type === 'invoice.paid') {
-    return handleInvoicePaid(event, userRepository);
-  }
-
-  if (type === 'invoice.payment_failed') {
-    return handleInvoicePaymentFailed(event, userRepository);
-  }
-
-  if (type === 'customer.subscription.deleted') {
-    return handleSubscriptionDeleted(event, userRepository);
-  }
-
-  billingLog('stripe_webhook_unhandled_event', { eventId, eventType: type });
 }

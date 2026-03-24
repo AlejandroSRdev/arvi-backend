@@ -75,8 +75,8 @@ function validateRequestBody(body) {
  * - lastActivityAt: string (ISO)
  */
 export async function createHabitSeriesEndpoint(req, res, next) {
-  console.log('🟢 Controller reached');
   try {
+    const requestId = res.locals.requestId;
     const userId = req.user?.uid;
 
     if (!userId) {
@@ -102,6 +102,7 @@ export async function createHabitSeriesEndpoint(req, res, next) {
       userRepository,
       habitSeriesRepository,
       aiProvider,
+      requestId,
     });
 
     const responseDTO = toHabitSeriesOutputDTO(habitSeries);
@@ -109,14 +110,6 @@ export async function createHabitSeriesEndpoint(req, res, next) {
     return res.status(HTTP_STATUS.CREATED).json(responseDTO);
 
   } catch (err) {
-
-    console.error('🚨 [Controller Error] CreateHabitSeries failed');
-    console.error('📌 Name:', err?.name);
-    console.error('📌 Message:', err?.message);
-    console.error('📌 Status:', err?.response?.status || err?.status);
-    console.error('📌 Data:', err?.response?.data || null);
-    console.error('📌 Stack:', err?.stack);
-
     return next(err);
   }
 }
@@ -150,13 +143,14 @@ export async function deleteHabitSeriesEndpoint(req, res, next) {
 
     const outcome = result.deleted ? 'deleted' : 'noop_not_found';
 
-    logger.info('[Habit Series] Delete', {
-      uid: userId,
+    logger.log('quota.released', {
+      resource: 'active_series',
+      userId,
       seriesId,
-      deletedAt: new Date().toISOString(),
       outcome,
-      activeSeriesCount_before: result.activeSeriesCount_before ?? null,
-      activeSeriesCount_after: result.activeSeriesCount_after ?? null,
+      count_before: result.activeSeriesCount_before ?? null,
+      count_after: result.activeSeriesCount_after ?? null,
+      requestId: res.locals.requestId,
     });
 
     return res.status(204).send();
@@ -306,11 +300,14 @@ export async function createActionEndpoint(req, res, next) {
       throw new ValidationError('language is required and must be "es" or "en"');
     }
 
+    const requestId = res.locals.requestId;
+
     const action = await createAction(userId, seriesId, { language }, {
       planId: req.plan,
       userRepository,
       habitSeriesRepository,
       aiProvider,
+      requestId,
     });
 
     const responseDTO = toActionOutputDTO(action);

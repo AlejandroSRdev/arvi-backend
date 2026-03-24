@@ -18,11 +18,18 @@ import { logger } from '../../logger/Logger.js';
  * @param {import('express').NextFunction} next - Express next function
  */
 export function errorMiddleware(err, req, res, next) {
+  const requestId = res.locals?.requestId;
+
   if (err instanceof BaseError) {
     const httpError = mapErrorToHttp(err);
 
-    logger.error(`[${req.method}] ${req.path} — ${err.name}: ${err.message}`, {
-      code: err.code,
+    logger.logError('http.error', {
+      requestId,
+      method: req.method,
+      path: req.path,
+      status: httpError.status,
+      errorCode: err.code,
+      message: err.message,
       metadata: err.metadata,
       ...(err.cause && { cause: String(err.cause) }),
     });
@@ -30,7 +37,11 @@ export function errorMiddleware(err, req, res, next) {
     return res.status(httpError.status).json(httpError.body);
   }
 
-  logger.error(`[${req.method}] ${req.path} — Unexpected error`, {
+  logger.logError('http.unexpected_error', {
+    requestId,
+    method: req.method,
+    path: req.path,
+    status: 500,
     name: err?.name,
     message: err?.message,
     stack: err?.stack,
