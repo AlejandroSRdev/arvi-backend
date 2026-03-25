@@ -11,6 +11,12 @@ import { processStripeWebhook } from '../../../02application/use-cases/ProcessSt
 import { ValidationError } from '../../../errors/Index.js';
 import { HTTP_STATUS } from '../HttpStatus.js';
 import { logger } from '../../logger/Logger.js';
+import {
+  billingCheckoutCreated,
+  billingWebhookReceived,
+  billingWebhookSuccess,
+  billingWebhookErrors,
+} from '../../metrics/AppMetrics.js';
 
 // Dependency injection
 let userRepository;
@@ -56,6 +62,7 @@ export async function createCheckoutSessionEndpoint(req, res, next) {
       status: HTTP_STATUS.OK,
     });
 
+    billingCheckoutCreated.add(1, { plan: plan?.toUpperCase() ?? 'unknown' });
     return res.status(HTTP_STATUS.OK).json({ url: result.url });
   } catch (err) {
     logger.logError('billing.checkout.error', {
@@ -87,23 +94,28 @@ export async function stripeWebhookEndpoint(req, res) {
     event = stripeService.constructWebhookEvent(req.body, signatureHeader);
   } catch (err) {
     logger.logError('stripe_webhook_signature_invalid', { error: err.message });
+    billingWebhookErrors.add(1, { event_type: 'unknown', error_type: 'INVALID_SIGNATURE' });
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Invalid webhook signature' });
   }
 
   logger.log('stripe_webhook_received', { eventId: event.id, eventType: event.type, stripeMode });
+  billingWebhookReceived.add(1, { event_type: event.type });
 
   try {
     await processStripeWebhook(event, { userRepository, stripeService });
+    billingWebhookSuccess.add(1, { event_type: event.type });
     return res.status(HTTP_STATUS.OK).json({ received: true });
   } catch (err) {
     // Only transient infra failures are retryable (DB timeouts, transaction contention)
     if (isTransientError(err)) {
       logger.logError('stripe_webhook_retryable_error', { eventId: event.id, errorType: err.code });
+      billingWebhookErrors.add(1, { event_type: event.type, error_type: 'TRANSIENT' });
       return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: 'Transient error, will retry' });
     }
 
     // Non-retryable: log and return 200 to stop Stripe from retrying indefinitely
     logger.logError('stripe_webhook_non_retryable_error', { eventId: event.id, reason: err.message });
+    billingWebhookErrors.add(1, { event_type: event.type, error_type: 'NON_RETRYABLE' });
     return res.status(HTTP_STATUS.OK).json({ received: true });
   }
 }

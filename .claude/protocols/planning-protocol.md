@@ -140,9 +140,34 @@ You may proceed to code ONLY if the user explicitly asks for it.
 
 Constraints:
 
-- Must strictly follow the defined design
-- No deviations or “improvements” unless requested
-- No additional features
+* Must strictly follow the defined design
+* No deviations or “improvements” unless explicitly requested
+* No additional features
+
+If implementation is requested:
+
+* You MUST NOT write the code directly.
+* You MUST generate an implementation prompt for the Implementer agent.
+
+This prompt must be created in:
+.claude/prompts/implementation.md
+
+And MUST strictly follow the style and structure defined in:
+.claude/prompts/guide/implementation-prompt-guide.md
+
+Requirements for the implementation prompt:
+
+* Include full context of the system and task
+* Translate the approved plan into precise implementation steps
+* Define exact scope (what is included and what is NOT)
+* Specify constraints and non-negotiable rules
+* Reference relevant files, modules, and integration points
+* Avoid ambiguity and interpretation gaps
+
+The goal is:
+
+- Zero interpretation by the Implementer
+- Direct, controlled execution of the approved plan
 
 ---
 

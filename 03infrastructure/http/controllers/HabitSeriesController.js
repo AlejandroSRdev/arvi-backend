@@ -12,6 +12,7 @@ import { logger } from '../../logger/Logger.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { toHabitSeriesOutputDTO, toActionOutputDTO } from '../../mappers/HabitSeriesMapper.js';
 import { HTTP_STATUS } from '../HttpStatus.js';
+import { aiRequestsTotal, aiLatencyMs, aiErrorsTotal } from '../../metrics/AppMetrics.js';
 
 // Dependency injection
 let userRepository;
@@ -97,13 +98,22 @@ export async function createHabitSeriesEndpoint(req, res, next) {
     };
 
     // Invoke use-case
-    const habitSeries = await createHabitSeries(userId, payload, {
-      planId: req.plan,
-      userRepository,
-      habitSeriesRepository,
-      aiProvider,
-      requestId,
-    });
+    const aiStart = Date.now();
+    let habitSeries;
+    try {
+      habitSeries = await createHabitSeries(userId, payload, {
+        planId: req.plan,
+        userRepository,
+        habitSeriesRepository,
+        aiProvider,
+        requestId,
+      });
+      aiRequestsTotal.add(1, { feature: 'createHabitSeries' });
+      aiLatencyMs.record(Date.now() - aiStart, { feature: 'createHabitSeries' });
+    } catch (aiErr) {
+      aiErrorsTotal.add(1, { feature: 'createHabitSeries', error_type: aiErr.code ?? aiErr.name ?? 'UNKNOWN' });
+      throw aiErr;
+    }
 
     const responseDTO = toHabitSeriesOutputDTO(habitSeries);
 
@@ -302,13 +312,22 @@ export async function createActionEndpoint(req, res, next) {
 
     const requestId = res.locals.requestId;
 
-    const action = await createAction(userId, seriesId, { language }, {
-      planId: req.plan,
-      userRepository,
-      habitSeriesRepository,
-      aiProvider,
-      requestId,
-    });
+    const aiStart = Date.now();
+    let action;
+    try {
+      action = await createAction(userId, seriesId, { language }, {
+        planId: req.plan,
+        userRepository,
+        habitSeriesRepository,
+        aiProvider,
+        requestId,
+      });
+      aiRequestsTotal.add(1, { feature: 'createAction' });
+      aiLatencyMs.record(Date.now() - aiStart, { feature: 'createAction' });
+    } catch (aiErr) {
+      aiErrorsTotal.add(1, { feature: 'createAction', error_type: aiErr.code ?? aiErr.name ?? 'UNKNOWN' });
+      throw aiErr;
+    }
 
     const responseDTO = toActionOutputDTO(action);
 

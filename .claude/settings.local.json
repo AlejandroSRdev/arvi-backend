@@ -25,7 +25,11 @@
       "Bash(env -u CLAUDECODE cat:*)",
       "Bash(bash -c 'unset CLAUDECODE && cat .claude/manifest.md .claude/agents/workers/reviewer.md .claude/prompts/review-logs-invisibility.md | claude run')",
       "Bash(ls:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''sdk-metrics:'''', d.get\\(''''version''''\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''api:'''', d.get\\(''''version''''\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''sdk-node:'''', d.get\\(''''version''''\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''otlp-http:'''', d.get\\(''''version''''\\)\\)\")"
     ]
   }
 }

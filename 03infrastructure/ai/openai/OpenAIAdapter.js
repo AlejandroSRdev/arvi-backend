@@ -9,6 +9,7 @@ import { openai } from './OpenAIConfig.js';
 import { IAIProvider } from '../../../01domain/ports/IAIProvider.js';
 import { InfrastructureError } from '../../../errors/infrastructure/InfrastructureError.js';
 import { logger } from '../../logger/Logger.js';
+import { aiTokensTotal } from '../../metrics/AppMetrics.js';
 
 export class OpenAIAdapter extends IAIProvider {
   /**
@@ -43,6 +44,7 @@ export class OpenAIAdapter extends IAIProvider {
       const content = completion.choices[0].message.content;
       const { prompt_tokens, completion_tokens, total_tokens } = completion.usage;
       const tokensUsed = total_tokens;
+      aiTokensTotal.add(tokensUsed, { model: completion.model, provider: 'openai' });
 
       // OpenAI calls always return energyConsumed: 0 (not a creative generation provider)
       const energyToConsume = 0;
