@@ -7,15 +7,15 @@
  * modules via the --import Node.js flag.
  */
 
-import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { NodeSDK } from '@opentelemetry/sdk-node';
 
 const metricExporter = new OTLPMetricExporter({
   url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
   headers: {
-    Authorization: process.env.OTEL_EXPORTER_OTLP_AUTHORIZATION,
+    Authorization: process.env.OTEL_EXPORTER_OTLP_HEADERS,
   },
 });
 
