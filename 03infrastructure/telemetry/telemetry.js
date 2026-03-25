@@ -10,7 +10,7 @@
 import 'dotenv/config';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { PeriodicExportingMetricReader, ExportResultCode } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 
 const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
@@ -22,6 +22,41 @@ console.log(`[OTEL] service.name   = ${serviceName}`);
 console.log(`[OTEL] endpoint       = ${endpoint ?? '⚠ NOT SET'}`);
 console.log(`[OTEL] authorization  = ${authorization ? 'SET' : '⚠ NOT SET'}`);
 
+class DebugMetricExporter {
+  constructor(delegate) {
+    this._delegate = delegate;
+  }
+
+  export(metrics, resultCallback) {
+    for (const scopeMetrics of metrics.resourceMetrics.scopeMetrics) {
+      for (const metric of scopeMetrics.metrics) {
+        const points = metric.dataPoints.map((dp) => {
+          const value = dp.value?.sum ?? dp.value ?? 0;
+          return `${JSON.stringify(dp.attributes)}=${value}`;
+        });
+        console.log(`[METRIC] ${metric.descriptor.name}: ${points.join(' | ') || '(no data points)'}`);
+      }
+    }
+
+    this._delegate.export(metrics, (result) => {
+      if (result.code === ExportResultCode.SUCCESS) {
+        console.log('[OTEL] Export cycle completed: success');
+      } else {
+        console.error('[OTEL] Export cycle completed: FAILED', result.error?.message ?? 'unknown error');
+      }
+      resultCallback(result);
+    });
+  }
+
+  forceFlush() {
+    return this._delegate.forceFlush?.() ?? Promise.resolve();
+  }
+
+  shutdown() {
+    return this._delegate.shutdown();
+  }
+}
+
 const metricExporter = new OTLPMetricExporter({
   url: endpoint,
   headers: {
@@ -29,10 +64,12 @@ const metricExporter = new OTLPMetricExporter({
   },
 });
 
+const debugExporter = new DebugMetricExporter(metricExporter);
+
 const sdk = new NodeSDK({
   serviceName,
   metricReader: new PeriodicExportingMetricReader({
-    exporter: metricExporter,
+    exporter: debugExporter,
     exportIntervalMillis: 60_000,
   }),
   instrumentations: [
