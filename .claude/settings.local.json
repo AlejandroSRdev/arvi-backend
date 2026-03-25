@@ -24,7 +24,8 @@
       "Bash(powershell -Command \"Get-Process -Id 1540 | Select-Object Id, Name, CPU\")",
       "Bash(env -u CLAUDECODE cat:*)",
       "Bash(bash -c 'unset CLAUDECODE && cat .claude/manifest.md .claude/agents/workers/reviewer.md .claude/prompts/review-logs-invisibility.md | claude run')",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

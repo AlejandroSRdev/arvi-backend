@@ -1,182 +1,153 @@
-We need to refactor our Stripe billing flow to correctly handle plan upgrades and downgrades.
+# IMPLEMENTATION TASK — OpenTelemetry Metrics Layer (Block 2)
 
-Current issue
--------------
-Our current implementation incorrectly updates the Stripe subscription directly inside the `createCheckoutSession` use case when a user already has an active subscription and requests a different plan.
+---
 
-This causes incorrect behavior:
-- the subscription is updated before any payment is confirmed
-- the backend may return `{ updated: true }`
-- the UI may interpret the change as completed
-- the database and Stripe state can become inconsistent
-- in some cases the user ends up with two subscriptions
+## 1. PURPOSE
 
-Business rule we want
----------------------
-A plan change (upgrade or downgrade) must only happen AFTER a successful payment.
+Integrate OpenTelemetry into the backend so that HTTP request metrics (latency histograms, throughput, error rate) are exported automatically to Grafana Cloud via OTLP HTTP.
 
-Therefore:
+This enables RED metrics (Rate, Errors, Duration) per endpoint in Grafana without touching any controller, use case, or domain file.
 
-1) If the user requests the SAME plan
-   → open Stripe Billing Portal
+---
 
-2) If the user requests a DIFFERENT plan
-   → create a checkout session for payment
-   → DO NOT update the Stripe subscription yet
-   → include metadata indicating a plan change
-   → the webhook will later execute the subscription update
+## 2. SCOPE
 
-Important rule:
-The webhook must be the single source of truth for plan activation.
+### INCLUDED
 
-Required implementation changes
---------------------------------
+- Install 4 npm packages (OTEL SDK + auto-instrumentations + metrics exporter)
+- Create `03infrastructure/telemetry/telemetry.js` — SDK initialization
+- Modify `package.json` start script to load telemetry before all other modules
+- Add 3 env vars to `.env` and `.env.example` (if it exists)
 
-1. Update the `createCheckoutSession` use case.
+### EXCLUDED
 
-When the user already has `stripeSubscriptionId` and requests a different plan:
+- No changes to `server.js` imports or body
+- No changes to any controller, use case, service, repository, or domain file
+- No custom metrics (counters, gauges) — auto-instrumentation only
+- No trace exporter — metrics only
+- No changes to `Logger.js` or `requestLogger.js`
+- No new middleware
 
-REMOVE this logic:
+---
 
-- any call to `stripe.updateSubscription`
-- returning `{ updated: true }`
+## 3. FILES
 
-Instead:
+### Create
+- `03infrastructure/telemetry/telemetry.js`
 
-Create a Stripe Checkout Session with:
+### Modify
+- `package.json` — start script only
+- `.env` — add 3 env vars (with placeholder values, no real secrets)
+- `.env.example` — add same 3 vars if file exists
 
-mode: "payment"
+---
 
-Include metadata so the webhook knows this is a plan change:
+## 4. REQUIREMENTS
 
-metadata:
-{
-  userId: userId,
-  action: "plan_change",
-  currentSubscriptionId: user.stripeSubscriptionId,
-  targetPriceId: requestedPriceId
-}
+### 4.1 — Install packages
 
-Return the checkout URL normally.
+Run exactly:
+```
+npm install @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node @opentelemetry/exporter-metrics-otlp-http @opentelemetry/sdk-metrics
+```
 
-Important:
-This checkout session must NOT create a new subscription.
+### 4.2 — `03infrastructure/telemetry/telemetry.js`
 
-The goal is only to collect payment before performing the plan change.
+Create this file with the following exact content:
 
-2. Preserve current behavior for SAME PLAN requests.
+```js
+/**
+ * Layer: Infrastructure
+ * File: telemetry.js
+ * Responsibility:
+ * Initializes the OpenTelemetry SDK with HTTP auto-instrumentation and
+ * OTLP metric export to Grafana Cloud. Must be loaded before all other
+ * modules via the --import Node.js flag.
+ */
 
-If the requested plan is the same as the current one:
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 
-return stripeService.createBillingPortalSession({
-  customerId,
-  returnUrl: successUrl
-})
+const metricExporter = new OTLPMetricExporter({
+  url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+  headers: {
+    Authorization: process.env.OTEL_EXPORTER_OTLP_AUTHORIZATION,
+  },
+});
 
-3. Modify the `ProcessStripeWebhook` use case.
+const sdk = new NodeSDK({
+  serviceName: process.env.OTEL_SERVICE_NAME ?? 'arvi-backend',
+  metricReader: new PeriodicExportingMetricReader({
+    exporter: metricExporter,
+    exportIntervalMillis: 60_000,
+  }),
+  instrumentations: [
+    getNodeAutoInstrumentations({
+      '@opentelemetry/instrumentation-fs': { enabled: false },
+    }),
+  ],
+});
 
-Handle the event:
+sdk.start();
+```
 
-event.type === "checkout.session.completed"
+Constraints:
+- Do NOT use `require()` — this project uses ES Modules throughout
+- `fs` instrumentation is disabled — it generates excessive noise (every file read becomes a span)
+- Export interval is 60 seconds — do not change this value
+- `OTEL_SERVICE_NAME` defaults to `'arvi-backend'` in code; env var is optional
 
-Read the metadata from the session.
+### 4.3 — `package.json` start script
 
-If:
+Locate the `"start"` script in `package.json`. Replace it so it becomes:
+```json
+"start": "node --import ./03infrastructure/telemetry/telemetry.js server.js"
+```
 
-metadata.action === "plan_change"
+If there is a `"dev"` script, apply the same `--import` prefix to it as well.
 
-then perform the plan update:
+Rationale: ES Modules hoist `import` declarations. Using `--import` guarantees the OTEL SDK is initialized and patches Node.js internals before any module in `server.js` is resolved. Adding `import './telemetry.js'` inside `server.js` would NOT work correctly for this reason.
 
-- retrieve the current subscription
-- update the subscription price
+### 4.4 — Environment variables
 
-Example logic:
+Add these 3 vars to `.env` with placeholder values (no real secrets):
+```
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-eu-central-0.grafana.net/otlp/v1/metrics
+OTEL_EXPORTER_OTLP_AUTHORIZATION=Bearer <instanceId>:<token>
+OTEL_SERVICE_NAME=arvi-backend
+```
 
-stripe.subscriptions.update(
-  metadata.currentSubscriptionId,
-  {
-    items: [{
-      id: existingSubscriptionItemId,
-      price: metadata.targetPriceId
-    }]
-  }
-)
+If `.env.example` exists, add the same vars with identical placeholder values.
 
-Important:
-You must use the existing subscription item id, otherwise Stripe will create a second item.
+---
 
-4. After updating the subscription, update the user plan in the database.
+## 5. NON-GOALS
 
-Example:
+- Do NOT add any `import` or `require` of telemetry inside `server.js`
+- Do NOT create a custom metric (counter, histogram, gauge) anywhere
+- Do NOT configure a trace exporter — the Grafana Cloud endpoint is for metrics only
+- Do NOT add OTEL to the synthetic runners — separate block
+- Do NOT change `exportIntervalMillis` from 60000
+- Do NOT enable `@opentelemetry/instrumentation-fs`
+- Do NOT commit real API keys or tokens
 
-updateUser(userId, {
-  plan: mapPriceIdToPlan(metadata.targetPriceId)
-})
+---
 
-5. Ensure webhook idempotency.
+## 6. DELIVERABLES
 
-Stripe may send the same event multiple times.
+1. `03infrastructure/telemetry/telemetry.js` created with exact content from §4.2
+2. `package.json` start script updated per §4.3
+3. `.env` updated with 3 vars (placeholder values)
+4. 4 npm packages installed and reflected in `package.json` dependencies
 
-Prevent duplicate updates by checking whether the user already has the target plan before executing the update.
+### Verification
 
-6. Add structured logs for debugging.
+Start the server locally with `npm start`. Confirm:
 
-In createCheckoutSession:
+a) Server boots without error
 
-log:
-- userId
-- currentPlan
-- targetPlan
-- stripeSubscriptionId
-- checkoutSessionId
+b) No OTEL crash in console (a warning about missing env vars is acceptable locally if vars are not configured)
 
-In webhook:
-
-log:
-- event.type
-- metadata.action
-- subscriptionId
-- targetPriceId
-- result of updateSubscription
-
-Expected final behavior
------------------------
-
-Upgrade or downgrade flow:
-
-User presses change plan
-        ↓
-createCheckoutSession
-(mode: payment)
-metadata.action = "plan_change"
-        ↓
-Stripe checkout page
-        ↓
-Payment succeeds
-        ↓
-Stripe webhook
-        ↓
-ProcessStripeWebhook reads metadata
-        ↓
-updateSubscription(existing subscription)
-        ↓
-update user plan in DB
-
-Constraints
------------
-
-Do not introduce new external dependencies.
-
-Keep the existing architecture:
-
-- use cases
-- stripeService
-- userRepository
-
-Only adjust the billing logic where required.
-
-Return the full modified code for:
-
-- createCheckoutSession use case
-- ProcessStripeWebhook use case
-- any small changes needed in stripeService
+c) Make one HTTP request to any endpoint and confirm the server responds normally — the OTEL layer must be transparent to existing behavior

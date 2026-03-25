@@ -5,35 +5,21 @@
  * Provides a structured logging adapter wrapping Node.js console for consistent output across the infrastructure layer.
  */
 
+function emit(level, event, data = {}) {
+  const output = { level, event, ts: new Date().toISOString(), ...data };
+  if (level === 'error') {
+    console.error(JSON.stringify(output));
+  } else {
+    console.log(JSON.stringify(output));
+  }
+}
+
 export const logger = {
-  error(message, error) {
-    console.error(`[ERROR] ${message}`);
-    if (error) {
-      console.error(error);
-    }
-  },
+  log(event, data = {}) { emit('info', event, data); },
+  logError(event, data = {}) { emit('error', event, data); },
 
-  success(message, data) {
-    console.log(`[SUCCESS] ${message}`);
-    if (data) {
-      console.log(data);
-    }
-  },
-
-  info(message, data) {
-    console.log(`[INFO] ${message}`);
-    if (data) {
-      console.log(data);
-    }
-  },
-
-  // Structured billing observability — outputs a single JSON line per trace point.
-  // Each record is self-contained: event name + correlation fields + timestamp.
-  log(event, data = {}) {
-    console.log(JSON.stringify({ event, ...data, ts: new Date().toISOString() }));
-  },
-
-  logError(event, data = {}) {
-    console.error(JSON.stringify({ event, ...data, ts: new Date().toISOString() }));
-  },
+  // Backward-compatible wrappers — no new code should use these.
+  info(message, data = {}) { emit('info', 'log', { message, ...data }); },
+  error(message, data = {}) { emit('error', 'log', { message, ...data }); },
+  success(message, data = {}) { emit('info', 'log', { message, ...data }); },
 };

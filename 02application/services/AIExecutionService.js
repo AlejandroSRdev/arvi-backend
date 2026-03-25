@@ -32,20 +32,31 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
     maxTokens = 1500,
     forceJson = false,
     step = null,
+    requestId = undefined,
+    pipeline = undefined,
   } = options;
 
+  const start = Date.now();
   const response = await aiProvider.callAI(userId, messages, {
     model,
     temperature,
     maxTokens,
     forceJson,
   });
+  const duration_ms = Date.now() - start;
 
   if (step) {
-    console.log('[AI_STEP]', {
+    console.log(JSON.stringify({
+      level: 'info',
+      event: 'ai.step',
+      ts: new Date().toISOString(),
+      requestId,
+      userId,
+      pipeline,
       step,
-      timestamp: new Date().toISOString()
-    });
+      model,
+      duration_ms,
+    }));
   }
 
   return {

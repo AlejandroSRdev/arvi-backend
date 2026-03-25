@@ -78,9 +78,7 @@ function validateActionSchema(data) {
  * @returns {Promise<Action>} The created action domain entity
  */
 export async function createAction(userId, seriesId, payload, deps) {
-  console.log(`[USE-CASE] [Action] CreateAction started for user ${userId}, series ${seriesId}`);
-
-  const { userRepository, habitSeriesRepository, aiProvider, planId } = deps;
+  const { userRepository, habitSeriesRepository, aiProvider, planId, requestId = undefined } = deps;
 
   if (!userRepository) {
     throw new ValidationError('Dependency required: userRepository');
@@ -96,162 +94,181 @@ export async function createAction(userId, seriesId, payload, deps) {
     throw new ValidationError('Missing required payload field: language');
   }
 
-  // STEP 1: PRE-AI VALIDATION
-
-  const user = await userRepository.getUser(userId);
-  if (!user) {
-    throw new ValidationError('USER_NOT_FOUND');
-  }
-
-  // planId is null when trial has expired or user has no active subscription
-  if (!planId) {
-    throw new AuthorizationError('No active plan. Access denied.');
-  }
-
-  // Check quota before any further DB calls or AI execution to fail fast
-  const monthlyRemaining = user.limits?.monthlyActionsRemaining ?? 0;
-  if (monthlyRemaining <= 0) {
-    throw new MonthlyActionsQuotaExceededError(user.limits?.monthlyActionsMax ?? 0);
-  }
-
-  const series = await habitSeriesRepository.getHabitSeriesById(userId, seriesId);
-  if (!series) {
-    throw new NotFoundError('Habit series not found');
-  }
-
-  // STEP 2: AI EXECUTION (3 passes)
-
-  const { language } = payload;
-
-  // Difficulty is fully deterministic: cycles low → medium → high → low ...
-  const difficulty = getNextDifficulty(series.actions);
-
-  // Pass 1 — creative: generate free-form human-readable action content
-  const creativeMessages = CreativeActionPrompt({ language, series, difficulty });
-
-  const creativeConfig = getModelConfig('action_creative');
-  const creativeResponse = await generateAIResponse(
-    userId,
-    creativeMessages,
-    {
-      model: creativeConfig.model,
-      temperature: creativeConfig.temperature,
-      maxTokens: creativeConfig.maxTokens,
-      forceJson: false,
-      step: 'creative'
-    },
-    { aiProvider }
-  );
-
-  const rawCreativeText = creativeResponse.content;
-
-  // Pass 2 — structure: extract JSON from creative text
-  const structureMessages = StructureActionPrompt({ language, rawText: rawCreativeText });
-
-  const structureConfig = getModelConfig('action_structure');
-  const structureResponse = await generateAIResponse(
-    userId,
-    structureMessages,
-    {
-      model: structureConfig.model,
-      temperature: structureConfig.temperature,
-      maxTokens: structureConfig.maxTokens,
-      forceJson: true,
-      step: 'structure'
-    },
-    { aiProvider }
-  );
-
-  const rawStructuredText = structureResponse.content;
-
-  // Pass 3 — schema: enforce strict JSON schema compliance
-  const schemaMessages = JsonSchemaHabitSeriesPrompt({
-    content: rawStructuredText,
-    schema: ACTION_SCHEMA
-  });
-
-  const schemaConfig = getModelConfig('json_conversion');
-  const schemaResponse = await generateAIResponse(
-    userId,
-    schemaMessages,
-    {
-      model: schemaConfig.model,
-      temperature: schemaConfig.temperature,
-      maxTokens: schemaConfig.maxTokens,
-      forceJson: true,
-      step: 'schema'
-    },
-    { aiProvider }
-  );
-
-  // STEP 3: POST-AI VALIDATION
-
-  let parsedAction;
-  try {
-    parsedAction = typeof schemaResponse.content === 'string'
-      ? JSON.parse(schemaResponse.content)
-      : schemaResponse.content;
-  } catch (parseError) {
-    throw new ValidationError(`AI output is not valid JSON: ${parseError.message}`);
-  }
-
-  console.log('[SCHEMA] [Action] Validating AI output against schema');
-
-  const schemaValidation = validateActionSchema(parsedAction);
-  if (!schemaValidation.valid) {
-    console.error(`[SCHEMA ERROR] [Action] Schema validation failed: ${schemaValidation.error}`);
-    throw new ValidationError(`AI output schema validation failed: ${schemaValidation.error}`);
-  }
-
-  console.log('[SCHEMA] [Action] Schema validation OK');
-
-  // STEP 4: ATOMIC COMMIT — append action and increment monthly usage in one transaction
-
-  const actionId = `${seriesId}_action_${Date.now()}`;
-
-  const actionData = {
-    id: actionId,
-    name: parsedAction.name,
-    description: parsedAction.description,
-    difficulty: parseDifficulty(parsedAction.difficulty),
-  };
-
-  console.log('[ATOMIC_COMMIT_START]', {
-    userId,
-    seriesId,
-    actionId,
-    timestamp: new Date().toISOString()
-  });
+  const pipelineStart = Date.now();
+  console.log(JSON.stringify({ level: 'info', event: 'pipeline.start', ts: new Date().toISOString(), pipeline: 'action', userId, requestId }));
 
   try {
-    await habitSeriesRepository.atomicCommitActionCreation(
+    // STEP 1: PRE-AI VALIDATION
+
+    const user = await userRepository.getUser(userId);
+    if (!user) {
+      throw new ValidationError('USER_NOT_FOUND');
+    }
+
+    // planId is null when trial has expired or user has no active subscription
+    if (!planId) {
+      throw new AuthorizationError('No active plan. Access denied.');
+    }
+
+    // Check quota before any further DB calls or AI execution to fail fast
+    const monthlyRemaining = user.limits?.monthlyActionsRemaining ?? 0;
+    if (monthlyRemaining <= 0) {
+      throw new MonthlyActionsQuotaExceededError(user.limits?.monthlyActionsMax ?? 0);
+    }
+
+    const series = await habitSeriesRepository.getHabitSeriesById(userId, seriesId);
+    if (!series) {
+      throw new NotFoundError('Habit series not found');
+    }
+
+    // STEP 2: AI EXECUTION (3 passes)
+
+    const { language } = payload;
+
+    // Difficulty is fully deterministic: cycles low → medium → high → low ...
+    const difficulty = getNextDifficulty(series.actions);
+
+    // Pass 1 — creative: generate free-form human-readable action content
+    const creativeMessages = CreativeActionPrompt({ language, series, difficulty });
+
+    const creativeConfig = getModelConfig('action_creative');
+    const creativeResponse = await generateAIResponse(
       userId,
-      seriesId,
-      actionData
+      creativeMessages,
+      {
+        model: creativeConfig.model,
+        temperature: creativeConfig.temperature,
+        maxTokens: creativeConfig.maxTokens,
+        forceJson: false,
+        step: 'creative',
+        requestId,
+        pipeline: 'action',
+      },
+      { aiProvider }
     );
 
-    console.log('[ATOMIC_COMMIT_SUCCESS]', {
+    const rawCreativeText = creativeResponse.content;
+
+    // Pass 2 — structure: extract JSON from creative text
+    const structureMessages = StructureActionPrompt({ language, rawText: rawCreativeText });
+
+    const structureConfig = getModelConfig('action_structure');
+    const structureResponse = await generateAIResponse(
       userId,
-      seriesId,
-      actionId,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('[ATOMIC_COMMIT_FAILURE]', {
-      userId,
-      seriesId,
-      error: error.message,
-      timestamp: new Date().toISOString()
+      structureMessages,
+      {
+        model: structureConfig.model,
+        temperature: structureConfig.temperature,
+        maxTokens: structureConfig.maxTokens,
+        forceJson: true,
+        step: 'structure',
+        requestId,
+        pipeline: 'action',
+      },
+      { aiProvider }
+    );
+
+    const rawStructuredText = structureResponse.content;
+
+    // Pass 3 — schema: enforce strict JSON schema compliance
+    const schemaMessages = JsonSchemaHabitSeriesPrompt({
+      content: rawStructuredText,
+      schema: ACTION_SCHEMA
     });
 
-    throw error;
+    const schemaConfig = getModelConfig('json_conversion');
+    const schemaResponse = await generateAIResponse(
+      userId,
+      schemaMessages,
+      {
+        model: schemaConfig.model,
+        temperature: schemaConfig.temperature,
+        maxTokens: schemaConfig.maxTokens,
+        forceJson: true,
+        step: 'schema',
+        requestId,
+        pipeline: 'action',
+      },
+      { aiProvider }
+    );
+
+    // STEP 3: POST-AI VALIDATION
+
+    let parsedAction;
+    try {
+      parsedAction = typeof schemaResponse.content === 'string'
+        ? JSON.parse(schemaResponse.content)
+        : schemaResponse.content;
+    } catch (parseError) {
+      throw new ValidationError(`AI output is not valid JSON: ${parseError.message}`);
+    }
+
+    const schemaValidation = validateActionSchema(parsedAction);
+    if (!schemaValidation.valid) {
+      throw new ValidationError(`AI output schema validation failed: ${schemaValidation.error}`);
+    }
+
+    // STEP 4: ATOMIC COMMIT — append action and increment monthly usage in one transaction
+
+    const actionId = `${seriesId}_action_${Date.now()}`;
+
+    const actionData = {
+      id: actionId,
+      name: parsedAction.name,
+      description: parsedAction.description,
+      difficulty: parseDifficulty(parsedAction.difficulty),
+    };
+
+    try {
+      await habitSeriesRepository.atomicCommitActionCreation(
+        userId,
+        seriesId,
+        actionData
+      );
+    } catch (error) {
+      throw error;
+    }
+
+    console.log(JSON.stringify({
+      level: 'info',
+      event: 'quota.consumed',
+      ts: new Date().toISOString(),
+      resource: 'monthly_actions',
+      userId,
+      planId,
+      remaining: monthlyRemaining - 1,
+      requestId,
+    }));
+
+    console.log(JSON.stringify({
+      level: 'info',
+      event: 'pipeline.end',
+      ts: new Date().toISOString(),
+      pipeline: 'action',
+      userId,
+      duration_ms: Date.now() - pipelineStart,
+      requestId,
+    }));
+
+    // STEP 5: MAP AND RETURN DOMAIN ENTITY
+
+    const action = Action.create(actionData);
+
+    return action;
+
+  } catch (err) {
+    console.error(JSON.stringify({
+      level: 'error',
+      event: 'pipeline.failure',
+      ts: new Date().toISOString(),
+      pipeline: 'action',
+      userId,
+      errorCode: err.code || err.name,
+      message: err.message,
+      requestId,
+    }));
+    throw err;
   }
-
-  // STEP 5: MAP AND RETURN DOMAIN ENTITY
-
-  const action = Action.create(actionData);
-
-  return action;
 }
 
 export default { createAction };
