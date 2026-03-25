@@ -10,7 +10,7 @@
 import 'dotenv/config';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
-import { PeriodicExportingMetricReader, ExportResultCode } from '@opentelemetry/sdk-metrics';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 
 const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
@@ -39,7 +39,7 @@ class DebugMetricExporter {
     }
 
     this._delegate.export(metrics, (result) => {
-      if (result.code === ExportResultCode.SUCCESS) {
+      if (result.code === 0) { // 0 = ExportResultCode.SUCCESS
         console.log('[OTEL] Export cycle completed: success');
       } else {
         console.error('[OTEL] Export cycle completed: FAILED', result.error?.message ?? 'unknown error');
