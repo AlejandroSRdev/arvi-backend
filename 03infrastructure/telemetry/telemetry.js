@@ -7,20 +7,30 @@
  * modules via the --import Node.js flag.
  */
 
+import 'dotenv/config';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 
+const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+const authorization = process.env.OTEL_EXPORTER_OTLP_HEADERS;
+const serviceName = process.env.OTEL_SERVICE_NAME ?? 'arvi-backend';
+
+console.log('[OTEL] Initializing telemetry...');
+console.log(`[OTEL] service.name   = ${serviceName}`);
+console.log(`[OTEL] endpoint       = ${endpoint ?? '⚠ NOT SET'}`);
+console.log(`[OTEL] authorization  = ${authorization ? 'SET' : '⚠ NOT SET'}`);
+
 const metricExporter = new OTLPMetricExporter({
-  url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+  url: endpoint,
   headers: {
-    Authorization: process.env.OTEL_EXPORTER_OTLP_HEADERS,
+    Authorization: authorization,
   },
 });
 
 const sdk = new NodeSDK({
-  serviceName: process.env.OTEL_SERVICE_NAME ?? 'arvi-backend',
+  serviceName,
   metricReader: new PeriodicExportingMetricReader({
     exporter: metricExporter,
     exportIntervalMillis: 60_000,
@@ -33,3 +43,4 @@ const sdk = new NodeSDK({
 });
 
 sdk.start();
+console.log('[OTEL] SDK started. First export in ~60s.');
