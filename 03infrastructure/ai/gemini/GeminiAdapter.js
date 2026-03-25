@@ -9,6 +9,7 @@ import { IAIProvider } from '../../../01domain/ports/IAIProvider.js';
 import { InfrastructureError } from '../../../errors/infrastructure/InfrastructureError.js';
 import { logger } from '../../logger/Logger.js';
 import { getModel } from './GeminiConfig.js';
+import { aiTokensTotal } from '../../metrics/AppMetrics.js';
 
 /**
  * Heuristic fallback token estimation.
@@ -104,6 +105,7 @@ export class GeminiAdapter extends IAIProvider {
       }
 
       const tokensUsed = totalTokens;
+      aiTokensTotal.add(tokensUsed, { model, provider: 'gemini' });
 
       // ===== DOMAIN ENERGY (unchanged logic) =====
       const energyConsumed = calculateGeminiEnergy(prompt, content);

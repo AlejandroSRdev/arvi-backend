@@ -8,6 +8,7 @@
 
 import { randomUUID } from 'crypto';
 import { logger } from '../../logger/Logger.js';
+import { httpRequestsTotal, httpRequestDurationMs } from '../../metrics/AppMetrics.js';
 
 export function requestLogger(req, res, next) {
   const requestId = randomUUID();
@@ -24,6 +25,9 @@ export function requestLogger(req, res, next) {
       status: res.statusCode,
       duration_ms: Date.now() - start,
     });
+    const route = (req.baseUrl ?? '') + (req.route?.path ?? 'unmatched');
+    httpRequestsTotal.add(1, { method: req.method, route, status: String(res.statusCode) });
+    httpRequestDurationMs.record(Date.now() - start, { method: req.method, route });
   });
 
   next();

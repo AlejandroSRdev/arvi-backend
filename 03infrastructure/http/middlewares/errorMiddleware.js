@@ -8,6 +8,7 @@
 import { BaseError } from '../../../errors/base/BaseError.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { logger } from '../../logger/Logger.js';
+import { httpErrorsTotal } from '../../metrics/AppMetrics.js';
 
 /**
  * Must have 4 parameters for Express to recognize it as an error-handling middleware.
@@ -34,6 +35,8 @@ export function errorMiddleware(err, req, res, next) {
       ...(err.cause && { cause: String(err.cause) }),
     });
 
+    const route = (req.baseUrl ?? '') + (req.route?.path ?? 'unmatched');
+    httpErrorsTotal.add(1, { method: req.method, route, status: String(httpError.status) });
     return res.status(httpError.status).json(httpError.body);
   }
 
@@ -47,6 +50,8 @@ export function errorMiddleware(err, req, res, next) {
     stack: err?.stack,
   });
 
+  const route = (req.baseUrl ?? '') + (req.route?.path ?? 'unmatched');
+  httpErrorsTotal.add(1, { method: req.method, route, status: '500' });
   return res.status(500).json({
     error: 'INTERNAL_SERVER_ERROR',
     message: 'Unexpected error occurred',
