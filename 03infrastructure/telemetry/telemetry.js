@@ -28,7 +28,7 @@ class DebugMetricExporter {
   }
 
   export(metrics, resultCallback) {
-    for (const scopeMetrics of metrics.resourceMetrics.scopeMetrics) {
+    for (const scopeMetrics of metrics.scopeMetrics) {
       for (const metric of scopeMetrics.metrics) {
         const points = metric.dataPoints.map((dp) => {
           const value = dp.value?.sum ?? dp.value ?? 0;
