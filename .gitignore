@@ -40,3 +40,5 @@ coverage/
 
 # vs code settings
 .vscode/
+
+synthetic/users.js
