@@ -1,4 +1,5 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
+dotenv.config({ path: new URL('.env.synthetic', import.meta.url).pathname })
 import { CONFIG } from './config.js'
 import { scenarioA, scenarioB, scenarioC } from './scenarios.js'
 import { request } from './http.js'
