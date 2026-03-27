@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
-dotenv.config({ path: new URL('../.env', import.meta.url).pathname })
-dotenv.config({ path: new URL('.env.synthetic', import.meta.url).pathname })
+import { fileURLToPath } from 'node:url'
+dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)) })
+dotenv.config({ path: fileURLToPath(new URL('.env.synthetic', import.meta.url)) })
 import admin from 'firebase-admin'
 import { scrypt, randomBytes, randomUUID } from 'node:crypto'
 
