@@ -16,32 +16,8 @@ import {
 
 import CreativeHabitSeriesPrompt from '../prompts/habit_series_prompts/CreativeHabitSeriesPrompt.js';
 import StructureHabitSeriesPrompt from '../prompts/habit_series_prompts/StructureHabitSeriesPrompt.js';
-import JsonSchemaHabitSeriesPrompt from '../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
 import { mapAIOutputToHabitSeries } from '../mappers/HabitSeriesFromAIMapper.js';
 import { sanitizeUserInput } from '../input/SanitizeUserInput.js';
-
-const HABIT_SERIES_SCHEMA = {
-  type: 'object',
-  required: ['title', 'description', 'actions'],
-  properties: {
-    title: { type: 'string' },
-    description: { type: 'string' },
-    actions: {
-      type: 'array',
-      minItems: 3,
-      maxItems: 5,
-      items: {
-        type: 'object',
-        required: ['name', 'description', 'difficulty'],
-        properties: {
-          name: { type: 'string' },
-          description: { type: 'string' },
-          difficulty: { type: 'string' }
-        }
-      }
-    }
-  }
-};
 
 function validateSchema(data) {
   if (!data || typeof data !== 'object') {
@@ -75,8 +51,8 @@ function validateSchema(data) {
     if (typeof action.description !== 'string' || !action.description.trim()) {
       return { valid: false, error: `actions[${i}].description is missing or invalid` };
     }
-    if (typeof action.difficulty !== 'string' || !action.difficulty.trim()) {
-      return { valid: false, error: `actions[${i}].difficulty is missing or invalid` };
+    if (!['low', 'medium', 'high'].includes(action.difficulty)) {
+      return { valid: false, error: `actions[${i}].difficulty must be one of: low, medium, high` };
     }
   }
 
@@ -195,37 +171,13 @@ export async function createHabitSeries(userId, payload, deps) {
       { aiProvider }
     );
 
-    const rawStructuredText = structureResponse.content;
-
-    // Pass 3 — schema: enforce strict JSON schema compliance
-    const schemaMessages = JsonSchemaHabitSeriesPrompt({
-      content: rawStructuredText,
-      schema: HABIT_SERIES_SCHEMA
-    });
-
-    const schemaConfig = getModelConfig('json_conversion');
-    const schemaResponse = await generateAIResponse(
-      userId,
-      schemaMessages,
-      {
-        model: schemaConfig.model,
-        temperature: schemaConfig.temperature,
-        maxTokens: schemaConfig.maxTokens,
-        forceJson: true,
-        step: 'schema',
-        requestId,
-        pipeline: 'habit_series',
-      },
-      { aiProvider }
-    );
-
     // STEP 3: POST-AI VALIDATION
 
     let parsedSeries;
     try {
-      parsedSeries = typeof schemaResponse.content === 'string'
-        ? JSON.parse(schemaResponse.content)
-        : schemaResponse.content;
+      parsedSeries = typeof structureResponse.content === 'string'
+        ? JSON.parse(structureResponse.content)
+        : structureResponse.content;
     } catch (parseError) {
       throw new ValidationError(`AI output is not valid JSON: ${parseError.message}`);
     }

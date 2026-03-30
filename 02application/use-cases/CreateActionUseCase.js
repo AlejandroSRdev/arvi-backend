@@ -16,7 +16,6 @@ import {
 
 import CreativeActionPrompt from '../prompts/action_prompts/CreativeActionPrompt.js';
 import StructureActionPrompt from '../prompts/action_prompts/StructureActionPrompt.js';
-import JsonSchemaHabitSeriesPrompt from '../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
 import { Action } from '../../01domain/value_objects/habits/Action.js';
 import { parseDifficulty } from '../../01domain/value_objects/habits/Difficulty.js';
 
@@ -33,16 +32,6 @@ function getNextDifficulty(actions) {
 
   return "medium";
 }
-
-const ACTION_SCHEMA = {
-  type: 'object',
-  required: ['name', 'description', 'difficulty'],
-  properties: {
-    name: { type: 'string' },
-    description: { type: 'string' },
-    difficulty: { type: 'string', enum: VALID_DIFFICULTIES },
-  }
-};
 
 function validateActionSchema(data) {
   if (!data || typeof data !== 'object') {
@@ -168,37 +157,13 @@ export async function createAction(userId, seriesId, payload, deps) {
       { aiProvider }
     );
 
-    const rawStructuredText = structureResponse.content;
-
-    // Pass 3 — schema: enforce strict JSON schema compliance
-    const schemaMessages = JsonSchemaHabitSeriesPrompt({
-      content: rawStructuredText,
-      schema: ACTION_SCHEMA
-    });
-
-    const schemaConfig = getModelConfig('json_conversion');
-    const schemaResponse = await generateAIResponse(
-      userId,
-      schemaMessages,
-      {
-        model: schemaConfig.model,
-        temperature: schemaConfig.temperature,
-        maxTokens: schemaConfig.maxTokens,
-        forceJson: true,
-        step: 'schema',
-        requestId,
-        pipeline: 'action',
-      },
-      { aiProvider }
-    );
-
     // STEP 3: POST-AI VALIDATION
 
     let parsedAction;
     try {
-      parsedAction = typeof schemaResponse.content === 'string'
-        ? JSON.parse(schemaResponse.content)
-        : schemaResponse.content;
+      parsedAction = typeof structureResponse.content === 'string'
+        ? JSON.parse(structureResponse.content)
+        : structureResponse.content;
     } catch (parseError) {
       throw new ValidationError(`AI output is not valid JSON: ${parseError.message}`);
     }
