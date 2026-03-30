@@ -10,7 +10,6 @@
  * - gemini-2.0-flash: fast responses, plain text, low token budget
  * - gemini-2.5-flash: standard analysis, moderate creativity
  * - gemini-2.5-pro: complex reasoning, deep analysis
- * - gpt-4o-mini: strict JSON conversion, structure validation
  */
 export const MODEL_MAPPING = {
  
@@ -43,14 +42,6 @@ export const MODEL_MAPPING = {
     description: 'Create habit action - STRUCTURING PASS'
   },
 
-  // JSON conversion — always uses gpt-4o-mini for strict structural fidelity
-  'json_conversion': {
-    model: 'gpt-4o-mini',
-    temperature: 0.0,
-    maxTokens: 700,
-    forceJson: true,
-    description: 'Strict conversion from free text to structured JSON'
-  },
 };
 
 export function getModelConfig(functionType) {
