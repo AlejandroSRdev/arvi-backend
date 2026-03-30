@@ -150,7 +150,7 @@ export async function createAction(userId, seriesId, payload, deps) {
     const rawCreativeText = creativeResponse.content;
 
     // Pass 2 — structure: extract JSON from creative text
-    const structureMessages = StructureActionPrompt({ language, rawText: rawCreativeText });
+    const structureMessages = StructureActionPrompt({ language, rawText: rawCreativeText, difficulty });
 
     const structureConfig = getModelConfig('action_structure');
     const structureResponse = await generateAIResponse(

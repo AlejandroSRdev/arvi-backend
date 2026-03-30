@@ -56,6 +56,9 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
       step,
       model,
       duration_ms,
+      raw_output: typeof response.content === 'string'
+        ? response.content
+        : JSON.stringify(response.content),
     }));
   }
 

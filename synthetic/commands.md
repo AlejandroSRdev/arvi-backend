@@ -1,4 +1,4 @@
-● # 1. Crear usuarios PRO en Firestore
+# 1. Crear usuarios PRO en Firestore
   node synthetic/seed.js
 
   # 2. Phase 1 — 2 usuarios concurrentes
