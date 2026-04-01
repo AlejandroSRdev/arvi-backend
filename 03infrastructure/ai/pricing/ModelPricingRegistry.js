@@ -10,8 +10,13 @@
 
 import { logger } from '../../logger/Logger.js';
 
-const PRICING_REGISTRY = { 
+const PRICING_REGISTRY = {
   'gpt-4o-mini': {
+    inputPerMillion:  0.15,
+    outputPerMillion: 0.60,
+    provider: 'openai',
+  },
+  'gpt-4o-mini-2024-07-18': {
     inputPerMillion:  0.15,
     outputPerMillion: 0.60,
     provider: 'openai',

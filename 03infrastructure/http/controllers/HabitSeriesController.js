@@ -100,6 +100,7 @@ export async function createHabitSeriesEndpoint(req, res, next) {
     // Invoke use-case
     const aiStart = Date.now();
     let habitSeries;
+    let pipelineCostUsd;
     try {
       const result = await createHabitSeries(userId, payload, {
         planId: req.plan,
@@ -109,10 +110,11 @@ export async function createHabitSeriesEndpoint(req, res, next) {
         requestId,
       });
       habitSeries = result.habitSeries;
-      aiRequestsTotal.add(1,                          { feature: 'createHabitSeries', pipeline: 'habit_series' });
-      aiLatencyMs.record(Date.now() - aiStart,        { feature: 'createHabitSeries', pipeline: 'habit_series' });
-      aiCostUsd.record(result.pipelineCostUsd,        { feature: 'createHabitSeries', pipeline: 'habit_series' });
-      aiCostTotalUsd.add(result.pipelineCostUsd,      { feature: 'createHabitSeries', pipeline: 'habit_series' });
+      pipelineCostUsd = result.pipelineCostUsd;
+      aiRequestsTotal.add(1,                     { feature: 'createHabitSeries', pipeline: 'habit_series' });
+      aiLatencyMs.record(Date.now() - aiStart,   { feature: 'createHabitSeries', pipeline: 'habit_series' });
+      aiCostUsd.record(pipelineCostUsd,          { feature: 'createHabitSeries', pipeline: 'habit_series' });
+      aiCostTotalUsd.add(pipelineCostUsd,        { feature: 'createHabitSeries', pipeline: 'habit_series' });
     } catch (aiErr) {
       aiErrorsTotal.add(1, { feature: 'createHabitSeries', error_type: aiErr.code ?? aiErr.name ?? 'UNKNOWN' });
       throw aiErr;
@@ -122,7 +124,7 @@ export async function createHabitSeriesEndpoint(req, res, next) {
 
     return res.status(HTTP_STATUS.CREATED).json({
       ...responseDTO,
-      _meta: { cost_usd: result.pipelineCostUsd },
+      _meta: { cost_usd: pipelineCostUsd },
     });
 
   } catch (err) {
