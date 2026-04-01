@@ -1,240 +1,271 @@
-IMPLEMENTATION PROMPT
+# IMPLEMENTATION PROMPT — Load Experiment Analysis (Python scatter plots)
 
 ---
 
 ## 1. PURPOSE
 
-Eliminate the redundant `schema` third pass from both AI pipelines (`habit_series` and `action`).
-
-The schema pass performs a second LLM call on already-structured JSON without adding meaningful correction. It introduces ~5s of latency, unnecessary token cost, and an additional failure point. Backend deterministic validation already exists and is the real guard. This change makes `structure` the terminal LLM step in both pipelines.
+Implement a Python analysis script that consumes the NDJSON output of `runner-experiment.js`
+and produces three scatter plot images showing the real per-request distribution of latency
+and cost across the three experiment batches (batch_10, batch_50, batch_100).
 
 ---
 
 ## 2. SCOPE
 
-**INCLUDED:**
-- Remove Pass 3 (schema) from `CreateHabitSeriesUseCase.js`
-- Remove Pass 3 (schema) from `CreateActionUseCase.js`
-- Strengthen difficulty enum validation in `validateSchema()` in `CreateHabitSeriesUseCase.js`
-- Delete `JsonSchemaHabitSeriesPrompt.js` (no longer consumed)
-- Remove `json_conversion` entry from `ModelSelectionPolicy.js` (no longer consumed)
+### INCLUDED
 
-**EXCLUDED:**
-- Any change to `CreativeHabitSeriesPrompt.js` or `CreativeActionPrompt.js`
-- Any change to `StructureHabitSeriesPrompt.js` or `StructureActionPrompt.js`
-- Any change to `AIExecutionService.js`
-- Any change to error classes or error mapper
-- Any change to repository methods or persistence logic
-- Any refactor of logic not directly related to the schema pass removal
-- Any modification to `.docs/` files
+- Create `synthetic/analysis/requirements.txt`
+- Create `synthetic/analysis/analyze.py`
+
+### EXCLUDED
+
+- No changes to the runner (`runner-experiment.js`)
+- No changes to any backend file
+- No interactive dashboards or HTML output
+- No statistical tests or aggregated metrics computation beyond what is needed for the plots
+- No seaborn, plotly, or any library beyond pandas and matplotlib
 
 ---
 
 ## 3. FILES
 
-**Modify:**
-- `02application/use-cases/CreateHabitSeriesUseCase.js`
-- `02application/use-cases/CreateActionUseCase.js`
-- `01domain/policies/ModelSelectionPolicy.js`
+### Files to create
 
-**Delete:**
-- `02application/prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js`
+```
+synthetic/analysis/requirements.txt
+synthetic/analysis/analyze.py
+```
+
+The script creates `synthetic/analysis/output/` at runtime if it does not exist.
 
 ---
 
 ## 4. REQUIREMENTS
 
-### 4.1 — `CreateHabitSeriesUseCase.js`
+### 4.1 — synthetic/analysis/requirements.txt
 
-**A) Remove import:**
-```js
-import JsonSchemaHabitSeriesPrompt from '../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
+```
+pandas
+matplotlib
 ```
 
-**B) Remove the `HABIT_SERIES_SCHEMA` constant** (the entire object declared at the top of the file). It is only used to construct the schema pass prompt.
+No version pins. No other dependencies.
 
-**C) Fix difficulty validation in `validateSchema()`.**
+---
 
-Current check for each action's difficulty:
-```js
-if (typeof action.difficulty !== 'string' || !action.difficulty.trim()) {
-  return { valid: false, error: `actions[${i}].difficulty is missing or invalid` };
+### 4.2 — synthetic/analysis/analyze.py
+
+#### Invocation
+
+```bash
+python synthetic/analysis/analyze.py <path_to_ndjson>
+```
+
+`<path_to_ndjson>` is a required positional argument. If omitted, print usage and exit with
+code 1.
+
+#### Input parsing
+
+- Read the file line by line
+- Parse each line as JSON
+- Keep only lines where `event == "request.result"`
+- Discard all other lines silently
+
+Each kept record has these fields (as emitted by the runner):
+
+```
+batch_id          str   "batch_10" | "batch_50" | "batch_100"
+concurrency_level int   10 | 50 | 100
+request_index     int   position within batch, 0-based
+ts                str   ISO timestamp
+status            str   "success" | "failure"
+http_status       int
+latency_ms        int   wall-clock duration in ms
+cost_usd          float | null
+error_code        str | null
+```
+
+#### DataFrame construction
+
+Build a DataFrame with exactly these columns after parsing:
+
+```
+batch_id, latency_ms, cost_usd, status
+```
+
+`cost_usd` may be null for failed requests — keep the null (NaN in pandas).
+
+#### Batch ordering
+
+Define a fixed order for batches used consistently across all plots:
+
+```python
+BATCH_ORDER = ['batch_10', 'batch_50', 'batch_100']
+```
+
+This order determines the left-to-right position of columns in the scatter plots
+and the legend order.
+
+#### Color palette
+
+Define a fixed color map for batches:
+
+```python
+COLORS = {
+  'batch_10':  '#4C72B0',
+  'batch_50':  '#DD8452',
+  'batch_100': '#55A868',
 }
 ```
 
-Replace with enum validation:
-```js
-if (!['low', 'medium', 'high'].includes(action.difficulty)) {
-  return { valid: false, error: `actions[${i}].difficulty must be one of: low, medium, high` };
-}
+#### Jitter
+
+Each batch is plotted as a vertical column of points on a categorical X axis.
+To prevent point overlap, add random horizontal noise to each point:
+
+```python
+import numpy as np
+rng = np.random.default_rng(seed=42)
 ```
 
-**D) Remove Pass 3 — schema block entirely:**
-
-Remove these lines (the full Pass 3 block including its comment):
-```js
-// Pass 3 — schema: enforce strict JSON schema compliance
-const schemaMessages = JsonSchemaHabitSeriesPrompt({
-  content: rawStructuredText,
-  schema: HABIT_SERIES_SCHEMA
-});
-
-const schemaConfig = getModelConfig('json_conversion');
-const schemaResponse = await generateAIResponse(
-  userId,
-  schemaMessages,
-  {
-    model: schemaConfig.model,
-    temperature: schemaConfig.temperature,
-    maxTokens: schemaConfig.maxTokens,
-    forceJson: true,
-    step: 'schema',
-    requestId,
-    pipeline: 'habit_series',
-  },
-  { aiProvider }
-);
+For each batch column, generate jitter offsets:
+```python
+jitter = rng.uniform(-0.2, 0.2, size=len(batch_df))
 ```
 
-**E) Update post-AI parse to consume `structureResponse` directly.**
+The X position for a batch at index `i` in `BATCH_ORDER` is `i + jitter`.
 
-Current:
-```js
-parsedSeries = typeof schemaResponse.content === 'string'
-  ? JSON.parse(schemaResponse.content)
-  : schemaResponse.content;
-```
-
-Replace with:
-```js
-parsedSeries = typeof structureResponse.content === 'string'
-  ? JSON.parse(structureResponse.content)
-  : structureResponse.content;
-```
-
-**F) Remove the now-unused variable `rawStructuredText`** (was only used to construct the schema pass input).
+Use a fixed seed so the layout is reproducible across runs.
 
 ---
 
-### 4.2 — `CreateActionUseCase.js`
+#### Figure 1 — latency_scatter.png
 
-**A) Remove import:**
-```js
-import JsonSchemaHabitSeriesPrompt from '../prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js';
-```
+File: `synthetic/analysis/output/latency_scatter.png`
 
-**B) Remove the `ACTION_SCHEMA` constant** (the entire object). It is only used to construct the schema pass prompt.
+- One scatter plot
+- X axis: batch categories (categorical with jitter as described above)
+  - X tick positions: `[0, 1, 2]`
+  - X tick labels: `['batch_10', 'batch_50', 'batch_100']`
+- Y axis: `latency_ms`
+- Points colored by batch using `COLORS`
+- Successful requests: `marker='o'`, `alpha=0.6`, `s=30`
+- Failed requests: `marker='X'`, `alpha=0.9`, `s=60`, same color as batch, `edgecolors='red'`, `linewidths=1.2`
 
-**C) Remove Pass 3 — schema block entirely:**
+**Y axis cap:**
+- Compute `p99 = df['latency_ms'].quantile(0.99)`
+- Set `ylim = (0, p99 * 1.2)`
+- For any point above `ylim`, do NOT move the point — matplotlib will clip it.
+  Instead, after plotting, annotate the count of clipped points per batch in the plot title
+  or as a text note below the title. Format: `"N points above y-axis cap not shown"` only
+  if there are clipped points; omit the note otherwise.
 
-Remove these lines (the full Pass 3 block including its comment):
-```js
-// Pass 3 — schema: enforce strict JSON schema compliance
-const schemaMessages = JsonSchemaHabitSeriesPrompt({
-  content: rawStructuredText,
-  schema: ACTION_SCHEMA
-});
+Title: `Latency per request by batch`
+Y label: `latency (ms)`
+X label: omit (batch names on ticks are sufficient)
+Legend: one entry per batch, success markers only. Add a separate legend entry for failure
+markers using `marker='X'`, color gray, label `'failure'` — only if there are failures in
+the dataset.
 
-const schemaConfig = getModelConfig('json_conversion');
-const schemaResponse = await generateAIResponse(
-  userId,
-  schemaMessages,
-  {
-    model: schemaConfig.model,
-    temperature: schemaConfig.temperature,
-    maxTokens: schemaConfig.maxTokens,
-    forceJson: true,
-    step: 'schema',
-    requestId,
-    pipeline: 'action',
-  },
-  { aiProvider }
-);
-```
-
-**D) Update post-AI parse to consume `structureResponse` directly.**
-
-Current:
-```js
-parsedAction = typeof schemaResponse.content === 'string'
-  ? JSON.parse(schemaResponse.content)
-  : schemaResponse.content;
-```
-
-Replace with:
-```js
-parsedAction = typeof structureResponse.content === 'string'
-  ? JSON.parse(structureResponse.content)
-  : structureResponse.content;
-```
-
-**E) Remove the now-unused variable `rawStructuredText`** (was only used to construct the schema pass input).
-
-Note: `validateActionSchema()` already performs enum validation for `difficulty` (`!VALID_DIFFICULTIES.includes(data.difficulty)`). No changes needed there.
-
-Note: `parseDifficulty` import and its usage in `actionData` construction remain untouched.
+Figure size: `(10, 6)`, dpi=150.
 
 ---
 
-### 4.3 — `ModelSelectionPolicy.js`
+#### Figure 2 — cost_scatter.png
 
-**A) Remove the `json_conversion` entry from `MODEL_MAPPING`:**
+File: `synthetic/analysis/output/cost_scatter.png`
 
-Remove:
-```js
-// JSON conversion — always uses gpt-4o-mini for strict structural fidelity
-'json_conversion': {
-  model: 'gpt-4o-mini',
-  temperature: 0.0,
-  maxTokens: 700,
-  forceJson: true,
-  description: 'Strict conversion from free text to structured JSON'
-},
-```
+- Same X axis structure and jitter as Figure 1 (use the same `rng` state — do NOT reinitialize)
+- Y axis: `cost_usd`
+- Only plot rows where `cost_usd` is not null (i.e., successful requests with a recorded cost)
+- Y axis: linear scale, no cap (costs are expected to be stable)
+- `ylim` bottom: 0
+- Points: `marker='o'`, `alpha=0.6`, `s=30`, colored by batch
 
-**B) Remove the comment in the model selection criteria block** that references `gpt-4o-mini` for JSON conversion:
-```js
-// - gpt-4o-mini: strict JSON conversion, structure validation
-```
+Title: `Cost per request by batch`
+If any requests were excluded due to null `cost_usd`, append to title:
+`(N requests with null cost excluded)`
 
-Note: `gpt-4o-mini` is still used by `habit_series_structure` and `action_structure`. Only the `json_conversion` entry and its associated comment are removed.
+Y label: `cost (USD)`
+Legend: one entry per batch.
+Figure size: `(10, 6)`, dpi=150.
 
 ---
 
-### 4.4 — Delete `JsonSchemaHabitSeriesPrompt.js`
+#### Figure 3 — cost_vs_latency.png
 
-Delete the file at:
+File: `synthetic/analysis/output/cost_vs_latency.png`
+
+- Only successful requests with non-null `cost_usd`
+- X axis: `latency_ms`
+- Y axis: `cost_usd`
+- Color: by batch using `COLORS`
+- Markers: `marker='o'`, `alpha=0.5`, `s=30`
+- No jitter (both axes are continuous)
+
+Title: `Cost vs Latency per request`
+X label: `latency (ms)`
+Y label: `cost (USD)`
+Legend: one entry per batch.
+Figure size: `(10, 6)`, dpi=150.
+
+---
+
+#### stdout summary
+
+After saving all figures, print to stdout:
+
 ```
-02application/prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js
+=== Experiment summary ===
+Total requests: N
+  batch_10  : N total, N success, N failure
+  batch_50  : N total, N success, N failure
+  batch_100 : N total, N success, N failure
+
+Figures saved to: synthetic/analysis/output/
+  latency_scatter.png
+  cost_scatter.png
+  cost_vs_latency.png
 ```
 
-Confirm no other file imports it before deleting.
+---
+
+#### Output directory
+
+Create `synthetic/analysis/output/` if it does not exist before saving any file:
+
+```python
+from pathlib import Path
+output_dir = Path(__file__).parent / 'output'
+output_dir.mkdir(exist_ok=True)
+```
 
 ---
 
 ## 5. NON-GOALS
 
-- Do NOT modify any prompt files (`CreativeHabitSeriesPrompt`, `StructureHabitSeriesPrompt`, `CreativeActionPrompt`, `StructureActionPrompt`)
-- Do NOT add retry logic
-- Do NOT add new error classes
-- Do NOT change the `validateActionSchema()` function beyond what is explicitly stated (i.e., no changes needed there)
-- Do NOT remove `parseDifficulty` from `CreateActionUseCase.js`
-- Do NOT remove the `getModelConfig` import from either use case (still used for creative and structure passes)
-- Do NOT add comments, JSDoc, or inline documentation
-- Do NOT refactor any logic not directly related to the schema pass
+- Do NOT compute p50, p95, or any aggregated statistics beyond what is needed to set the
+  Y axis cap in Figure 1
+- Do NOT produce any interactive output (no plt.show())
+- Do NOT add command-line flags beyond the positional NDJSON path argument
+- Do NOT handle multiple input files
+- Do NOT add logging or verbose output beyond the summary printed at the end
 
 ---
 
 ## 6. DELIVERABLES
 
-1. Modified `02application/use-cases/CreateHabitSeriesUseCase.js`
-2. Modified `02application/use-cases/CreateActionUseCase.js`
-3. Modified `01domain/policies/ModelSelectionPolicy.js`
-4. Deleted `02application/prompts/habit_series_prompts/JsonSchemaHabitSeriesPrompt.js`
+1. `synthetic/analysis/requirements.txt` — created
+2. `synthetic/analysis/analyze.py` — created
 
-**Verification steps after implementation:**
+**Verification:**
 
-- Confirm no file imports `JsonSchemaHabitSeriesPrompt` anywhere in the codebase
-- Confirm no file calls `getModelConfig('json_conversion')` anywhere in the codebase
-- Confirm `ai.step` logs in both pipelines show only two steps: `creative` and `structure`
-- Confirm `pipeline.end` `duration_ms` reflects the reduced latency
+- `python synthetic/analysis/analyze.py` (no args) exits with code 1 and prints usage
+- `python synthetic/analysis/analyze.py experiment_results.ndjson` produces three `.png`
+  files in `synthetic/analysis/output/`
+- Each figure has the correct title, axis labels, and legend
+- Points are colored by batch using the defined palette
+- Failed requests appear as `X` markers in Figure 1
+- Figure 3 contains only successful requests with non-null cost
+- The jitter is reproducible (fixed seed=42): running the script twice on the same input
+  produces identical images

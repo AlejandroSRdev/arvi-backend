@@ -972,5 +972,5 @@ No dispersion.
 No creativity beyond the task.
 Only controlled engineering output.
 
-
+Lee .claude/prompts/context.md y procedamos con el protocolo. 
   
