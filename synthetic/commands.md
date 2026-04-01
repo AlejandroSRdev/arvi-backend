@@ -15,7 +15,7 @@
   # 5. Crear 100 usuarios PRO en Firestore (si no existen)
   node synthetic/seed.js
 
-  # 6. Ejecutar el experimento de carga (batches 10 / 50 / 100)
+  # 6. Ejecutar el experimento de carga (batches)
   node synthetic/runner-experiment.js 2>experiment.log > experiment_results.ndjson
 
   # 7. Instalar dependencias del análisis (solo la primera vez)

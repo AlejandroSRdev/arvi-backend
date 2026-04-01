@@ -12,7 +12,7 @@ try {
   process.exit(1)
 }
 
-const CONCURRENCY_LEVELS = [10, 50, 100]
+const CONCURRENCY_LEVELS = [5, 10, 20]
 
 const BATCHES = CONCURRENCY_LEVELS.map((level, i) => ({
   batchId: `batch_${i + 1}`,
@@ -51,7 +51,11 @@ async function loginAll(users) {
       if (result.ok) {
         authenticated.push({ email, token: result.body.token })
       } else {
-        console.error(`[EXPERIMENT] Login failed for ${email}: status=${result.status}`)
+        if (result.status === 0) {
+          console.error(`[EXPERIMENT] Login failed for ${email}: NETWORK_ERROR errorCode=${result.errorCode} errorMessage=${result.errorMessage}`)
+        } else {
+          console.error(`[EXPERIMENT] Login failed for ${email}: status=${result.status} body=${JSON.stringify(result.body)}`)
+        }
       }
     } catch (err) {
       console.error(`[EXPERIMENT] Login error for ${email}:`, err.message)
@@ -101,7 +105,7 @@ async function executeRequest(user, batchId, concurrencyLevel, requestIndex) {
     http_status: result.status,
     latency_ms: result.durationMs,
     cost_usd: result.body?._meta?.cost_usd ?? null,
-    error_code: result.ok ? null : (result.body?.error ?? `HTTP_${result.status}`),
+    error_code: result.ok ? null : (result.status === 0 ? result.errorCode : (result.body?.error ?? `HTTP_${result.status}`)),
   })
 }
 
@@ -121,6 +125,7 @@ async function main() {
     process.exit(1)
   }
 
+  console.error(`[EXPERIMENT] Base URL: ${process.env.SYNTHETIC_BASE_URL || 'http://localhost:3000'}`)
   console.error(`[EXPERIMENT] Logging in ${MAX_CONCURRENCY} users...`)
   const authenticated = await loginAll(TEST_USERS.slice(0, MAX_CONCURRENCY))
 
@@ -133,7 +138,11 @@ async function main() {
   console.error('[EXPERIMENT] Warm-up request...')
   const warmup = await request('POST', '/api/habits/series', authenticated[0].token, SERIES_PAYLOAD)
   if (!warmup.ok) {
-    console.error(`ERROR: Warm-up failed. status=${warmup.status} body=${JSON.stringify(warmup.body)}`)
+    if (warmup.status === 0) {
+      console.error(`ERROR: Warm-up failed. NETWORK_ERROR errorCode=${warmup.errorCode} errorMessage=${warmup.errorMessage}`)
+    } else {
+      console.error(`ERROR: Warm-up failed. status=${warmup.status} body=${JSON.stringify(warmup.body)}`)
+    }
     process.exit(1)
   }
   console.error('[EXPERIMENT] Warm-up OK')

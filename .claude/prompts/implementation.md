@@ -1,271 +1,204 @@
-# IMPLEMENTATION PROMPT — Load Experiment Analysis (Python scatter plots)
+# IMPLEMENTATION PROMPT — Observabilidad del runner de experimento
 
 ---
 
 ## 1. PURPOSE
 
-Implement a Python analysis script that consumes the NDJSON output of `runner-experiment.js`
-and produces three scatter plot images showing the real per-request distribution of latency
-and cost across the three experiment batches (batch_10, batch_50, batch_100).
+Mejorar la observabilidad del runner de carga (`synthetic/runner-experiment.js`) y su cliente HTTP (`synthetic/http.js`) para que todos los puntos de fallo emitan información diagnóstica precisa en stderr.
+
+**Problema a resolver:** actualmente el sistema aborta en múltiples puntos sin exponer la causa real del fallo. Errores de red, logins fallidos por credenciales incorrectas, y logins fallidos por conexión son indistinguibles. El diagnóstico post-ejecución es imposible.
 
 ---
 
 ## 2. SCOPE
 
-### INCLUDED
+**INCLUIDO:**
+- `synthetic/http.js` — exponer tipo y mensaje de error de red en el objeto de retorno
+- `synthetic/runner-experiment.js` — añadir logs diagnósticos en todos los puntos de fallo y corte
 
-- Create `synthetic/analysis/requirements.txt`
-- Create `synthetic/analysis/analyze.py`
-
-### EXCLUDED
-
-- No changes to the runner (`runner-experiment.js`)
-- No changes to any backend file
-- No interactive dashboards or HTML output
-- No statistical tests or aggregated metrics computation beyond what is needed for the plots
-- No seaborn, plotly, or any library beyond pandas and matplotlib
+**EXCLUIDO:**
+- Cambios en lógica de negocio del runner (secuencia, concurrencia, batches, payloads, timeouts)
+- Cambios en `synthetic/seed.js`, `synthetic/config.js`, `synthetic/scenarios.js`
+- Cambios en cualquier archivo de backend
+- Refactors de estructura, nombres o flujo general del runner
+- Creación de archivos nuevos
 
 ---
 
 ## 3. FILES
 
-### Files to create
+Modificar únicamente:
 
-```
-synthetic/analysis/requirements.txt
-synthetic/analysis/analyze.py
-```
-
-The script creates `synthetic/analysis/output/` at runtime if it does not exist.
+- `synthetic/http.js`
+- `synthetic/runner-experiment.js`
 
 ---
 
 ## 4. REQUIREMENTS
 
-### 4.1 — synthetic/analysis/requirements.txt
+### 4.1 `synthetic/http.js`
 
-```
-pandas
-matplotlib
-```
+**Cambio requerido:** el bloque `catch` debe incluir el error de red en el objeto de retorno en lugar de descartarlo.
 
-No version pins. No other dependencies.
-
----
-
-### 4.2 — synthetic/analysis/analyze.py
-
-#### Invocation
-
-```bash
-python synthetic/analysis/analyze.py <path_to_ndjson>
-```
-
-`<path_to_ndjson>` is a required positional argument. If omitted, print usage and exit with
-code 1.
-
-#### Input parsing
-
-- Read the file line by line
-- Parse each line as JSON
-- Keep only lines where `event == "request.result"`
-- Discard all other lines silently
-
-Each kept record has these fields (as emitted by the runner):
-
-```
-batch_id          str   "batch_10" | "batch_50" | "batch_100"
-concurrency_level int   10 | 50 | 100
-request_index     int   position within batch, 0-based
-ts                str   ISO timestamp
-status            str   "success" | "failure"
-http_status       int
-latency_ms        int   wall-clock duration in ms
-cost_usd          float | null
-error_code        str | null
-```
-
-#### DataFrame construction
-
-Build a DataFrame with exactly these columns after parsing:
-
-```
-batch_id, latency_ms, cost_usd, status
-```
-
-`cost_usd` may be null for failed requests — keep the null (NaN in pandas).
-
-#### Batch ordering
-
-Define a fixed order for batches used consistently across all plots:
-
-```python
-BATCH_ORDER = ['batch_10', 'batch_50', 'batch_100']
-```
-
-This order determines the left-to-right position of columns in the scatter plots
-and the legend order.
-
-#### Color palette
-
-Define a fixed color map for batches:
-
-```python
-COLORS = {
-  'batch_10':  '#4C72B0',
-  'batch_50':  '#DD8452',
-  'batch_100': '#55A868',
+**Código actual:**
+```js
+} catch (err) {
+  const durationMs = Date.now() - startMs
+  return { status: 0, ok: false, body: null, durationMs }
 }
 ```
 
-#### Jitter
-
-Each batch is plotted as a vertical column of points on a categorical X axis.
-To prevent point overlap, add random horizontal noise to each point:
-
-```python
-import numpy as np
-rng = np.random.default_rng(seed=42)
+**Código requerido:**
+```js
+} catch (err) {
+  const durationMs = Date.now() - startMs
+  return { status: 0, ok: false, body: null, durationMs, errorCode: err.code ?? 'NETWORK_ERROR', errorMessage: err.message }
+}
 ```
 
-For each batch column, generate jitter offsets:
-```python
-jitter = rng.uniform(-0.2, 0.2, size=len(batch_df))
+En el path de éxito HTTP (response recibida), el objeto de retorno debe incluir `errorCode: null, errorMessage: null`:
+
+**Código actual (return de éxito):**
+```js
+return { status: response.status, ok: response.ok, body: parsedBody, durationMs }
 ```
 
-The X position for a batch at index `i` in `BATCH_ORDER` is `i + jitter`.
-
-Use a fixed seed so the layout is reproducible across runs.
-
----
-
-#### Figure 1 — latency_scatter.png
-
-File: `synthetic/analysis/output/latency_scatter.png`
-
-- One scatter plot
-- X axis: batch categories (categorical with jitter as described above)
-  - X tick positions: `[0, 1, 2]`
-  - X tick labels: `['batch_10', 'batch_50', 'batch_100']`
-- Y axis: `latency_ms`
-- Points colored by batch using `COLORS`
-- Successful requests: `marker='o'`, `alpha=0.6`, `s=30`
-- Failed requests: `marker='X'`, `alpha=0.9`, `s=60`, same color as batch, `edgecolors='red'`, `linewidths=1.2`
-
-**Y axis cap:**
-- Compute `p99 = df['latency_ms'].quantile(0.99)`
-- Set `ylim = (0, p99 * 1.2)`
-- For any point above `ylim`, do NOT move the point — matplotlib will clip it.
-  Instead, after plotting, annotate the count of clipped points per batch in the plot title
-  or as a text note below the title. Format: `"N points above y-axis cap not shown"` only
-  if there are clipped points; omit the note otherwise.
-
-Title: `Latency per request by batch`
-Y label: `latency (ms)`
-X label: omit (batch names on ticks are sufficient)
-Legend: one entry per batch, success markers only. Add a separate legend entry for failure
-markers using `marker='X'`, color gray, label `'failure'` — only if there are failures in
-the dataset.
-
-Figure size: `(10, 6)`, dpi=150.
-
----
-
-#### Figure 2 — cost_scatter.png
-
-File: `synthetic/analysis/output/cost_scatter.png`
-
-- Same X axis structure and jitter as Figure 1 (use the same `rng` state — do NOT reinitialize)
-- Y axis: `cost_usd`
-- Only plot rows where `cost_usd` is not null (i.e., successful requests with a recorded cost)
-- Y axis: linear scale, no cap (costs are expected to be stable)
-- `ylim` bottom: 0
-- Points: `marker='o'`, `alpha=0.6`, `s=30`, colored by batch
-
-Title: `Cost per request by batch`
-If any requests were excluded due to null `cost_usd`, append to title:
-`(N requests with null cost excluded)`
-
-Y label: `cost (USD)`
-Legend: one entry per batch.
-Figure size: `(10, 6)`, dpi=150.
-
----
-
-#### Figure 3 — cost_vs_latency.png
-
-File: `synthetic/analysis/output/cost_vs_latency.png`
-
-- Only successful requests with non-null `cost_usd`
-- X axis: `latency_ms`
-- Y axis: `cost_usd`
-- Color: by batch using `COLORS`
-- Markers: `marker='o'`, `alpha=0.5`, `s=30`
-- No jitter (both axes are continuous)
-
-Title: `Cost vs Latency per request`
-X label: `latency (ms)`
-Y label: `cost (USD)`
-Legend: one entry per batch.
-Figure size: `(10, 6)`, dpi=150.
-
----
-
-#### stdout summary
-
-After saving all figures, print to stdout:
-
+**Código requerido:**
+```js
+return { status: response.status, ok: response.ok, body: parsedBody, durationMs, errorCode: null, errorMessage: null }
 ```
-=== Experiment summary ===
-Total requests: N
-  batch_10  : N total, N success, N failure
-  batch_50  : N total, N success, N failure
-  batch_100 : N total, N success, N failure
 
-Figures saved to: synthetic/analysis/output/
-  latency_scatter.png
-  cost_scatter.png
-  cost_vs_latency.png
+El contrato de retorno resultante en todos los casos es:
+```
+{ status, ok, body, durationMs, errorCode, errorMessage }
 ```
 
 ---
 
-#### Output directory
+### 4.2 `synthetic/runner-experiment.js`
 
-Create `synthetic/analysis/output/` if it does not exist before saving any file:
+Añadir o modificar logs diagnósticos en los siguientes puntos exactos. No alterar ninguna otra lógica.
 
-```python
-from pathlib import Path
-output_dir = Path(__file__).parent / 'output'
-output_dir.mkdir(exist_ok=True)
+#### A. Log de URL base — antes del loop de login
+
+Añadir inmediatamente antes de `console.error('[EXPERIMENT] Logging in...')`:
+
+```js
+console.error(`[EXPERIMENT] Base URL: ${process.env.SYNTHETIC_BASE_URL || 'http://localhost:3000'}`)
 ```
+
+No importar CONFIG — usar directamente `process.env.SYNTHETIC_BASE_URL` con el mismo fallback que usa `config.js`.
+
+---
+
+#### B. Log de login fallido en `loginAll` — cuando `!result.ok`
+
+**Código actual:**
+```js
+console.error(`[EXPERIMENT] Login failed for ${email}: status=${result.status}`)
+```
+
+**Código requerido:**
+
+Si `result.status === 0` (error de red, nunca llegó al servidor):
+```
+[EXPERIMENT] Login failed for <email>: NETWORK_ERROR errorCode=<result.errorCode> errorMessage=<result.errorMessage>
+```
+
+Si `result.status !== 0` (respuesta HTTP recibida, servidor rechazó):
+```
+[EXPERIMENT] Login failed for <email>: status=<result.status> body=<JSON.stringify(result.body)>
+```
+
+Implementación exacta:
+```js
+if (result.status === 0) {
+  console.error(`[EXPERIMENT] Login failed for ${email}: NETWORK_ERROR errorCode=${result.errorCode} errorMessage=${result.errorMessage}`)
+} else {
+  console.error(`[EXPERIMENT] Login failed for ${email}: status=${result.status} body=${JSON.stringify(result.body)}`)
+}
+```
+
+---
+
+#### C. Log de warm-up fallido — cuando `!warmup.ok`
+
+**Código actual:**
+```js
+console.error(`ERROR: Warm-up failed. status=${warmup.status} body=${JSON.stringify(warmup.body)}`)
+```
+
+**Código requerido:**
+
+Si `warmup.status === 0`:
+```
+ERROR: Warm-up failed. NETWORK_ERROR errorCode=<warmup.errorCode> errorMessage=<warmup.errorMessage>
+```
+
+Si `warmup.status !== 0`:
+```
+ERROR: Warm-up failed. status=<warmup.status> body=<JSON.stringify(warmup.body)>
+```
+
+Implementación exacta:
+```js
+if (warmup.status === 0) {
+  console.error(`ERROR: Warm-up failed. NETWORK_ERROR errorCode=${warmup.errorCode} errorMessage=${warmup.errorMessage}`)
+} else {
+  console.error(`ERROR: Warm-up failed. status=${warmup.status} body=${JSON.stringify(warmup.body)}`)
+}
+```
+
+El `process.exit(1)` que sigue permanece sin cambios.
+
+---
+
+#### D. Campo `error_code` en `emit` dentro de `executeRequest`
+
+**Código actual:**
+```js
+error_code: result.ok ? null : (result.body?.error ?? `HTTP_${result.status}`)
+```
+
+**Código requerido:**
+```js
+error_code: result.ok ? null : (result.status === 0 ? result.errorCode : (result.body?.error ?? `HTTP_${result.status}`))
+```
+
+Este cambio hace que cuando una request de serie falla por error de red, el evento emitido al ndjson contenga el `errorCode` real (ej. `ECONNREFUSED`, `ETIMEDOUT`) en lugar de `HTTP_0`.
 
 ---
 
 ## 5. NON-GOALS
 
-- Do NOT compute p50, p95, or any aggregated statistics beyond what is needed to set the
-  Y axis cap in Figure 1
-- Do NOT produce any interactive output (no plt.show())
-- Do NOT add command-line flags beyond the positional NDJSON path argument
-- Do NOT handle multiple input files
-- Do NOT add logging or verbose output beyond the summary printed at the end
+- NO cambiar la secuencia de ejecución del runner
+- NO añadir reintentos de login ni de requests
+- NO añadir health check previo al login
+- NO cambiar el mecanismo de timeout en `executeRequest`
+- NO cambiar el formato general de los eventos `emit()` más allá del campo `error_code` especificado en el punto D
+- NO añadir comentarios al código
+- NO añadir tests
 
 ---
 
 ## 6. DELIVERABLES
 
-1. `synthetic/analysis/requirements.txt` — created
-2. `synthetic/analysis/analyze.py` — created
+1. `synthetic/http.js` modificado — contrato de retorno incluye `errorCode` y `errorMessage` en todos los casos
+2. `synthetic/runner-experiment.js` modificado — logs diagnósticos en puntos A, B, C y campo `error_code` corregido en punto D
 
-**Verification:**
+**Verificación:**
 
-- `python synthetic/analysis/analyze.py` (no args) exits with code 1 and prints usage
-- `python synthetic/analysis/analyze.py experiment_results.ndjson` produces three `.png`
-  files in `synthetic/analysis/output/`
-- Each figure has the correct title, axis labels, and legend
-- Points are colored by batch using the defined palette
-- Failed requests appear as `X` markers in Figure 1
-- Figure 3 contains only successful requests with non-null cost
-- The jitter is reproducible (fixed seed=42): running the script twice on the same input
-  produces identical images
+- Con `SYNTHETIC_BASE_URL` incorrecto (servidor inexistente), stderr debe mostrar:
+  ```
+  [EXPERIMENT] Base URL: <url>
+  [EXPERIMENT] Login failed for user@X: NETWORK_ERROR errorCode=ECONNREFUSED errorMessage=...
+  ...
+  ERROR: Only 0/20 users authenticated. Aborting.
+  ```
+
+- Con credenciales incorrectas (servidor activo pero 401), stderr debe mostrar:
+  ```
+  [EXPERIMENT] Login failed for user@X: status=401 body={"error":"..."}
+  ```
+
+- Con ejecución completa exitosa, el campo `error_code` en eventos de fallo del ndjson contiene códigos reales en lugar de `HTTP_0`.
