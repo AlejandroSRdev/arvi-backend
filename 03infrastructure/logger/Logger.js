@@ -9,6 +9,8 @@ function emit(level, event, data = {}) {
   const output = { level, event, ts: new Date().toISOString(), ...data };
   if (level === 'error') {
     console.error(JSON.stringify(output));
+  } else if (level === 'warn') {
+    console.warn(JSON.stringify(output));
   } else {
     console.log(JSON.stringify(output));
   }
@@ -20,6 +22,7 @@ export const logger = {
 
   // Backward-compatible wrappers — no new code should use these.
   info(message, data = {}) { emit('info', 'log', { message, ...data }); },
+  warn(message, data = {}) { emit('warn', 'log', { message, ...data }); },
   error(message, data = {}) { emit('error', 'log', { message, ...data }); },
   success(message, data = {}) { emit('info', 'log', { message, ...data }); },
 };

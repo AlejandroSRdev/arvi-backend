@@ -12,7 +12,7 @@ import { logger } from '../../logger/Logger.js';
 import { mapErrorToHttp } from '../../mappers/ErrorMapper.js';
 import { toHabitSeriesOutputDTO, toActionOutputDTO } from '../../mappers/HabitSeriesMapper.js';
 import { HTTP_STATUS } from '../HttpStatus.js';
-import { aiRequestsTotal, aiLatencyMs, aiErrorsTotal } from '../../metrics/AppMetrics.js';
+import { aiRequestsTotal, aiLatencyMs, aiErrorsTotal, aiCostUsd, aiCostTotalUsd } from '../../metrics/AppMetrics.js';
 
 // Dependency injection
 let userRepository;
@@ -101,15 +101,18 @@ export async function createHabitSeriesEndpoint(req, res, next) {
     const aiStart = Date.now();
     let habitSeries;
     try {
-      habitSeries = await createHabitSeries(userId, payload, {
+      const result = await createHabitSeries(userId, payload, {
         planId: req.plan,
         userRepository,
         habitSeriesRepository,
         aiProvider,
         requestId,
       });
-      aiRequestsTotal.add(1, { feature: 'createHabitSeries' });
-      aiLatencyMs.record(Date.now() - aiStart, { feature: 'createHabitSeries' });
+      habitSeries = result.habitSeries;
+      aiRequestsTotal.add(1,                          { feature: 'createHabitSeries', pipeline: 'habit_series' });
+      aiLatencyMs.record(Date.now() - aiStart,        { feature: 'createHabitSeries', pipeline: 'habit_series' });
+      aiCostUsd.record(result.pipelineCostUsd,        { feature: 'createHabitSeries', pipeline: 'habit_series' });
+      aiCostTotalUsd.add(result.pipelineCostUsd,      { feature: 'createHabitSeries', pipeline: 'habit_series' });
     } catch (aiErr) {
       aiErrorsTotal.add(1, { feature: 'createHabitSeries', error_type: aiErr.code ?? aiErr.name ?? 'UNKNOWN' });
       throw aiErr;
@@ -117,7 +120,10 @@ export async function createHabitSeriesEndpoint(req, res, next) {
 
     const responseDTO = toHabitSeriesOutputDTO(habitSeries);
 
-    return res.status(HTTP_STATUS.CREATED).json(responseDTO);
+    return res.status(HTTP_STATUS.CREATED).json({
+      ...responseDTO,
+      _meta: { cost_usd: result.pipelineCostUsd },
+    });
 
   } catch (err) {
     return next(err);
@@ -315,15 +321,18 @@ export async function createActionEndpoint(req, res, next) {
     const aiStart = Date.now();
     let action;
     try {
-      action = await createAction(userId, seriesId, { language }, {
+      const result = await createAction(userId, seriesId, { language }, {
         planId: req.plan,
         userRepository,
         habitSeriesRepository,
         aiProvider,
         requestId,
       });
-      aiRequestsTotal.add(1, { feature: 'createAction' });
-      aiLatencyMs.record(Date.now() - aiStart, { feature: 'createAction' });
+      action = result.action;
+      aiRequestsTotal.add(1,                          { feature: 'createAction', pipeline: 'action' });
+      aiLatencyMs.record(Date.now() - aiStart,        { feature: 'createAction', pipeline: 'action' });
+      aiCostUsd.record(result.pipelineCostUsd,        { feature: 'createAction', pipeline: 'action' });
+      aiCostTotalUsd.add(result.pipelineCostUsd,      { feature: 'createAction', pipeline: 'action' });
     } catch (aiErr) {
       aiErrorsTotal.add(1, { feature: 'createAction', error_type: aiErr.code ?? aiErr.name ?? 'UNKNOWN' });
       throw aiErr;

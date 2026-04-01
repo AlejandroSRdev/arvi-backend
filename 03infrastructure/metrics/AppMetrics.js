@@ -47,6 +47,15 @@ export const aiTokensTotal = meter.createCounter('ai_tokens_total', {
   description: 'Total tokens consumed by AI provider calls',
 });
 
+export const aiCostUsd = meter.createHistogram('ai_cost_usd', {
+  description: 'USD cost of a full AI pipeline request',
+  advice: { explicitBucketBoundaries: [0.00005, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1] },
+});
+
+export const aiCostTotalUsd = meter.createCounter('ai_cost_total_usd', {
+  description: 'Cumulative USD cost of all AI pipeline requests',
+});
+
 // Billing
 export const billingCheckoutCreated = meter.createCounter('billing_checkout_created', {
   description: 'Total Stripe checkout sessions created',

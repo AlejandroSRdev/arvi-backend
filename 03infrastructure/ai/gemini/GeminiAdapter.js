@@ -105,7 +105,8 @@ export class GeminiAdapter extends IAIProvider {
       }
 
       const tokensUsed = totalTokens;
-      aiTokensTotal.add(tokensUsed, { model, provider: 'gemini' });
+      aiTokensTotal.add(promptTokens,     { model, provider: 'gemini', token_type: 'input'  });
+      aiTokensTotal.add(completionTokens, { model, provider: 'gemini', token_type: 'output' });
 
       // ===== DOMAIN ENERGY (unchanged logic) =====
       const energyConsumed = calculateGeminiEnergy(prompt, content);
@@ -113,8 +114,11 @@ export class GeminiAdapter extends IAIProvider {
       const response = {
         content,
         model,
+        promptTokens,
+        completionTokens,
         tokensUsed,
         energyConsumed,
+        estimated: !usage,
       };
 
       logger.info(

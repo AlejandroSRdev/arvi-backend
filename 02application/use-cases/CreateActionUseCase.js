@@ -84,6 +84,7 @@ export async function createAction(userId, seriesId, payload, deps) {
   }
 
   const pipelineStart = Date.now();
+  let pipelineCostUsd = 0;
   console.log(JSON.stringify({ level: 'info', event: 'pipeline.start', ts: new Date().toISOString(), pipeline: 'action', userId, requestId }));
 
   try {
@@ -137,6 +138,7 @@ export async function createAction(userId, seriesId, payload, deps) {
     );
 
     const rawCreativeText = creativeResponse.content;
+    pipelineCostUsd += creativeResponse.cost?.total ?? 0;
 
     // Pass 2 — structure: extract JSON from creative text
     const structureMessages = StructureActionPrompt({ language, rawText: rawCreativeText, difficulty });
@@ -156,6 +158,7 @@ export async function createAction(userId, seriesId, payload, deps) {
       },
       { aiProvider }
     );
+    pipelineCostUsd += structureResponse.cost?.total ?? 0;
 
     // STEP 3: POST-AI VALIDATION
 
@@ -212,6 +215,7 @@ export async function createAction(userId, seriesId, payload, deps) {
       pipeline: 'action',
       userId,
       duration_ms: Date.now() - pipelineStart,
+      pipeline_cost_usd: pipelineCostUsd,
       requestId,
     }));
 
@@ -219,7 +223,7 @@ export async function createAction(userId, seriesId, payload, deps) {
 
     const action = Action.create(actionData);
 
-    return action;
+    return { action, pipelineCostUsd };
 
   } catch (err) {
     console.error(JSON.stringify({

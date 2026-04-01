@@ -7,6 +7,7 @@
 
 import { getModelConfig } from '../../01domain/policies/ModelSelectionPolicy.js';
 import { ValidationError } from '../../errors/Index.js';
+import { calculateCost } from '../../03infrastructure/ai/pricing/ModelPricingRegistry.js';
 
 /**
  * Execute an AI call and return content.
@@ -45,6 +46,12 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
   });
   const duration_ms = Date.now() - start;
 
+  const cost = calculateCost(
+    response.model,
+    response.promptTokens     ?? 0,
+    response.completionTokens ?? 0,
+  );
+
   if (step) {
     console.log(JSON.stringify({
       level: 'info',
@@ -56,6 +63,8 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
       step,
       model,
       duration_ms,
+      cost_usd:       cost.total,
+      cost_estimated: response.estimated ?? false,
       raw_output: typeof response.content === 'string'
         ? response.content
         : JSON.stringify(response.content),
@@ -64,6 +73,7 @@ export async function generateAIResponse(userId, messages, options = {}, deps) {
 
   return {
     content: response.content,
+    cost,
   };
 }
 

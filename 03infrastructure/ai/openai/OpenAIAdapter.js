@@ -44,16 +44,20 @@ export class OpenAIAdapter extends IAIProvider {
       const content = completion.choices[0].message.content;
       const { prompt_tokens, completion_tokens, total_tokens } = completion.usage;
       const tokensUsed = total_tokens;
-      aiTokensTotal.add(tokensUsed, { model: completion.model, provider: 'openai' });
+      aiTokensTotal.add(prompt_tokens,     { model: completion.model, provider: 'openai', token_type: 'input'  });
+      aiTokensTotal.add(completion_tokens, { model: completion.model, provider: 'openai', token_type: 'output' });
 
       // OpenAI calls always return energyConsumed: 0 (not a creative generation provider)
       const energyToConsume = 0;
 
       const response = {
         content,
-        model: completion.model,
+        model:            completion.model,
+        promptTokens:     prompt_tokens,
+        completionTokens: completion_tokens,
         tokensUsed,
-        energyConsumed: 0,
+        energyConsumed:   0,
+        estimated:        false,
       };
 
       logger.info(`📊 [OpenAI Usage] Prompt: ${prompt_tokens}t, Response: ${completion_tokens}t, Total: ${total_tokens}t`);
