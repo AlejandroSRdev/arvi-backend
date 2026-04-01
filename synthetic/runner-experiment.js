@@ -1,8 +1,7 @@
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'node:url'
-dotenv.config({ path: fileURLToPath(new URL('.env.synthetic', import.meta.url)) })
-import { CONFIG } from './config.js'
 import { request } from './http.js'
+dotenv.config({ path: fileURLToPath(new URL('.env.synthetic', import.meta.url)) })
 
 let TEST_USERS
 try {
@@ -13,11 +12,14 @@ try {
   process.exit(1)
 }
 
-const BATCHES = [
-  { batchId: 'batch_10',  concurrencyLevel: 10  },
-  { batchId: 'batch_50',  concurrencyLevel: 50  },
-  { batchId: 'batch_100', concurrencyLevel: 100 },
-]
+const CONCURRENCY_LEVELS = [10, 50, 100]
+
+const BATCHES = CONCURRENCY_LEVELS.map((level, i) => ({
+  batchId: `batch_${i + 1}`,
+  concurrencyLevel: level,
+}))
+
+const MAX_CONCURRENCY = Math.max(...CONCURRENCY_LEVELS)
 
 const TIMEOUT_MS = 90_000
 const PAUSE_BETWEEN_BATCHES_MS = 15_000
@@ -114,16 +116,16 @@ async function runBatch(users, batchId, concurrencyLevel) {
 }
 
 async function main() {
-  if (TEST_USERS.length < 100) {
-    console.error(`ERROR: Need 100 users, found ${TEST_USERS.length}`)
+  if (TEST_USERS.length < MAX_CONCURRENCY) {
+    console.error(`ERROR: Need ${MAX_CONCURRENCY} users, found ${TEST_USERS.length}`)
     process.exit(1)
   }
 
-  console.error('[EXPERIMENT] Logging in 100 users...')
-  const authenticated = await loginAll(TEST_USERS)
+  console.error(`[EXPERIMENT] Logging in ${MAX_CONCURRENCY} users...`)
+  const authenticated = await loginAll(TEST_USERS.slice(0, MAX_CONCURRENCY))
 
-  if (authenticated.length < 100) {
-    console.error(`ERROR: Only ${authenticated.length}/100 users authenticated. Aborting.`)
+  if (authenticated.length < MAX_CONCURRENCY) {
+    console.error(`ERROR: Only ${authenticated.length}/${MAX_CONCURRENCY} users authenticated. Aborting.`)
     process.exit(1)
   }
   console.error(`[EXPERIMENT] ${authenticated.length} users authenticated`)
