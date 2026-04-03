@@ -7,18 +7,29 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-BATCH_ORDER = ['batch_10', 'batch_50', 'batch_100']
+BATCH_ORDER = ['batch_1', 'batch_2', 'batch_3']
 
 COLORS = {
-    'batch_10':  '#4C72B0',
-    'batch_50':  '#DD8452',
-    'batch_100': '#55A868',
+    'batch_1': '#4C72B0',
+    'batch_2': '#DD8452',
+    'batch_3': '#55A868',
 }
 
 
+def detect_encoding(path):
+    with open(path, 'rb') as f:
+        raw = f.read(4)
+    if raw[:2] in (b'\xff\xfe', b'\xfe\xff'):
+        return 'utf-16'
+    if raw[:3] == b'\xef\xbb\xbf':
+        return 'utf-8-sig'
+    return 'utf-8'
+
+
 def load_data(path):
+    encoding = detect_encoding(path)
     records = []
-    with open(path, 'r') as f:
+    with open(path, 'r', encoding=encoding) as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -191,6 +202,10 @@ def main():
     output_dir.mkdir(exist_ok=True)
 
     df = load_data(ndjson_path)
+
+    if df.empty:
+        print('No request.result records found in the input file. Nothing to plot.')
+        sys.exit(0)
 
     rng = np.random.default_rng(seed=42)
     plot_latency(df, output_dir, rng)

@@ -12,7 +12,7 @@ try {
   process.exit(1)
 }
 
-const CONCURRENCY_LEVELS = [5, 10, 20]
+const CONCURRENCY_LEVELS = [5, 15, 30]
 
 const BATCHES = CONCURRENCY_LEVELS.map((level, i) => ({
   batchId: `batch_${i + 1}`,
