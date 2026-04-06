@@ -4,24 +4,38 @@
  * Responsibility:
  * Stripe SDK client. Handles checkout session creation and webhook event verification.
  * No domain logic. All Stripe API calls are isolated here.
+ *
+ * No side effects on import. Call initializeStripeService() once before use.
  */
 
 import Stripe from 'stripe';
 import { StripeProviderFailureError } from '../../../errors/Index.js';
 import { stripeConfig } from './stripeConfig.js';
 
-const stripe = new Stripe(stripeConfig.secretKey);
+let stripe = null;
+
+/**
+ * Initialize the Stripe SDK client.
+ * Must be called after initializeStripeConfig() has populated stripeConfig.
+ */
+export function initializeStripeService() {
+  if (stripe) return;
+  stripe = new Stripe(stripeConfig.secretKey);
+}
+
+function getStripe() {
+  if (!stripe) {
+    throw new Error('Stripe not initialized. Call initializeStripeService() first.');
+  }
+  return stripe;
+}
 
 /**
  * Creates a Stripe Customer for a user.
- * Should be called once per user; caller is responsible for persisting the returned customerId.
- *
- * @param {{ email: string, metadata: Object }} params
- * @returns {Promise<{ customerId: string }>}
  */
 export async function createCustomer({ email, metadata }) {
   try {
-    const customer = await stripe.customers.create({ email, metadata });
+    const customer = await getStripe().customers.create({ email, metadata });
     return { customerId: customer.id };
   } catch (err) {
     throw new StripeProviderFailureError({
@@ -34,17 +48,12 @@ export async function createCustomer({ email, metadata }) {
 
 /**
  * Creates a Stripe Checkout Session for a subscription.
- * Requires a Stripe customerId — never passes raw email to avoid duplicate customers.
- *
- * @param {{ customerId: string, priceId: string, metadata: Object, idempotencyKey: string }} params
- * @returns {Promise<{ url: string, sessionId: string }>}
  */
 export async function createCheckoutSession({ customerId, priceId, metadata, idempotencyKey }) {
-  // Log mode + priceId before the API call to make test/live mismatches immediately visible in logs.
   console.log(`[Stripe] Creating checkout session | mode=${stripeConfig.mode} | plan=${metadata?.internalPlan} | priceId=${priceId}`);
 
   try {
-    const session = await stripe.checkout.sessions.create(
+    const session = await getStripe().checkout.sessions.create(
       {
         mode: 'subscription',
         payment_method_types: ['card'],
@@ -70,13 +79,10 @@ export async function createCheckoutSession({ customerId, priceId, metadata, ide
 
 /**
  * Retrieves an existing Stripe subscription by ID.
- *
- * @param {string} subscriptionId
- * @returns {Promise<Object>} Stripe subscription object
  */
 export async function retrieveSubscription(subscriptionId) {
   try {
-    return await stripe.subscriptions.retrieve(subscriptionId);
+    return await getStripe().subscriptions.retrieve(subscriptionId);
   } catch (err) {
     throw new StripeProviderFailureError({
       operation: 'retrieveSubscription',
@@ -88,13 +94,10 @@ export async function retrieveSubscription(subscriptionId) {
 
 /**
  * Creates a Stripe Billing Portal session for a customer.
- *
- * @param {{ customerId: string, returnUrl: string }} params
- * @returns {Promise<{ url: string }>}
  */
 export async function createBillingPortalSession({ customerId, returnUrl }) {
   try {
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
     });
@@ -109,18 +112,13 @@ export async function createBillingPortalSession({ customerId, returnUrl }) {
 }
 
 /**
- * Creates a Stripe Checkout Session in payment mode to collect a one-time charge
- * before executing a plan change on an existing subscription.
- * The webhook reads session.metadata.action === 'plan_change' to perform the update.
- *
- * @param {{ customerId: string, priceId: string, metadata: Object, idempotencyKey: string }} params
- * @returns {Promise<{ url: string, sessionId: string }>}
+ * Creates a Stripe Checkout Session in payment mode for plan changes.
  */
 export async function createPlanChangeCheckoutSession({ customerId, priceId, metadata, idempotencyKey }) {
   console.log(`[Stripe] Creating plan-change checkout session | mode=${stripeConfig.mode} | priceId=${priceId}`);
 
   try {
-    const session = await stripe.checkout.sessions.create(
+    const session = await getStripe().checkout.sessions.create(
       {
         mode: 'subscription',
         payment_method_types: ['card'],
@@ -144,15 +142,11 @@ export async function createPlanChangeCheckoutSession({ customerId, priceId, met
 }
 
 /**
- * Updates an existing subscription to a new price (upgrade or downgrade).
- *
- * @param {string} subscriptionId
- * @param {{ itemId: string, priceId: string }} params
- * @returns {Promise<void>}
+ * Updates an existing subscription to a new price.
  */
 export async function updateSubscription(subscriptionId, { itemId, priceId }) {
   try {
-    await stripe.subscriptions.update(subscriptionId, {
+    await getStripe().subscriptions.update(subscriptionId, {
       items: [{ id: itemId, price: priceId }],
       proration_behavior: 'create_prorations',
     });
@@ -167,14 +161,10 @@ export async function updateSubscription(subscriptionId, { itemId, priceId }) {
 
 /**
  * Immediately cancels a Stripe subscription.
- * Used to remove duplicate subscriptions created by a plan-change checkout session.
- *
- * @param {string} subscriptionId
- * @returns {Promise<void>}
  */
 export async function cancelSubscription(subscriptionId) {
   try {
-    await stripe.subscriptions.cancel(subscriptionId);
+    await getStripe().subscriptions.cancel(subscriptionId);
   } catch (err) {
     throw new StripeProviderFailureError({
       operation: 'cancelSubscription',
@@ -186,14 +176,9 @@ export async function cancelSubscription(subscriptionId) {
 
 /**
  * Verifies and constructs a Stripe webhook event from a raw request body.
- * Throws the raw Stripe error on signature mismatch (caller maps it to 400).
- *
- * @param {Buffer} rawBody
- * @param {string} signatureHeader
- * @returns {Object} Verified Stripe event
  */
 export function constructWebhookEvent(rawBody, signatureHeader) {
-  return stripe.webhooks.constructEvent(
+  return getStripe().webhooks.constructEvent(
     rawBody,
     signatureHeader,
     stripeConfig.webhookSecret
