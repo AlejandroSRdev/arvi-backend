@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node --import ./03infrastructure/telemetry/telemetry.js server.js",
     "dev": "nodemon --import ./03infrastructure/telemetry/telemetry.js server.js",
-    "test": "node --test tests/",
+    "test": "node --test tests/monthly-actions-quota.test.js",
+    "test:acceptance": "cucumber-js --config cucumber.cjs",
     "check:imports": "madge --extensions js .",
     "predeploy": "npm run check:imports",
     "verify": "node verify.js",
@@ -43,10 +44,12 @@
     "stripe": "^16.6.0"
   },
   "devDependencies": {
+    "@cucumber/cucumber": "^12.7.0",
     "@types/express": "^5.0.6",
     "@types/node": "^25.2.3",
     "madge": "^8.0.0",
     "nodemon": "^3.0.2",
+    "supertest": "^7.2.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },

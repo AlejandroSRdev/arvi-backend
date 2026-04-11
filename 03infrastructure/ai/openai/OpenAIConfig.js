@@ -3,19 +3,47 @@
  * File: OpenAIConfig.js
  * Responsibility:
  * Initializes and exports the OpenAI SDK client configured from environment credentials.
+ *
+ * No side effects on import. Call initializeOpenAI() once before use.
  */
 
 import OpenAI from 'openai';
 
-if (!process.env.OPENAI_API_KEY) {
-  console.error('❌ OPENAI_API_KEY no está definida');
-  process.exit(1);
+let openaiInstance = null;
+
+/**
+ * Initialize the OpenAI client. Must be called once before any AI operation.
+ */
+export function initializeOpenAI() {
+  if (openaiInstance) return;
+
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not defined');
+  }
+
+  openaiInstance = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  console.log('✅ OpenAI client inicializado correctamente');
 }
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+/**
+ * Returns the initialized OpenAI client.
+ * @returns {OpenAI}
+ */
+export function getOpenAI() {
+  if (!openaiInstance) {
+    throw new Error('OpenAI not initialized. Call initializeOpenAI() first.');
+  }
+  return openaiInstance;
+}
 
-console.log('✅ OpenAI client inicializado correctamente');
+/** @deprecated Use getOpenAI() instead. Kept for backward compatibility. */
+export const openai = new Proxy({}, {
+  get(_, prop) {
+    return getOpenAI()[prop];
+  },
+});
 
 export default openai;
